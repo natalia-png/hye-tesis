@@ -1,22 +1,66 @@
-import { NavLink } from "react-router-dom";
-import { HiOutlineHome, HiOutlineCollection } from "react-icons/hi";
-
-const base = "flex flex-col items-center justify-center h-12 flex-1 text-[12px] font-medium";
-const active = "text-ink";
-const inactive = "text-stone";
+// src/components/BottomNav.jsx
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../app/useAuth";
 
 export default function BottomNav() {
+  const nav = useNavigate();
+  const { pathname } = useLocation();
+  const { user } = useAuth();
+
+  const isCliente = user?.role === "cliente";
+
+  const goHome = () => nav("/");
+  const goProjects = () =>
+    nav(isCliente ? "/mis-proyectos" : "/proyectos");
+
+  const isHome = pathname === "/";
+  const isProjects =
+    pathname.startsWith("/proyectos") || pathname === "/mis-proyectos";
+
   return (
-    <nav className="fixed bottom-0 inset-x-0 h-16 bg-ivory/90 backdrop-blur border-t border-taupe/40 shadow-sm z-50">
-      <div className="max-w-phone mx-auto h-full grid grid-cols-2">
-        <NavLink to="/" end className={({isActive}) => `${base} ${isActive?active:inactive}`}>
-          <HiOutlineHome size={20} />
-          <span>Inicio</span>
-        </NavLink>
-        <NavLink to="/proyectos" className={({isActive}) => `${base} ${isActive?active:inactive}`}>
-          <HiOutlineCollection size={20} />
-          <span>Proyectos</span>
-        </NavLink>
+    <nav className="fixed bottom-0 inset-x-0 border-t border-black/5 bg-ivory/95 backdrop-blur-sm">
+      <div className="mx-auto max-w-[500px] flex items-center justify-around py-2 text-[11px]">
+        <button
+          type="button"
+          onClick={goHome}
+          className="flex flex-col items-center gap-0.5"
+        >
+          <span
+            className={
+              "inline-flex h-6 w-6 items-center justify-center rounded-full border " +
+              (isHome
+                ? "bg-ink text-ivory border-ink"
+                : "border-ink/20 text-ink/60")
+            }
+          >
+            {/* icono home simple */}
+            <span className="text-xs">⌂</span>
+          </span>
+          <span className={isHome ? "text-ink font-medium" : "text-ink/60"}>
+            Inicio
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={goProjects}
+          className="flex flex-col items-center gap-0.5"
+        >
+          <span
+            className={
+              "inline-flex h-6 w-6 items-center justify-center rounded-full border " +
+              (isProjects
+                ? "bg-ink text-ivory border-ink"
+                : "border-ink/20 text-ink/60")
+            }
+          >
+            {/* icono maletín / proyectos */}
+            <span className="text-xs">🧱</span>
+          </span>
+          <span className={isProjects ? "text-ink font-medium" : "text-ink/60"}>
+            Proyectos
+          </span>
+        </button>
       </div>
     </nav>
   );

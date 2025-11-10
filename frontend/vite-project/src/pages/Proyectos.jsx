@@ -1,169 +1,216 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+// src/pages/Proyectos.jsx
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { db } from "../lib/firebase";
+import { useAuth } from "../app/useAuth";
 
-/* ====== Data mock (puedes ampliar libremente) ====== */
-const MOCK = [
-  { id: "ARQ-001", nombre: "Vivienda unifamiliar", estado: "En curso",    avance: 62, cliente: "H&E"  },
-  { id: "ARQ-002", nombre: "Centro comercial N.",  estado: "Planificado", avance: 10, cliente: "Acme" },
-  { id: "ARQ-003", nombre: "Remodelación oficina", estado: "En curso",    avance: 45, cliente: "Beta" },
-];
-
-/* ====== UI helpers ====== */
-const ESTADOS = ["Todos", "En curso", "Planificado", "Finalizado"];
-const ORDENES = [
-  { id: "recientes", label: "Recientes" },
-  { id: "nombre_asc", label: "Nombre A–Z" },
-  { id: "avance_asc", label: "Avance ↑" },
-  { id: "avance_desc", label: "Avance ↓" },
-];
-
-function EstadoChip({ value }) {
-  if (!value) return null;
-  return (
-    <span className="text-[10px] px-2 py-0.5 rounded-full bg-sand/80 text-ink/80 border border-taupe/40">
-      {value}
-    </span>
-  );
-}
-
-/* ====== Página ====== */
 export default function Proyectos() {
+  const { user } = useAuth();
+  const nav = useNavigate();
+
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [q, setQ] = useState("");
-  const [estado, setEstado] = useState("Todos");
-  const [orden, setOrden] = useState("recientes");
+  const [order, setOrder] = useState("recentes"); // "recentes" | "nombre"
 
-  const filtrados = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    let arr = MOCK.filter(p => {
-      const matchTexto =
-        p.id.toLowerCase().includes(s) ||
-        p.nombre.toLowerCase().includes(s) ||
-        p.cliente.toLowerCase().includes(s);
-      const matchEstado = estado === "Todos" ? true : p.estado === estado;
-      return matchTexto && matchEstado;
-    });
+  // 🔌 Cargar proyectos desde Firestore
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError("");
 
-    switch (orden) {
-      case "nombre_asc":
-        arr = [...arr].sort((a, b) => a.nombre.localeCompare(b.nombre));
-        break;
-      case "avance_asc":
-        arr = [...arr].sort((a, b) => a.avance - b.avance);
-        break;
-      case "avance_desc":
-        arr = [...arr].sort((a, b) => b.avance - a.avance);
-        break;
-      default:
-        // "recientes": aquí mantén el orden original (simula fecha desc)
-        break;
+      try {
+        const base = collection(db, "projects");
+        // por ahora solo ordenamos por createdAt desc
+        const q = query(base, orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+
+        const items = snap.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            code: data.code || doc.id,
+            name: data.name || data.nombre || "Proyecto sin nombre",
+            client: data.client || data.cliente || "Cliente sin nombre",
+            status: data.status || data.estado || "Sin estado",
+            progress:
+              typeof data.progress === "number"
+                ? data.progress
+                : typeof data.avance === "number"
+                ? data.avance
+                : 0,
+          };
+        });
+
+        setProjects(items);
+      } catch (e) {
+        console.error("Error cargando proyectos:", e);
+        setError("No se pudieron cargar los proyectos.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
+
+  // 🔍 Filtros y búsqueda
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    let list = [...projects];
+
+    if (term) {
+      list = list.filter(
+        (p) =>
+          p.code.toLowerCase().includes(term) ||
+          p.name.toLowerCase().includes(term) ||
+          p.client.toLowerCase().includes(term)
+      );
     }
 
-    return arr;
-  }, [q, estado, orden]);
+    if (order === "nombre") {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    } // "recientes" ya vienen por createdAt desc
 
-  const total = MOCK.length;
-  const enCurso = MOCK.filter(p => p.estado === "En curso").length;
+    return list;
+  }, [projects, q, order]);
+
+  const total = projects.length;
+  const enCurso = projects.filter((p) =>
+    p.status.toLowerCase().includes("curso") ||
+    p.status.toLowerCase().includes("ejecución")
+  ).length;
+
+  const firstName = user?.name?.split(" ")[0] || "Arquitecta";
 
   return (
-    <section className="space-y-4">
-      {/* Encabezado compacto con métricas */}
-      <header className="flex items-end justify-between">
-        <div>
-          <h2 className="text-[18px] font-semibold text-ink">Proyectos</h2>
-          <p className="text-[12px] muted">
-            {total} totales · {enCurso} en curso
-          </p>
+    <section className="space-y-5">
+      {/* Encabezado explicativo del módulo */}
+      <header className="space-y-2">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-[20px] font-semibold text-ink">Proyectos</h1>
+            <p className="text-[13px] text-ink/65">
+              {total} totales · {enCurso} en curso
+            </p>
+          </div>
+          <button
+            type="button"
+            className="btn-primary whitespace-nowrap"
+            onClick={() => nav("/proyectos/nuevo")}
+          >
+          + Nuevo
+          </button>
         </div>
-        <button className="btn-primary">+ Nuevo</button>
+
+        {/* Texto alineado con la tesis: rol de Luisa */}
+        <p className="text-[12px] text-ink/65 leading-relaxed">
+          Esta vista está pensada para{" "}
+          <span className="font-medium">{firstName}</span>, como
+          directora de la firma de arquitectura. Desde aquí revisa el
+          portafolio completo de proyectos, verifica el estado, el cliente
+          asociado y el avance de cada uno antes de entrar al detalle.
+        </p>
       </header>
 
-      {/* Controles: búsqueda, estado y orden */}
-      <div className="rounded-2xl bg-ivory/90 border border-taupe/30 p-3 shadow-card space-y-2">
+      {/* Búsqueda y ordenamiento */}
+      <div className="space-y-3 rounded-2xl bg-ivory/80 p-3 border border-taupe/20">
         <div className="flex gap-2">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por ID, nombre o cliente…"
-            className="input flex-1 bg-ivory"
-            aria-label="Buscar proyectos"
+            className="input flex-1"
           />
         </div>
 
-        <div className="flex gap-2">
-          <select
-            className="input bg-white/80"
-            value={estado}
-            onChange={(e) => setEstado(e.target.value)}
-            aria-label="Filtrar por estado"
+        <div className="flex gap-2 text-[12px]">
+          <button
+            type="button"
+            onClick={() => setOrder("recentes")}
+            className={`px-3 py-1 rounded-full border ${
+              order === "recentes"
+                ? "bg-ink text-ivory border-ink"
+                : "bg-transparent text-ink/70 border-taupe/40"
+            }`}
           >
-            {ESTADOS.map(op => <option key={op} value={op}>{op}</option>)}
-          </select>
-
-          <select
-            className="input bg-white/80"
-            value={orden}
-            onChange={(e) => setOrden(e.target.value)}
-            aria-label="Ordenar resultados"
+            Recientes
+          </button>
+          <button
+            type="button"
+            onClick={() => setOrder("nombre")}
+            className={`px-3 py-1 rounded-full border ${
+              order === "nombre"
+                ? "bg-ink text-ivory border-ink"
+                : "bg-transparent text-ink/70 border-taupe/40"
+            }`}
           >
-            {ORDENES.map(op => <option key={op.id} value={op.id}>{op.label}</option>)}
-          </select>
+            A-Z por nombre
+          </button>
         </div>
       </div>
 
-      {/* Listado */}
+      {/* Listado de proyectos */}
       <div className="space-y-3">
-        {filtrados.map(p => (
-          <article key={p.id} className="card">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="font-medium text-ink truncate">{p.nombre}</h3>
-                <p className="text-[13px] text-ink/80">
-                  <span className="muted">Cliente:</span> {p.cliente}
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="block text-[11px] text-ink/70 font-semibold tracking-wide">{p.id}</span>
-                <div className="mt-1">
-                  <EstadoChip value={p.estado} />
+        {loading && (
+          <p className="text-[13px] text-ink/60">Cargando proyectos…</p>
+        )}
+
+        {error && !loading && (
+          <p className="text-[13px] text-red-600">{error}</p>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <p className="text-[13px] text-ink/50">
+            No se encontraron proyectos con ese criterio de búsqueda.
+          </p>
+        )}
+
+        {!loading &&
+          !error &&
+          filtered.map((p) => (
+            <article
+              key={p.id}
+              className="card flex flex-col gap-2"
+              onClick={() => nav(`/proyectos/${p.id}`)}
+
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="text-[15px] font-medium text-ink">
+                    {p.name}
+                  </h3>
+                  <p className="text-[12px] text-ink/70">
+                    Cliente: {p.client}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[11px] text-ink/70 font-semibold tracking-wide">
+                    {p.code}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-sand px-2 py-[2px] text-[11px] text-ink/80">
+                    {p.status}
+                  </span>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-4">
-              <div className="flex justify-between text-[11px] muted mb-1">
-                <span>Avance</span><span>{p.avance}%</span>
+              <div className="mt-1">
+                <div className="flex justify-between text-[11px] text-ink/60 mb-1">
+                  <span>Avance</span>
+                  <span>{p.progress}%</span>
+                </div>
+                <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-ink"
+                    style={{ width: `${p.progress}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-ink"
-                  style={{ width: `${p.avance}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-end">
-  <Link className="btn-ghost" to={`/proyectos/${p.id}`}>Ver</Link>
-</div>
-          </article>
-        ))}
-
-        {filtrados.length === 0 && (
-          <div className="rounded-2xl border border-taupe/30 bg-ivory/80 p-8 text-center">
-            <div className="text-3xl mb-2">🗂️</div>
-            <p className="text-sm text-ink/80">Sin resultados.</p>
-            <p className="text-[12px] muted">Ajusta la búsqueda o filtros.</p>
-          </div>
-        )}
+            </article>
+          ))}
       </div>
-
-      {/* Botón flotante (acción principal) */}
-      <button
-        aria-label="Nuevo proyecto"
-        className="fixed bottom-20 right-6 bg-ink text-ivory rounded-full w-14 h-14 text-2xl shadow-card flex items-center justify-center hover:bg-coal"
-        title="Crear proyecto"
-      >
-        +
-      </button>
     </section>
   );
 }

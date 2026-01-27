@@ -3,11 +3,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { cloneFases, DEFAULT_FASES } from "../data/fases";
+import { useAuth } from "../app/useAuth";
+import { findUserByEmail } from "../lib/firestore";
 
 const INITIAL_FORM = {
   code: "",
   name: "",
   client: "",
+  clientEmail: "", // ✅ Luisa usa esto (amigable)
   type: "",
   location: "",
   budget: "",
@@ -18,6 +22,8 @@ const INITIAL_FORM = {
 
 export default function ProyectoNuevo() {
   const nav = useNavigate();
+  const { user } = useAuth();
+
   const [form, setForm] = useState(INITIAL_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -38,22 +44,52 @@ export default function ProyectoNuevo() {
 
     setSaving(true);
     try {
-      const docRef = await addDoc(collection(db, "projects"), {
+      // ✅ Resolver clientId por email (si se ingresó)
+      let clientId = null;
+      const email = form.clientEmail.trim().toLowerCase();
+
+      if (email) {
+        const found = await findUserByEmail(email);
+        if (!found) {
+          setError(
+            "No encontramos un usuario con ese email. Pídele al cliente que se registre/inicie sesión primero."
+          );
+          setSaving(false);
+          return;
+        }
+        if ((found.role || "").toLowerCase() !== "cliente") {
+          setError("Ese email existe, pero no corresponde a un usuario cliente.");
+          setSaving(false);
+          return;
+        }
+        clientId = found.uid;
+      }
+
+      const payload = {
         code: form.code.trim() || null,
         name: form.name.trim(),
         client: form.client.trim(),
+
+        // ✅ amarre seguro
+        clientId,
+        clientEmail: email || null,
+
         type: form.type.trim() || null,
         location: form.location.trim() || null,
         budget: form.budget ? Number(form.budget) : null,
         startDate: form.startDate || null,
         endDate: form.endDate || null,
         description: form.description.trim() || "",
-        status: "Planificado",
-        progress: 0,
-        createdAt: serverTimestamp(),
-      });
 
-      // Ir directamente al detalle del nuevo proyecto
+        status: "Planificado",
+        fases: cloneFases(DEFAULT_FASES),
+        progress: 0,
+
+        createdBy: user?.uid || null,
+        createdAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, "projects"), payload);
       nav(`/proyectos/${docRef.id}`);
     } catch (e) {
       console.error("Error creando proyecto:", e);
@@ -86,21 +122,15 @@ export default function ProyectoNuevo() {
             Registrar proyecto para H&amp;E
           </h1>
           <p className="text-[12px] text-ink/65 mt-1">
-            Este formulario está pensado para que la dirección de la firma
-            registre un proyecto con la información mínima necesaria: cliente,
-            tipo, ubicación y presupuesto de referencia. Más adelante se
-            completan detalles técnicos y documentos.
+            Luisa puede asignar el proyecto a un cliente usando su email. El
+            sistema enlaza internamente al UID para que el cliente vea el
+            proyecto en “Mis proyectos” sin exponer la base.
           </p>
         </div>
 
-        {error && (
-          <p className="text-[12px] text-red-600">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-[12px] text-red-600">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Código + nombre */}
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-1">
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -129,7 +159,6 @@ export default function ProyectoNuevo() {
             </div>
           </div>
 
-          {/* Cliente */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Cliente / razón social *
@@ -144,7 +173,26 @@ export default function ProyectoNuevo() {
             />
           </div>
 
-          {/* Tipo + ubicación */}
+          {/* ✅ Amigable: asignación por email */}
+          <div>
+            <label className="block text-[11px] text-ink/60 mb-1">
+              Email del cliente (para asignar “Mis proyectos”)
+            </label>
+            <input
+              name="clientEmail"
+              value={form.clientEmail}
+              onChange={handleChange}
+              placeholder="cliente@correo.com"
+              className="input w-full text-[13px]"
+              type="email"
+            />
+            <p className="text-[11px] text-ink/50 mt-1">
+              El cliente debe haberse registrado antes. Si lo dejas vacío, el
+              proyecto se crea igual pero no aparecerá en “Mis proyectos”.
+            </p>
+          </div>
+
+          {/* resto igual */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -158,9 +206,7 @@ export default function ProyectoNuevo() {
               >
                 <option value="">Seleccionar…</option>
                 <option value="Vivienda unifamiliar">Vivienda unifamiliar</option>
-                <option value="Edificio de vivienda">
-                  Edificio de vivienda
-                </option>
+                <option value="Edificio de vivienda">Edificio de vivienda</option>
                 <option value="Oficinas">Oficinas</option>
                 <option value="Comercial">Comercial</option>
                 <option value="Institucional">Institucional</option>
@@ -180,7 +226,6 @@ export default function ProyectoNuevo() {
             </div>
           </div>
 
-          {/* Presupuesto */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Presupuesto estimado (COP)
@@ -195,13 +240,8 @@ export default function ProyectoNuevo() {
               placeholder="250000000"
               className="input w-full text-[13px]"
             />
-            <p className="text-[11px] text-ink/50 mt-1">
-              Solo un valor de referencia para la etapa de dirección. Los
-              detalles se afinan con el equipo técnico.
-            </p>
           </div>
 
-          {/* Fechas */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -229,7 +269,6 @@ export default function ProyectoNuevo() {
             </div>
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Descripción / alcance inicial
@@ -240,15 +279,11 @@ export default function ProyectoNuevo() {
               onChange={handleChange}
               rows={3}
               maxLength={800}
-              placeholder="Breve descripción del encargo, alcance arquitectónico y criterios clave del cliente."
+              placeholder="Breve descripción del encargo..."
               className="input w-full text-[13px] resize-none"
             />
-            <p className="text-[11px] text-ink/50 mt-1">
-              Máx. 800 caracteres para mantener la base de datos ligera.
-            </p>
           </div>
 
-          {/* Botones */}
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"

@@ -1,7 +1,7 @@
 // src/pages/Proyectos.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 
@@ -12,10 +12,10 @@ export default function Proyectos() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [q, setQ] = useState("");
-  const [order, setOrder] = useState("recentes"); // "recentes" | "nombre"
+  const [qText, setQText] = useState("");
+  const [order, setOrder] = useState("recientes"); // "recientes" | "nombre"
 
-  // 🔌 Cargar proyectos desde Firestore
+  // 🔌 Cargar proyectos desde Firestore (optimizado para costos)
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -23,31 +23,35 @@ export default function Proyectos() {
 
       try {
         const base = collection(db, "projects");
-        // por ahora solo ordenamos por createdAt desc
-        const q = query(base, orderBy("createdAt", "desc"));
-        const snap = await getDocs(q);
 
-        const items = snap.docs.map((doc) => {
-          const data = doc.data();
+        // 🔒 Cost-friendly: trae solo los más recientes (ej: 50)
+        const qRef = query(base, orderBy("createdAt", "desc"), limit(50));
+        const snap = await getDocs(qRef);
+
+        const items = snap.docs.map((d) => {
+          const data = d.data();
           return {
-            id: doc.id,
-            code: data.code || doc.id,
+            id: d.id,
+            code: data.code || d.id,
             name: data.name || data.nombre || "Proyecto sin nombre",
             client: data.client || data.cliente || "Cliente sin nombre",
             status: data.status || data.estado || "Sin estado",
+            // OJO: en detalle ya calculas el avance por fases.
+            // Aquí mantenemos progress como "resumen" (si luego quieres, lo recalculamos también aquí).
             progress:
               typeof data.progress === "number"
                 ? data.progress
                 : typeof data.avance === "number"
                 ? data.avance
                 : 0,
+            createdAt: data.createdAt || null,
           };
         });
 
         setProjects(items);
       } catch (e) {
         console.error("Error cargando proyectos:", e);
-        setError("No se pudieron cargar los proyectos.");
+        setError("No se pudieron cargar los proyectos. Revisa permisos/reglas.");
       } finally {
         setLoading(false);
       }
@@ -56,62 +60,66 @@ export default function Proyectos() {
     load();
   }, []);
 
-  // 🔍 Filtros y búsqueda
+  // 🔍 Filtros y orden (sin recargar Firestore)
   const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
+    const term = qText.trim().toLowerCase();
     let list = [...projects];
 
     if (term) {
-      list = list.filter(
-        (p) =>
-          p.code.toLowerCase().includes(term) ||
-          p.name.toLowerCase().includes(term) ||
-          p.client.toLowerCase().includes(term)
-      );
+      list = list.filter((p) => {
+        const code = (p.code || "").toLowerCase();
+        const name = (p.name || "").toLowerCase();
+        const client = (p.client || "").toLowerCase();
+        return code.includes(term) || name.includes(term) || client.includes(term);
+      });
     }
 
     if (order === "nombre") {
-      list.sort((a, b) => a.name.localeCompare(b.name));
-    } // "recientes" ya vienen por createdAt desc
+      list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    }
+    // "recientes" ya vienen por createdAt desc (y si no, igual queda consistente)
 
     return list;
-  }, [projects, q, order]);
+  }, [projects, qText, order]);
 
-  const total = projects.length;
-  const enCurso = projects.filter((p) =>
-    p.status.toLowerCase().includes("curso") ||
-    p.status.toLowerCase().includes("ejecución")
-  ).length;
+  const stats = useMemo(() => {
+    const total = projects.length;
+    const enCurso = projects.filter((p) => {
+      const s = (p.status || "").toLowerCase();
+      return s.includes("curso") || s.includes("ejecución") || s.includes("ejecucion");
+    }).length;
+    return { total, enCurso };
+  }, [projects]);
 
   const firstName = user?.name?.split(" ")[0] || "Arquitecta";
 
   return (
     <section className="space-y-5">
-      {/* Encabezado explicativo del módulo */}
+      {/* Encabezado */}
       <header className="space-y-2">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-[20px] font-semibold text-ink">Proyectos</h1>
             <p className="text-[13px] text-ink/65">
-              {total} totales · {enCurso} en curso
+              {stats.total} totales · {stats.enCurso} en curso
             </p>
           </div>
+
           <button
             type="button"
             className="btn-primary whitespace-nowrap"
             onClick={() => nav("/proyectos/nuevo")}
           >
-          + Nuevo
+            + Nuevo
           </button>
         </div>
 
-        {/* Texto alineado con la tesis: rol de Luisa */}
         <p className="text-[12px] text-ink/65 leading-relaxed">
           Esta vista está pensada para{" "}
-          <span className="font-medium">{firstName}</span>, como
-          directora de la firma de arquitectura. Desde aquí revisa el
-          portafolio completo de proyectos, verifica el estado, el cliente
-          asociado y el avance de cada uno antes de entrar al detalle.
+          <span className="font-medium">{firstName}</span>, como directora de la
+          firma de arquitectura. Desde aquí revisa el portafolio completo de
+          proyectos, verifica el estado, el cliente asociado y el avance de cada
+          uno antes de entrar al detalle.
         </p>
       </header>
 
@@ -119,8 +127,8 @@ export default function Proyectos() {
       <div className="space-y-3 rounded-2xl bg-ivory/80 p-3 border border-taupe/20">
         <div className="flex gap-2">
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={qText}
+            onChange={(e) => setQText(e.target.value)}
             placeholder="Buscar por ID, nombre o cliente…"
             className="input flex-1"
           />
@@ -129,15 +137,16 @@ export default function Proyectos() {
         <div className="flex gap-2 text-[12px]">
           <button
             type="button"
-            onClick={() => setOrder("recentes")}
+            onClick={() => setOrder("recientes")}
             className={`px-3 py-1 rounded-full border ${
-              order === "recentes"
+              order === "recientes"
                 ? "bg-ink text-ivory border-ink"
                 : "bg-transparent text-ink/70 border-taupe/40"
             }`}
           >
             Recientes
           </button>
+
           <button
             type="button"
             onClick={() => setOrder("nombre")}
@@ -150,9 +159,14 @@ export default function Proyectos() {
             A-Z por nombre
           </button>
         </div>
+
+        {/* Nota cost-friendly */}
+        <p className="text-[11px] text-ink/50">
+          Se muestran los 50 proyectos más recientes para optimizar lecturas en Firestore.
+        </p>
       </div>
 
-      {/* Listado de proyectos */}
+      {/* Listado */}
       <div className="space-y-3">
         {loading && (
           <p className="text-[13px] text-ink/60">Cargando proyectos…</p>
@@ -173,19 +187,15 @@ export default function Proyectos() {
           filtered.map((p) => (
             <article
               key={p.id}
-              className="card flex flex-col gap-2"
+              className="card flex flex-col gap-2 cursor-pointer"
               onClick={() => nav(`/proyectos/${p.id}`)}
-
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="text-[15px] font-medium text-ink">
-                    {p.name}
-                  </h3>
-                  <p className="text-[12px] text-ink/70">
-                    Cliente: {p.client}
-                  </p>
+                  <h3 className="text-[15px] font-medium text-ink">{p.name}</h3>
+                  <p className="text-[12px] text-ink/70">Cliente: {p.client}</p>
                 </div>
+
                 <div className="flex flex-col items-end gap-1">
                   <span className="text-[11px] text-ink/70 font-semibold tracking-wide">
                     {p.code}
@@ -202,10 +212,7 @@ export default function Proyectos() {
                   <span>{p.progress}%</span>
                 </div>
                 <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-ink"
-                    style={{ width: `${p.progress}%` }}
-                  />
+                  <div className="h-full bg-ink" style={{ width: `${p.progress}%` }} />
                 </div>
               </div>
             </article>

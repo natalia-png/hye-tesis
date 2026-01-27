@@ -1,7 +1,7 @@
 // src/pages/ProyectoEditar.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 const EMPTY_FORM = {
@@ -15,7 +15,6 @@ const EMPTY_FORM = {
   endDate: "",
   description: "",
   status: "",
-  progress: 0,
 };
 
 export default function ProyectoEditar() {
@@ -27,19 +26,21 @@ export default function ProyectoEditar() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Cargar datos actuales del proyecto
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError("");
+
       try {
         const ref = doc(db, "projects", id);
         const snap = await getDoc(ref);
+
         if (!snap.exists()) {
           setError("El proyecto no existe o fue eliminado.");
           return;
         }
-        const data = snap.data();
+
+        const data = snap.data() || {};
 
         setForm({
           code: data.code || "",
@@ -48,17 +49,13 @@ export default function ProyectoEditar() {
           type: data.type || data.tipo || "",
           location: data.location || data.ubicacion || "",
           budget:
-            typeof data.budget === "number" ? String(data.budget) : data.budget || "",
+            typeof data.budget === "number"
+              ? String(data.budget)
+              : data.budget || "",
           startDate: data.startDate || "",
           endDate: data.endDate || "",
           description: data.description || data.descripcion || "",
           status: data.status || data.estado || "Planificado",
-          progress:
-            typeof data.progress === "number"
-              ? data.progress
-              : typeof data.avance === "number"
-              ? data.avance
-              : 0,
         });
       } catch (e) {
         console.error(e);
@@ -75,12 +72,7 @@ export default function ProyectoEditar() {
     const { name, value } = e.target;
     setForm((f) => ({
       ...f,
-      [name]:
-        name === "progress"
-          ? Number(value)
-          : name === "budget"
-          ? value.replace(/[^\d]/g, "")
-          : value,
+      [name]: name === "budget" ? value.replace(/[^\d]/g, "") : value,
     }));
   };
 
@@ -96,6 +88,7 @@ export default function ProyectoEditar() {
     setSaving(true);
     try {
       const ref = doc(db, "projects", id);
+
       await updateDoc(ref, {
         code: form.code.trim() || null,
         name: form.name.trim(),
@@ -107,10 +100,11 @@ export default function ProyectoEditar() {
         endDate: form.endDate || null,
         description: form.description.trim() || "",
         status: form.status || "Planificado",
-        progress: Number(form.progress) || 0,
+
+        // ✅ No tocamos progress aquí: lo controla FasesProyecto
+        updatedAt: serverTimestamp(),
       });
 
-      // Volver al detalle del proyecto
       nav(`/proyectos/${id}`);
     } catch (e) {
       console.error("Error actualizando proyecto:", e);
@@ -140,7 +134,6 @@ export default function ProyectoEditar() {
   }
 
   if (error && !form.name) {
-    // error grave y sin datos
     return (
       <section className="space-y-4">
         <div className="flex items-center gap-2 mb-1">
@@ -178,20 +171,14 @@ export default function ProyectoEditar() {
             Actualizar información
           </h1>
           <p className="text-[12px] text-ink/65 mt-1">
-            Desde esta vista la dirección de la firma puede ajustar el estado,
-            avance, presupuesto y descripción del proyecto sin perder el
-            historial general de la ficha.
+            Ajusta los datos generales del proyecto. El avance (%) se gestiona
+            desde “Fases del proyecto” para mantener trazabilidad y coherencia.
           </p>
         </div>
 
-        {error && (
-          <p className="text-[12px] text-red-600">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-[12px] text-red-600">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Código + nombre */}
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-1">
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -218,7 +205,6 @@ export default function ProyectoEditar() {
             </div>
           </div>
 
-          {/* Cliente */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Cliente / razón social *
@@ -232,7 +218,6 @@ export default function ProyectoEditar() {
             />
           </div>
 
-          {/* Tipo + ubicación */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -265,7 +250,6 @@ export default function ProyectoEditar() {
             </div>
           </div>
 
-          {/* Presupuesto */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Presupuesto estimado (COP)
@@ -280,49 +264,25 @@ export default function ProyectoEditar() {
             />
           </div>
 
-          {/* Estado + progreso */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
-                Estado
-              </label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="input w-full text-[13px] pr-8"
-              >
-                <option value="Planificado">Planificado</option>
-                <option value="En diseño">En diseño</option>
-                <option value="En ejecución">En ejecución</option>
-                <option value="En revisión">En revisión</option>
-                <option value="En entrega">En entrega</option>
-                <option value="Finalizado">Finalizado</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
-                Avance (%) 
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  name="progress"
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={form.progress}
-                  onChange={handleChange}
-                  className="w-full"
-                />
-                <span className="text-[12px] text-ink/80 w-10 text-right">
-                  {form.progress}%
-                </span>
-              </div>
-            </div>
+          <div>
+            <label className="block text-[11px] text-ink/60 mb-1">
+              Estado
+            </label>
+            <select
+              name="status"
+              value={form.status}
+              onChange={handleChange}
+              className="input w-full text-[13px] pr-8"
+            >
+              <option value="Planificado">Planificado</option>
+              <option value="En diseño">En diseño</option>
+              <option value="En ejecución">En ejecución</option>
+              <option value="En revisión">En revisión</option>
+              <option value="En entrega">En entrega</option>
+              <option value="Finalizado">Finalizado</option>
+            </select>
           </div>
 
-          {/* Fechas */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-[11px] text-ink/60 mb-1">
@@ -350,7 +310,6 @@ export default function ProyectoEditar() {
             </div>
           </div>
 
-          {/* Descripción */}
           <div>
             <label className="block text-[11px] text-ink/60 mb-1">
               Descripción / notas
@@ -365,7 +324,6 @@ export default function ProyectoEditar() {
             />
           </div>
 
-          {/* Botones */}
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"

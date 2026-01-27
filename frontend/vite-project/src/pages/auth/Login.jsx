@@ -80,7 +80,7 @@ export default function Login() {
               <input
                 type="email"
                 required
-                placeholder="correo@he-arquitectos.com"
+                placeholder="correo@hye.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 rounded-2xl bg-[#F7F4EE]

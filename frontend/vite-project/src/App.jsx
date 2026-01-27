@@ -6,6 +6,7 @@ import Login from "./pages/auth/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
+
 import Proyectos from "./pages/Proyectos.jsx";
 import ProyectosCliente from "./pages/ProyectosCliente.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -13,7 +14,7 @@ import ProyectoDetalle from "./pages/ProyectoDetalle.jsx";
 import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
 
-function Shell() {
+function ShellLayout() {
   return (
     <div className="min-h-screen bg-[#F2EEE7]">
       <Header />
@@ -33,18 +34,18 @@ export default function App() {
       {/* Login público */}
       <Route path="/login" element={<Login />} />
 
-      {/* Rutas privadas, todas dentro del Shell para que se vea como app */}
+      {/* App protegida */}
       <Route
         element={
           <ProtectedRoute>
-            <Shell />
+            <ShellLayout />
           </ProtectedRoute>
         }
       >
-        {/* Dashboard según rol */}
+        {/* Dashboard */}
         <Route index element={<Dashboard />} />
 
-        {/* Proyectos (Luisa / equipo interno) */}
+        {/* Proyectos – equipo interno (Luisa) */}
         <Route
           path="proyectos"
           element={
@@ -54,7 +55,6 @@ export default function App() {
           }
         />
 
-        {/* Crear proyecto */}
         <Route
           path="proyectos/nuevo"
           element={
@@ -64,20 +64,18 @@ export default function App() {
           }
         />
 
-        {/* Detalle interno – aquí SÍ se puede gestionar documentos */}
         <Route
           path="proyectos/:id"
           element={
             <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
               <ProyectoDetalle
-                canManageDocuments={true} // 👈 Luisa / equipo
+                canManageDocuments={true}
                 clientView={false}
               />
             </RoleRoute>
           }
         />
 
-        {/* Editar proyecto (solo equipo interno) */}
         <Route
           path="proyectos/:id/editar"
           element={
@@ -87,7 +85,7 @@ export default function App() {
           }
         />
 
-        {/* Listado de proyectos del cliente */}
+        {/* Proyectos cliente */}
         <Route
           path="mis-proyectos"
           element={
@@ -97,13 +95,12 @@ export default function App() {
           }
         />
 
-        {/* Detalle desde vista de cliente – solo lectura */}
         <Route
           path="mis-proyectos/:id"
           element={
             <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}>
               <ProyectoDetalle
-                canManageDocuments={false} // 👈 cliente NO gestiona
+                canManageDocuments={false}
                 clientView={true}
               />
             </RoleRoute>

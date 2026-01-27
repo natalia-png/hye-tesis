@@ -1,77 +1,122 @@
 // src/pages/ProyectosCliente.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 
 export default function ProyectosCliente() {
-  const { user } = useAuth();
+  const { user, ready } = useAuth();
   const nav = useNavigate();
 
   const [items, setItems] = useState([]);
-  const [q, setQ] = useState("");
+  const [qText, setQText] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Cargar proyectos asociados al cliente logueado
   useEffect(() => {
     const load = async () => {
-      if (!user) return;
+      if (!ready) return;
+
+      const uid = user?.uid || null;
+      const email = (user?.email || "").trim();
+
+
+      if (!uid) {
+        setItems([]);
+        setLoading(false);
+        setError("");
+        return;
+      }
+
       setLoading(true);
       setError("");
 
       try {
-        // suponiendo que en "projects" guardas clientUid = uid del cliente
-        const ref = collection(db, "projects");
-        const qs = query(ref, where("clientUid", "==", user.uid));
-        const snap = await getDocs(qs);
+        const refCol = collection(db, "projects");
 
-        const list = snap.docs.map((d) => {
-          const data = d.data();
-          return {
-            id: d.id, // 🔴 MUY IMPORTANTE: este es el que usamos en la ruta
-            code: data.code || d.id,
-            name: data.name || data.nombre || "Proyecto sin nombre",
-            status: data.status || data.estado || "Sin estado",
-            progress:
-              typeof data.progress === "number"
-                ? data.progress
-                : typeof data.avance === "number"
-                ? data.avance
-                : 0,
-            location: data.location || data.ubicacion || "",
-          };
+        // ✅ 1) Principal: por email (tu caso real)
+        let snapEmail = { docs: [] };
+        if (email) {
+          const qsEmail = query(
+            refCol,
+            where("clientEmail", "==", email),
+            limit(50)
+          );
+          snapEmail = await getDocs(qsEmail);
+        }
+
+        // ✅ 2) Fallback: por clientId (por si tienes proyectos viejos)
+        const qsUid = query(refCol, where("clientId", "==", uid), limit(50));
+        const snapUid = await getDocs(qsUid);
+
+        // ✅ Unir + deduplicar por id
+        const map = new Map();
+
+        const pushDocs = (docs) => {
+          docs.forEach((d) => {
+            const data = d.data() || {};
+            map.set(d.id, {
+              id: d.id,
+              code: data.code || d.id,
+              name: data.name || data.nombre || "Proyecto sin nombre",
+              status: data.status || data.estado || "Sin estado",
+              progress:
+                typeof data.progress === "number"
+                  ? data.progress
+                  : typeof data.avance === "number"
+                  ? data.avance
+                  : 0,
+              location: data.location || data.ubicacion || "",
+              createdAt: data.createdAt || null,
+            });
+          });
+        };
+
+        pushDocs(snapEmail.docs);
+        pushDocs(snapUid.docs);
+
+        const list = Array.from(map.values());
+
+        // ✅ Ordenar (más reciente primero) sin indices extra
+        list.sort((a, b) => {
+          const aT = a.createdAt?.seconds || 0;
+          const bT = b.createdAt?.seconds || 0;
+          return bT - aT;
         });
 
         setItems(list);
       } catch (e) {
-        console.error(e);
-        setError("No se pudieron cargar tus proyectos.");
+        console.error("Error cargando proyectos cliente:", e);
+        setError(
+          "No se pudieron cargar tus proyectos. Revisa que el proyecto tenga clientEmail (igual al correo con el que iniciaste sesión) o clientId asignado."
+        );
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [user]);
+  }, [ready, user?.uid, user?.email]);
 
   const filtered = useMemo(() => {
-    const s = q.toLowerCase();
-    return items.filter(
-      (p) =>
-        p.code.toLowerCase().includes(s) ||
-        p.name.toLowerCase().includes(s) ||
-        p.location.toLowerCase().includes(s)
-    );
-  }, [items, q]);
+    const term = qText.trim().toLowerCase();
+    if (!term) return items;
+
+    return items.filter((p) => {
+      const code = (p.code || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      const loc = (p.location || "").toLowerCase();
+      return code.includes(term) || name.includes(term) || loc.includes(term);
+    });
+  }, [items, qText]);
 
   return (
     <section className="space-y-4">
       <div className="card space-y-2">
         <h1 className="text-[18px] font-semibold text-ink">Mis proyectos</h1>
         <p className="text-[13px] text-ink/70">
-          Esta vista está diseñada para clientes de la firma H&E. Aquí puedes
+          Esta vista está diseñada para clientes de la firma H&amp;E. Aquí puedes
           consultar el estado general de tus proyectos, el avance acumulado y la
           información clave sin acceder a los módulos internos de gestión.
         </p>
@@ -84,33 +129,30 @@ export default function ProyectosCliente() {
       <div className="card space-y-3">
         <p className="text-[12px] text-ink/60">Buscar en mis proyectos</p>
         <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={qText}
+          onChange={(e) => setQText(e.target.value)}
           placeholder="Buscar por código, nombre o ubicación…"
           className="input w-full"
         />
+        <p className="text-[11px] text-ink/50">
+          Se muestran hasta 50 proyectos para optimizar lecturas en Firestore.
+        </p>
       </div>
 
-      {loading && (
-        <p className="text-[13px] text-ink/60">Cargando proyectos…</p>
-      )}
-
-      {error && (
-        <p className="text-[13px] text-red-600 mt-2">{error}</p>
-      )}
+      {!ready && <p className="text-[13px] text-ink/60">Verificando sesión…</p>}
+      {loading && ready && <p className="text-[13px] text-ink/60">Cargando proyectos…</p>}
+      {error && <p className="text-[13px] text-red-600 mt-2">{error}</p>}
 
       <div className="space-y-3">
         {filtered.map((p) => (
           <article
             key={p.id}
             className="card space-y-2 cursor-pointer"
-            onClick={() => nav(`/mis-proyectos/${p.id}`)} // 👈 aquí vamos al detalle
+            onClick={() => nav(`/mis-proyectos/${p.id}`)}
           >
             <div className="flex items-center justify-between gap-2">
               <div>
-                <h2 className="text-[15px] font-semibold text-ink">
-                  {p.name}
-                </h2>
+                <h2 className="text-[15px] font-semibold text-ink">{p.name}</h2>
                 <p className="text-[12px] text-ink/70">
                   {p.location || "Ubicación pendiente"}
                 </p>
@@ -128,10 +170,7 @@ export default function ProyectosCliente() {
                 <span>{p.progress}%</span>
               </div>
               <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-ink"
-                  style={{ width: `${p.progress}%` }}
-                />
+                <div className="h-full bg-ink" style={{ width: `${p.progress}%` }} />
               </div>
             </div>
 
@@ -154,7 +193,7 @@ export default function ProyectosCliente() {
           </article>
         ))}
 
-        {!loading && !error && filtered.length === 0 && (
+        {!loading && !error && ready && filtered.length === 0 && (
           <p className="text-[13px] text-ink/60">
             No se encontraron proyectos con ese criterio.
           </p>

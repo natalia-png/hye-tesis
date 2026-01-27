@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+
 import DocumentosProyecto from "../components/DocumentosProyecto.jsx";
+import FasesProyecto from "../components/FasesProyecto.jsx";
+import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
 
 export default function ProyectoDetalle({
   canManageDocuments = false, // viene desde App.jsx según la ruta
@@ -31,7 +34,21 @@ export default function ProyectoDetalle({
           return;
         }
 
-        const data = snap.data();
+        const data = snap.data() || {};
+
+        // Fases (compatibilidad con datos viejos)
+        const fasesFromDb = Array.isArray(data.fases)
+          ? data.fases
+          : Array.isArray(data.phases)
+          ? data.phases
+          : null;
+
+        const fasesSafe =
+          fasesFromDb && fasesFromDb.length > 0
+            ? fasesFromDb
+            : cloneFases(DEFAULT_FASES);
+
+        const avanceCalculado = calcAvanceGlobal(fasesSafe);
 
         setProject({
           id: snap.id,
@@ -39,12 +56,19 @@ export default function ProyectoDetalle({
           name: data.name || data.nombre || "Proyecto sin nombre",
           client: data.client || data.cliente || "Cliente sin nombre",
           status: data.status || data.estado || "Sin estado",
-          progress:
+
+          // progreso legacy (no se muestra, solo compat)
+          progressStored:
             typeof data.progress === "number"
               ? data.progress
               : typeof data.avance === "number"
               ? data.avance
               : 0,
+
+          // progreso real mostrado
+          progress: avanceCalculado,
+          fases: fasesSafe,
+
           type: data.type || data.tipo || null,
           location: data.location || data.ubicacion || null,
           leadArchitect: data.leadArchitect || data.arquitecto || null,
@@ -54,6 +78,10 @@ export default function ProyectoDetalle({
           startDate: data.startDate || data.fechaInicio || null,
           endDate: data.endDate || data.fechaEntrega || null,
           description: data.description || data.descripcion || "",
+
+          // para "Actualizado hace..."
+          createdAt: data.createdAt || null,
+          updatedAt: data.updatedAt || null,
         });
       } catch (e) {
         console.error("Error cargando proyecto:", e);
@@ -67,12 +95,11 @@ export default function ProyectoDetalle({
   }, [id]);
 
   const goBack = () => {
-    if (clientView) {
-      nav("/mis-proyectos");
-    } else {
-      nav("/proyectos");
-    }
+    nav(clientView ? "/mis-proyectos" : "/proyectos");
   };
+
+  // 🔐 Solo admin puede editar fases
+  const canEditFases = canManageDocuments && !clientView;
 
   if (loading) {
     return (
@@ -103,6 +130,7 @@ export default function ProyectoDetalle({
     client,
     status,
     progress,
+    fases,
     type,
     location,
     leadArchitect,
@@ -112,16 +140,20 @@ export default function ProyectoDetalle({
     startDate,
     endDate,
     description,
+    createdAt,
+    updatedAt,
   } = project;
+
+  const lastUpdate = updatedAt || createdAt;
 
   return (
     <section className="space-y-4">
       <HeaderDetalle onBack={goBack} />
 
-      {/* Cabecera del proyecto */}
+      {/* Cabecera */}
       <div className="card space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0">
             <p className="text-[11px] tracking-[0.18em] uppercase text-ink/50">
               Proyecto
             </p>
@@ -132,6 +164,12 @@ export default function ProyectoDetalle({
               Código <span className="font-medium">{code}</span> · Cliente{" "}
               <span className="font-medium">{client}</span>
             </p>
+            <p className="text-[11px] text-ink/50 mt-1">
+              Actualizado:{" "}
+              <span className="font-medium">
+                {timeAgoSmart(lastUpdate)}
+              </span>
+            </p>
           </div>
 
           <div className="flex flex-col items-end gap-2">
@@ -139,7 +177,6 @@ export default function ProyectoDetalle({
               {status}
             </span>
 
-            {/* Solo equipo interno puede editar */}
             {canManageDocuments && !clientView && (
               <button
                 type="button"
@@ -154,12 +191,10 @@ export default function ProyectoDetalle({
 
         <p className="text-[12px] text-ink/65">
           Esta ficha resume la información clave del proyecto para la dirección
-          de la firma: alcance, responsables, fechas y avance general. A partir
-          de aquí se coordinan las decisiones con ingeniería, jurídica y el
-          cliente.
+          de la firma: alcance, responsables, fechas y avance general.
         </p>
 
-        {/* Avance */}
+        {/* Avance global */}
         <div className="mt-1">
           <div className="flex justify-between text-[11px] text-ink/60 mb-1">
             <span>Avance global</span>
@@ -168,10 +203,23 @@ export default function ProyectoDetalle({
           <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
             <div className="h-full bg-ink" style={{ width: `${progress}%` }} />
           </div>
+          <p className="text-[11px] text-ink/50 mt-1">
+            Calculado a partir de las fases del proyecto.
+          </p>
         </div>
       </div>
 
-      {/* Información general + equipo + fechas + notas */}
+      {/* 🔑 Fases del proyecto */}
+      <FasesProyecto
+        projectId={id}
+        fases={fases}
+        clientView={clientView}
+        canEdit={canEditFases}
+        createdAt={createdAt}
+        updatedAt={updatedAt}
+      />
+
+      {/* Info general */}
       <div className="grid gap-3">
         <div className="card space-y-2">
           <h2 className="text-[14px] font-semibold text-ink">
@@ -186,16 +234,15 @@ export default function ProyectoDetalle({
           <h2 className="text-[14px] font-semibold text-ink">
             Equipo responsable
           </h2>
-          <InfoRow
-            label="Arquitecta líder"
-            value={leadArchitect || "Luisa H&E"}
-          />
+          <InfoRow label="Arquitecta líder" value={leadArchitect || "Luisa H&E"} />
           <InfoRow label="Ingeniería" value={engineer} />
           <InfoRow label="Jurídica" value={lawyer} />
         </div>
 
         <div className="card space-y-2">
-          <h2 className="text-[14px] font-semibold text-ink">Fechas clave</h2>
+          <h2 className="text-[14px] font-semibold text-ink">
+            Fechas clave
+          </h2>
           <InfoRow label="Inicio" value={formatDate(startDate)} />
           <InfoRow label="Entrega estimada" value={formatDate(endDate)} />
         </div>
@@ -205,20 +252,18 @@ export default function ProyectoDetalle({
             Alcance y notas
           </h2>
           <p className="text-[13px] text-ink/70">
-            {description
-              ? description
-              : "Aún no se ha registrado una descripción detallada para este proyecto. Desde aquí podrás documentar el alcance arquitectónico, fases de trabajo y acuerdos clave con el cliente."}
+            {description || "Aún no se ha registrado una descripción detallada."}
           </p>
         </div>
       </div>
 
-      {/* Documentos del proyecto */}
+      {/* Documentos generales */}
       <DocumentosProyecto projectId={id} canManage={canManageDocuments} />
     </section>
   );
 }
 
-/* ------------ Componentes de apoyo ------------------ */
+/* ---------- helpers ---------- */
 
 function HeaderDetalle({ onBack }) {
   return (
@@ -226,7 +271,7 @@ function HeaderDetalle({ onBack }) {
       <button
         type="button"
         onClick={onBack}
-        className="text-[12px] text-ink/70 hover:text-ink inline-flex items-center"
+        className="text-[12px] text-ink/70 hover:text-ink"
       >
         ‹ Volver a proyectos
       </button>
@@ -238,20 +283,16 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex justify-between gap-4 text-[13px]">
       <span className="text-ink/60">{label}</span>
-      <span className="text-ink font-medium text-right">
-        {value || "—"}
-      </span>
+      <span className="text-ink font-medium text-right">{value || "—"}</span>
     </div>
   );
 }
 
 function formatDate(value) {
   if (!value) return "—";
-  if (value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleDateString("es-ES");
-  }
+  if (value?.seconds) return new Date(value.seconds * 1000).toLocaleDateString("es-CO");
   try {
-    return new Date(value).toLocaleDateString("es-ES");
+    return new Date(value).toLocaleDateString("es-CO");
   } catch {
     return String(value);
   }
@@ -267,4 +308,23 @@ function formatMoney(value) {
     });
   }
   return value;
+}
+
+function timeAgoSmart(value) {
+  if (!value) return "—";
+
+  let d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 10) return "hace unos segundos";
+  if (s < 60) return `hace ${s}s`;
+
+  const m = Math.floor(s / 60);
+  if (m < 60) return `hace ${m} min`;
+
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h} h`;
+
+  return `hace ${Math.floor(h / 24)} d`;
 }

@@ -1,7 +1,7 @@
 // src/pages/ProyectosCliente.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, onSnapshot, query, where, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 
@@ -15,70 +15,55 @@ export default function ProyectosCliente() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const load = async () => {
-      if (!ready) return;
+    if (!ready) return;
 
-      const uid = user?.uid || null;
-      const email = (user?.email || "").trim();
+    const uid = user?.uid || "";
+    const emailRaw = (user?.email || "").trim();
 
+    // Debug útil (puedes quitarlo luego)
+    console.log("AUTH READY:", ready);
+    console.log("USER UID:", uid);
+    console.log("USER EMAIL RAW:", emailRaw);
 
-      if (!uid) {
-        setItems([]);
-        setLoading(false);
-        setError("");
-        return;
-      }
-
-      setLoading(true);
+    if (!uid) {
+      setItems([]);
+      setLoading(false);
       setError("");
+      return;
+    }
 
-      try {
-        const refCol = collection(db, "projects");
+    setLoading(true);
+    setError("");
+    setItems([]);
 
-        // ✅ 1) Principal: por email (tu caso real)
-        let snapEmail = { docs: [] };
-        if (email) {
-          const qsEmail = query(
-            refCol,
-            where("clientEmail", "==", email),
-            limit(50)
-          );
-          snapEmail = await getDocs(qsEmail);
-        }
+    const refCol = collection(db, "projects");
 
-        // ✅ 2) Fallback: por clientId (por si tienes proyectos viejos)
-        const qsUid = query(refCol, where("clientId", "==", uid), limit(50));
-        const snapUid = await getDocs(qsUid);
+    // ✅ Profesional: listar por clientId (estable)
+    // ✅ Sin orderBy para NO requerir índice
+    const qs = query(refCol, where("clientId", "==", uid), limit(50));
 
-        // ✅ Unir + deduplicar por id
-        const map = new Map();
+    const unsub = onSnapshot(
+      qs,
+      (snap) => {
+        const list = snap.docs.map((d) => {
+          const data = d.data() || {};
+          return {
+            id: d.id,
+            code: data.code || d.id,
+            name: data.name || data.nombre || "Proyecto sin nombre",
+            status: data.status || data.estado || "Sin estado",
+            progress:
+              typeof data.progress === "number"
+                ? data.progress
+                : typeof data.avance === "number"
+                ? data.avance
+                : 0,
+            location: data.location || data.ubicacion || "",
+            createdAt: data.createdAt || null,
+          };
+        });
 
-        const pushDocs = (docs) => {
-          docs.forEach((d) => {
-            const data = d.data() || {};
-            map.set(d.id, {
-              id: d.id,
-              code: data.code || d.id,
-              name: data.name || data.nombre || "Proyecto sin nombre",
-              status: data.status || data.estado || "Sin estado",
-              progress:
-                typeof data.progress === "number"
-                  ? data.progress
-                  : typeof data.avance === "number"
-                  ? data.avance
-                  : 0,
-              location: data.location || data.ubicacion || "",
-              createdAt: data.createdAt || null,
-            });
-          });
-        };
-
-        pushDocs(snapEmail.docs);
-        pushDocs(snapUid.docs);
-
-        const list = Array.from(map.values());
-
-        // ✅ Ordenar (más reciente primero) sin indices extra
+        // ordenar local por createdAt (sin índices)
         list.sort((a, b) => {
           const aT = a.createdAt?.seconds || 0;
           const bT = b.createdAt?.seconds || 0;
@@ -86,17 +71,18 @@ export default function ProyectosCliente() {
         });
 
         setItems(list);
-      } catch (e) {
-        console.error("Error cargando proyectos cliente:", e);
-        setError(
-          "No se pudieron cargar tus proyectos. Revisa que el proyecto tenga clientEmail (igual al correo con el que iniciaste sesión) o clientId asignado."
-        );
-      } finally {
         setLoading(false);
+        setError("");
+      },
+      (e) => {
+        console.error("Error cargando proyectos cliente:", e);
+        setItems([]);
+        setLoading(false);
+        setError("No se pudieron cargar tus proyectos (permisos o clientId no asignado).");
       }
-    };
+    );
 
-    load();
+    return () => unsub();
   }, [ready, user?.uid, user?.email]);
 
   const filtered = useMemo(() => {
@@ -116,9 +102,7 @@ export default function ProyectosCliente() {
       <div className="card space-y-2">
         <h1 className="text-[18px] font-semibold text-ink">Mis proyectos</h1>
         <p className="text-[13px] text-ink/70">
-          Esta vista está diseñada para clientes de la firma H&amp;E. Aquí puedes
-          consultar el estado general de tus proyectos, el avance acumulado y la
-          información clave sin acceder a los módulos internos de gestión.
+          Aquí puedes consultar el estado general de tus proyectos e información clave.
         </p>
         <p className="text-[12px] text-ink/60">
           Proyectos asociados a tu usuario:{" "}
@@ -173,23 +157,6 @@ export default function ProyectosCliente() {
                 <div className="h-full bg-ink" style={{ width: `${p.progress}%` }} />
               </div>
             </div>
-
-            <p className="text-[11px] text-ink/60 mt-1">
-              Esta información tiene carácter informativo. Las decisiones
-              técnicas y contractuales siguen siendo coordinadas directamente
-              con el equipo de H&amp;E.
-            </p>
-
-            <button
-              type="button"
-              className="mt-1 text-[12px] text-ink/70 underline"
-              onClick={(e) => {
-                e.stopPropagation();
-                nav(`/mis-proyectos/${p.id}`);
-              }}
-            >
-              Ver detalle
-            </button>
           </article>
         ))}
 

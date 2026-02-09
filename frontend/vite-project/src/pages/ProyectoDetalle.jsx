@@ -4,7 +4,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
-import DocumentosProyecto from "../components/DocumentosProyecto.jsx";
 import FasesProyecto from "../components/FasesProyecto.jsx";
 import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
 
@@ -257,8 +256,8 @@ export default function ProyectoDetalle({
         </div>
       </div>
 
-      {/* Documentos generales */}
-      <DocumentosProyecto projectId={id} canManage={canManageDocuments} />
+      
+
     </section>
   );
 }

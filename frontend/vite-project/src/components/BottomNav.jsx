@@ -20,6 +20,8 @@ export default function BottomNav() {
   return (
     <nav className="fixed bottom-0 inset-x-0 border-t border-black/5 bg-ivory/95 backdrop-blur-sm">
       <div className="mx-auto max-w-[500px] flex items-center justify-around py-2 text-[11px]">
+
+        {/* INICIO */}
         <button
           type="button"
           onClick={goHome}
@@ -29,18 +31,25 @@ export default function BottomNav() {
             className={
               "inline-flex h-6 w-6 items-center justify-center rounded-full border " +
               (isHome
-                ? "bg-ink text-ivory border-ink"
-                : "border-ink/20 text-ink/60")
+                ? "bg-ink border-ink"
+                : "border-ink/20")
             }
           >
-            {/* icono home simple */}
-            <span className="text-xs">⌂</span>
+            <img
+              src="/home.png"
+              alt="Inicio"
+              className={
+                "h-3.5 w-3.5 object-contain " +
+                (isHome ? "invert" : "opacity-60")
+              }
+            />
           </span>
           <span className={isHome ? "text-ink font-medium" : "text-ink/60"}>
             Inicio
           </span>
         </button>
 
+        {/* PROYECTOS */}
         <button
           type="button"
           onClick={goProjects}
@@ -54,13 +63,14 @@ export default function BottomNav() {
                 : "border-ink/20 text-ink/60")
             }
           >
-            {/* icono maletín / proyectos */}
+            {/* icono proyectos (puedes cambiarlo luego por imagen también) */}
             <span className="text-xs">🧱</span>
           </span>
           <span className={isProjects ? "text-ink font-medium" : "text-ink/60"}>
             Proyectos
           </span>
         </button>
+
       </div>
     </nav>
   );

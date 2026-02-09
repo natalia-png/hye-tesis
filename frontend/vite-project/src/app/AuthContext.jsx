@@ -1,5 +1,10 @@
+// src/app/AuthProvider.jsx  (o donde tengas este AuthProvider)
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { fetchUserProfile } from "../lib/firestore";
 import { Ctx } from "./auth-ctx";
@@ -10,30 +15,51 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (fbUser) => {
+      // ✅ MUY IMPORTANTE: cada cambio de sesión “resetea” el ready
+      setReady(false);
+
       if (!fbUser) {
         setUser(null);
         setReady(true);
         return;
       }
+
       try {
-        const p = await fetchUserProfile(fbUser.uid); // { name, role, email? }
+        // ✅ FORZA refresco del token (email claim actualizado para reglas)
+        await fbUser.getIdToken(true);
+
+        const p = await fetchUserProfile(fbUser.uid); // { name, role }
+
         setUser({
           uid: fbUser.uid,
-          email: fbUser.email,
+          email: (fbUser.email || "").trim().toLowerCase(),
           name: fbUser.displayName || p?.name || "Usuario",
-          role: (p?.role || "sin-rol").toLowerCase(), // ⬅️ estandariza
+          role: (p?.role || "sin-rol").toLowerCase(),
         });
       } catch (e) {
         console.error("Perfil/rol:", e);
-        setUser({ uid: fbUser.uid, email: fbUser.email, name: "Usuario", role: "sin-rol" });
+        setUser({
+          uid: fbUser.uid,
+          email: (fbUser.email || "").trim().toLowerCase(),
+          name: "Usuario",
+          role: "sin-rol",
+        });
+      } finally {
+        setReady(true);
       }
-      setReady(true);
     });
+
     return () => unsub();
   }, []);
 
-  const login  = (email, password) => signInWithEmailAndPassword(auth, email, password);
+  const login = (email, password) =>
+    signInWithEmailAndPassword(auth, email, password);
+
   const logout = () => signOut(auth);
 
-  return <Ctx.Provider value={{ user, ready, login, logout }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, ready, login, logout }}>
+      {children}
+    </Ctx.Provider>
+  );
 }

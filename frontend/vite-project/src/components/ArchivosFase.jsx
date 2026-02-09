@@ -11,7 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where, // ✅ IMPORTANTE
+  where,
 } from "firebase/firestore";
 import {
   deleteObject,
@@ -167,7 +167,9 @@ export default function ArchivosFase({
       const downloadURL = await getDownloadURL(sRef);
       await updateDoc(fileDoc, { downloadURL });
 
-      setOk("✅ Archivo subido. Ahora puedes marcarlo como visible para el cliente.");
+      setOk(
+        "✅ Archivo subido. Ahora puedes marcarlo como visible para el cliente."
+      );
       setTimeout(() => setOk(""), 2500);
     } catch (e2) {
       console.error(e2);
@@ -234,7 +236,9 @@ export default function ArchivosFase({
       // Cliente: SOLO por downloadURL (no toca Storage SDK => evita 403)
       if (clientView) {
         if (!file?.downloadURL) {
-          setError("Este archivo aún no está publicado para descarga del cliente.");
+          setError(
+            "Este archivo aún no está publicado para descarga del cliente."
+          );
           return;
         }
         window.open(file.downloadURL, "_blank", "noopener,noreferrer");
@@ -278,7 +282,7 @@ export default function ArchivosFase({
             />
             <button
               type="button"
-              className="btn-primary text-[12px]"
+              className="btn-primary text-[12px] whitespace-nowrap"
               onClick={pickFile}
               disabled={busy}
             >
@@ -309,12 +313,15 @@ export default function ArchivosFase({
               key={f.id}
               className="rounded-xl border border-sand bg-white p-3"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+              {/* ✅ FIX RESPONSIVE: texto se trunca y botones no se cortan */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                {/* Izquierda */}
+                <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-medium text-ink truncate">
                     {f.fileName || "Archivo"}
                   </p>
-                  <p className="text-[11px] text-ink/60 mt-1">
+
+                  <p className="text-[11px] text-ink/60 mt-1 truncate">
                     {formatSize(f.size)} · {f.contentType || "—"}
                   </p>
 
@@ -328,10 +335,11 @@ export default function ArchivosFase({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Derecha */}
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
                   <button
                     type="button"
-                    className="btn-outline text-[12px]"
+                    className="btn-outline text-[12px] whitespace-nowrap"
                     onClick={() => onDownload(f)}
                     disabled={busy}
                   >
@@ -342,7 +350,7 @@ export default function ArchivosFase({
                     <>
                       <button
                         type="button"
-                        className="btn-outline text-[12px]"
+                        className="btn-outline text-[12px] whitespace-nowrap"
                         onClick={() => onToggleVisible(f.id, !!f.visibleToClient)}
                         disabled={busy}
                       >
@@ -351,7 +359,7 @@ export default function ArchivosFase({
 
                       <button
                         type="button"
-                        className="btn-outline text-[12px]"
+                        className="btn-outline text-[12px] whitespace-nowrap"
                         onClick={() => onDelete(f)}
                         disabled={busy}
                       >
@@ -368,7 +376,8 @@ export default function ArchivosFase({
 
       {!clientView && canEdit && (
         <p className="mt-2 text-[11px] text-ink/50">
-          Tip: por defecto los archivos quedan ocultos. Marca “Mostrar” cuando ya sea apto para cliente.
+          Tip: por defecto los archivos quedan ocultos. Marca “Mostrar” cuando ya sea
+          apto para cliente.
         </p>
       )}
     </div>

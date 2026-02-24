@@ -6,11 +6,14 @@ import Login from "./pages/auth/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
+import TestFCMToken from "./pages/TestFCMToken.jsx";
+
 
 import Proyectos from "./pages/Proyectos.jsx";
 import ProyectosCliente from "./pages/ProyectosCliente.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ProyectoDetalle from "./pages/ProyectoDetalle.jsx";
+import ProyectoDetalleCliente from "./pages/ProyectoDetalleCliente.jsx";
 import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
 
@@ -31,84 +34,39 @@ function ShellLayout() {
 export default function App() {
   return (
     <Routes>
-      {/* Login público */}
       <Route path="/login" element={<Login />} />
 
-      {/* App protegida */}
-      <Route
-        element={
-          <ProtectedRoute>
-            <ShellLayout />
-          </ProtectedRoute>
-        }
-      >
-        {/* Dashboard */}
+      <Route element={<ProtectedRoute><ShellLayout /></ProtectedRoute>}>
+
         <Route index element={<Dashboard />} />
 
-        {/* Proyectos – equipo interno (Luisa) */}
-        <Route
-          path="proyectos"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
-              <Proyectos />
-            </RoleRoute>
-          }
-        />
+        {/* Admin */}
+        <Route path="proyectos" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><Proyectos /></RoleRoute>
+        } />
+        <Route path="proyectos/nuevo" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ProyectoNuevo /></RoleRoute>
+        } />
+        <Route path="proyectos/:id" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
+            <ProyectoDetalle canManageDocuments={true} clientView={false} />
+          </RoleRoute>
+        } />
+        <Route path="proyectos/:id/editar" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ProyectoEditar /></RoleRoute>
+        } />
 
-        <Route
-          path="proyectos/nuevo"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
-              <ProyectoNuevo />
-            </RoleRoute>
-          }
-        />
+        {/* Cliente */}
+        <Route path="mis-proyectos" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><ProyectosCliente /></RoleRoute>
+        } />
+        <Route path="mis-proyectos/:id" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><ProyectoDetalleCliente /></RoleRoute>
+        } />
+        <Route path="test-fcm" element={<TestFCMToken />} />
 
-        <Route
-          path="proyectos/:id"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
-              <ProyectoDetalle
-                canManageDocuments={true}
-                clientView={false}
-              />
-            </RoleRoute>
-          }
-        />
-
-        <Route
-          path="proyectos/:id/editar"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
-              <ProyectoEditar />
-            </RoleRoute>
-          }
-        />
-
-        {/* Proyectos cliente */}
-        <Route
-          path="mis-proyectos"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}>
-              <ProyectosCliente />
-            </RoleRoute>
-          }
-        />
-
-        <Route
-          path="mis-proyectos/:id"
-          element={
-            <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}>
-              <ProyectoDetalle
-                canManageDocuments={false}
-                clientView={true}
-              />
-            </RoleRoute>
-          }
-        />
       </Route>
 
-      {/* Fallback */}
       <Route path="*" element={<Login />} />
     </Routes>
   );

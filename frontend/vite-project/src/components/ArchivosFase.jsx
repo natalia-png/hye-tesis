@@ -25,8 +25,8 @@ import { useAuth } from "../app/useAuth";
 export default function ArchivosFase({
   projectId,
   phaseId,
-  canEdit = false, // admin true
-  clientView = false, // cliente true
+  canEdit = false,
+  clientView = false,
 }) {
   const { user } = useAuth();
 
@@ -35,10 +35,9 @@ export default function ArchivosFase({
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [listenerStatus, setListenerStatus] = useState("idle"); // debug temporal
 
   const inputRef = useRef(null);
-
-  // ✅ evita “error fantasma” cuando ya cargó una vez
   const hadSuccessRef = useRef(false);
 
   const colRef = useMemo(() => {
@@ -46,16 +45,19 @@ export default function ArchivosFase({
     return collection(db, "projects", projectId, "fases", phaseId, "archivos");
   }, [projectId, phaseId]);
 
-  // ✅ Realtime list (CORRECTO CON REGLAS)
   useEffect(() => {
     setItems([]);
     setError("");
     setOk("");
     hadSuccessRef.current = false;
+    setListenerStatus("connecting");
 
-    if (!colRef) return;
+    if (!colRef) {
+      setListenerStatus("no-colref");
+      return;
+    }
 
-    // ✅ Cliente: consultar SOLO visibles (si no, Firestore tumba la query por permisos)
+    // ✅ Admin ve todos, cliente solo los visibles
     const qs = clientView
       ? query(
           colRef,
@@ -78,17 +80,16 @@ export default function ArchivosFase({
         });
 
         setItems(list);
-
         hadSuccessRef.current = true;
         setError("");
+        setListenerStatus(`ok-${list.length}`); // debug: cuántos docs trajo
       },
       (e) => {
-        console.error(e);
+        console.error("ArchivosFase listener error:", e.code, e.message);
+        setListenerStatus(`error-${e.code}`); // debug: qué error dio
 
-        // si ya cargó alguna vez, no ensucies la UI
         if (hadSuccessRef.current) return;
-
-        setError("No se pudieron cargar los archivos.");
+        setError(`No se pudieron cargar los archivos. (${e.code})`);
       }
     );
 
@@ -104,10 +105,9 @@ export default function ArchivosFase({
 
   const onSelectFile = async (e) => {
     const file = e.target.files?.[0];
-    e.target.value = ""; // reset input
+    e.target.value = "";
     if (!file) return;
 
-    // ✅ controles básicos
     const MAX_MB = 15;
     if (file.size > MAX_MB * 1024 * 1024) {
       setError(`Máximo ${MAX_MB}MB por archivo.`);
@@ -125,15 +125,12 @@ export default function ArchivosFase({
     setOk("");
 
     try {
-      // 1) Doc ID fijo para que fileId == storage object name
-      const fileDoc = doc(colRef); // ID sin escribir aún
+      const fileDoc = doc(colRef);
       const fileId = fileDoc.id;
 
-      // ✅ storagePath exacto y estable
       const storagePath = `phaseFiles/${projectId}/${phaseId}/${fileId}`;
       const sRef = storageRef(storage, storagePath);
 
-      // 2) metadata (Firestore) - se crea ANTES del upload para trazabilidad
       await setDoc(fileDoc, {
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
@@ -144,7 +141,6 @@ export default function ArchivosFase({
         createdBy: user?.uid || "unknown",
       });
 
-      // 3) subir a Storage
       const task = uploadBytesResumable(sRef, file, {
         contentType: file.type || undefined,
       });
@@ -163,14 +159,11 @@ export default function ArchivosFase({
         );
       });
 
-      // ✅ 4) obtener URL con token y guardarla en Firestore
       const downloadURL = await getDownloadURL(sRef);
       await updateDoc(fileDoc, { downloadURL });
 
-      setOk(
-        "✅ Archivo subido. Ahora puedes marcarlo como visible para el cliente."
-      );
-      setTimeout(() => setOk(""), 2500);
+      setOk("✅ Archivo subido. Marca 'Mostrar' para que el cliente lo vea.");
+      setTimeout(() => setOk(""), 4000);
     } catch (e2) {
       console.error(e2);
       setError("No se pudo subir el archivo. Revisa permisos o conexión.");
@@ -189,7 +182,7 @@ export default function ArchivosFase({
 
     try {
       await updateDoc(doc(colRef, id), { visibleToClient: !current });
-      setOk(!current ? "Visible para cliente ✅" : "Oculto para cliente ✅");
+      setOk(!current ? "✅ Visible para cliente." : "✅ Oculto para cliente.");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
       console.error(e);
@@ -212,40 +205,31 @@ export default function ArchivosFase({
     setOk("");
 
     try {
-      // ✅ borrar Storage (SIEMPRE por storagePath)
       if (file.storagePath) {
         await deleteObject(storageRef(storage, file.storagePath));
       }
-
-      // borrar Firestore
       await deleteDoc(doc(colRef, file.id));
-
       setOk("Archivo eliminado ✅");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
       console.error(e);
-      setError("No se pudo eliminar el archivo (Storage o Firestore).");
+      setError("No se pudo eliminar el archivo.");
     } finally {
       setBusy(false);
     }
   };
 
-  // ✅ DESCARGA: cliente por downloadURL, admin fallback storagePath
   const onDownload = async (file) => {
     try {
-      // Cliente: SOLO por downloadURL (no toca Storage SDK => evita 403)
       if (clientView) {
         if (!file?.downloadURL) {
-          setError(
-            "Este archivo aún no está publicado para descarga del cliente."
-          );
+          setError("Este archivo aún no está publicado para el cliente.");
           return;
         }
         window.open(file.downloadURL, "_blank", "noopener,noreferrer");
         return;
       }
 
-      // Admin: si existe downloadURL úsala, si no usa storagePath (legacy)
       if (file?.downloadURL) {
         window.open(file.downloadURL, "_blank", "noopener,noreferrer");
         return;
@@ -256,23 +240,24 @@ export default function ArchivosFase({
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       console.error(e);
-      setError("No se pudo descargar. Revisa permisos/visibilidad.");
+      setError("No se pudo descargar.");
     }
   };
 
   return (
     <div className="mt-4 rounded-2xl border border-sand bg-white/80 p-3">
+      {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[12px] font-semibold text-ink">Archivos</p>
           <p className="text-[11px] text-ink/60">
             {clientView
-              ? "Documentos asociados a esta fase (solo visibles para el cliente)."
+              ? "Documentos de esta fase visibles para ti."
               : "Sube planos, actas o entregables. Controla qué ve el cliente."}
           </p>
         </div>
 
-        {canEdit && (
+        {canEdit && !clientView && (
           <div className="flex items-center gap-2">
             <input
               ref={inputRef}
@@ -292,6 +277,7 @@ export default function ArchivosFase({
         )}
       </div>
 
+      {/* Barra de progreso */}
       {busy && progress > 0 && (
         <div className="mt-2">
           <p className="text-[11px] text-ink/60 mb-1">Subiendo… {progress}%</p>
@@ -302,64 +288,78 @@ export default function ArchivosFase({
       )}
 
       {error && <p className="mt-2 text-[12px] text-red-600">{error}</p>}
-      {ok && <p className="mt-2 text-[12px] text-ink/70">{ok}</p>}
+      {ok && <p className="mt-2 text-[12px] text-green-700">{ok}</p>}
 
+      {canEdit && (
+        <p className="mt-1 text-[10px] text-ink/30">
+          debug: listener={listenerStatus} · phaseId={phaseId} · items={items.length}
+        </p>
+      )}
+
+      {/* Lista de archivos */}
       <div className="mt-3 grid gap-2">
         {items.length === 0 ? (
-          <p className="text-[12px] text-ink/60">Aún no hay archivos en esta fase.</p>
+          <p className="text-[12px] text-ink/60">
+            {listenerStatus.startsWith("error")
+              ? "Error al cargar archivos. Revisa reglas de Firestore."
+              : "Aún no hay archivos en esta fase."}
+          </p>
         ) : (
           items.map((f) => (
             <div
               key={f.id}
               className="rounded-xl border border-sand bg-white p-3"
             >
-              {/* ✅ FIX RESPONSIVE: texto se trunca y botones no se cortan */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                {/* Izquierda */}
-                <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-2">
+                {/* Info del archivo */}
+                <div className="min-w-0">
                   <p className="text-[13px] font-medium text-ink truncate">
                     {f.fileName || "Archivo"}
                   </p>
-
-                  <p className="text-[11px] text-ink/60 mt-1 truncate">
+                  <p className="text-[11px] text-ink/60 mt-0.5">
                     {formatSize(f.size)} · {f.contentType || "—"}
                   </p>
 
                   {!clientView && (
                     <p className="text-[11px] mt-1">
                       <span className="text-ink/50">Visible al cliente: </span>
-                      <span className="font-medium text-ink">
-                        {f.visibleToClient ? "Sí" : "No"}
+                      <span className={`font-medium ${f.visibleToClient ? "text-green-700" : "text-ink/70"}`}>
+                        {f.visibleToClient ? "Sí ✅" : "No"}
                       </span>
                     </p>
                   )}
                 </div>
 
-                {/* Derecha */}
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:justify-end">
+                {/* Botones */}
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="btn-outline text-[12px] whitespace-nowrap"
+                    className="btn-outline text-[12px]"
                     onClick={() => onDownload(f)}
                     disabled={busy}
                   >
                     Descargar
                   </button>
 
+                  {/* ✅ Botones admin — solo si canEdit y no es vista cliente */}
                   {canEdit && !clientView && (
                     <>
                       <button
                         type="button"
-                        className="btn-outline text-[12px] whitespace-nowrap"
-                        onClick={() => onToggleVisible(f.id, !!f.visibleToClient)}
+                        className={`text-[12px] px-3 py-1.5 rounded-full border transition ${
+                          f.visibleToClient
+                            ? "border-ink/30 text-ink/70 hover:bg-sand"
+                            : "border-ink bg-ink text-ivory hover:bg-ink/80"
+                        }`}
+                        onClick={() => onToggleVisible(f.id, f.visibleToClient)}
                         disabled={busy}
                       >
-                        {f.visibleToClient ? "Ocultar" : "Mostrar"}
+                        {f.visibleToClient ? "Ocultar al cliente" : "Mostrar al cliente"}
                       </button>
 
                       <button
                         type="button"
-                        className="btn-outline text-[12px] whitespace-nowrap"
+                        className="text-[12px] px-3 py-1.5 rounded-full border border-red-200 text-red-500 hover:bg-red-50 transition"
                         onClick={() => onDelete(f)}
                         disabled={busy}
                       >
@@ -374,10 +374,9 @@ export default function ArchivosFase({
         )}
       </div>
 
-      {!clientView && canEdit && (
+      {canEdit && !clientView && (
         <p className="mt-2 text-[11px] text-ink/50">
-          Tip: por defecto los archivos quedan ocultos. Marca “Mostrar” cuando ya sea
-          apto para cliente.
+          Por defecto los archivos quedan ocultos. Marca "Mostrar al cliente" cuando esté listo.
         </p>
       )}
     </div>
@@ -391,6 +390,5 @@ function formatSize(bytes) {
   if (kb < 1024) return `${Math.round(kb)} KB`;
   const mb = kb / 1024;
   if (mb < 1024) return `${mb.toFixed(1)} MB`;
-  const gb = mb / 1024;
-  return `${gb.toFixed(2)} GB`;
+  return `${(mb / 1024).toFixed(2)} GB`;
 }

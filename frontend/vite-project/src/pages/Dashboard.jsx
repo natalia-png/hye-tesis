@@ -10,11 +10,9 @@ export default function Dashboard() {
     return <p className="text-[13px] text-ink/60">Verificando sesión…</p>;
   }
 
-  const role = (user?.role || "sin-rol").toLowerCase();
+  const role = (user?.role || "sin-rol").toLowerCase().trim();
 
-  // ✅ Cliente => solo dashboard cliente
   if (role === "cliente") return <DashboardCliente />;
 
-  // ✅ Todo lo demás => dashboard admin (tu app solo maneja admin/cliente)
   return <DashboardAdmin />;
 }

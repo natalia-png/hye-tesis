@@ -17,15 +17,11 @@ export default function ProyectosCliente() {
   useEffect(() => {
     if (!ready) return;
 
-    const uid = user?.uid || "";
-    const emailRaw = (user?.email || "").trim();
+    // ✅ CORREGIDO: usar clientEmail (igual que DashboardCliente)
+    // El flujo oficial es: Luisa asigna por email → se guarda clientEmail
+    const email = (user?.email || "").trim().toLowerCase();
 
-    // Debug útil (puedes quitarlo luego)
-    console.log("AUTH READY:", ready);
-    console.log("USER UID:", uid);
-    console.log("USER EMAIL RAW:", emailRaw);
-
-    if (!uid) {
+    if (!email) {
       setItems([]);
       setLoading(false);
       setError("");
@@ -38,9 +34,8 @@ export default function ProyectosCliente() {
 
     const refCol = collection(db, "projects");
 
-    // ✅ Profesional: listar por clientId (estable)
-    // ✅ Sin orderBy para NO requerir índice
-    const qs = query(refCol, where("clientId", "==", uid), limit(50));
+    // ✅ Filtra por clientEmail — consistente con DashboardCliente
+    const qs = query(refCol, where("clientEmail", "==", email), limit(50));
 
     const unsub = onSnapshot(
       qs,
@@ -78,12 +73,12 @@ export default function ProyectosCliente() {
         console.error("Error cargando proyectos cliente:", e);
         setItems([]);
         setLoading(false);
-        setError("No se pudieron cargar tus proyectos (permisos o clientId no asignado).");
+        setError("No se pudieron cargar tus proyectos. Verifica que tu proyecto tenga el email asignado correctamente.");
       }
     );
 
     return () => unsub();
-  }, [ready, user?.uid, user?.email]);
+  }, [ready, user?.email]); // ✅ depende de email, consistente con DashboardCliente
 
   const filtered = useMemo(() => {
     const term = qText.trim().toLowerCase();

@@ -3,11 +3,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -20,10 +23,11 @@ export default function NotasFase({
   const [items, setItems] = useState([]);
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(null);   // id de nota borrándose
+  const [editing, setEditing] = useState(null);     // { id, text } de nota editándose
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
 
-  // ✅ evita el “mensaje rojo fantasma”
   const hadSuccessRef = useRef(false);
 
   const notasRef = useMemo(() => {
@@ -46,17 +50,12 @@ export default function NotasFase({
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setItems(list);
-
-        // ✅ ya hubo respuesta válida del listener (aunque sea lista vacía)
         hadSuccessRef.current = true;
         setError("");
       },
       (e) => {
         console.error(e);
-
-        // ✅ si ya cargó una vez, NO ensuciar UI con rojo
         if (hadSuccessRef.current) return;
-
         setError("No se pudieron cargar las notas.");
       }
     );
@@ -66,20 +65,23 @@ export default function NotasFase({
 
   const lastUpdate = items?.[0]?.createdAt || null;
 
+  const flash = (msg) => {
+    setOk(msg);
+    setTimeout(() => setOk(""), 2000);
+  };
+
+  // ── Agregar nota ──────────────────────────────────────────────
   const onAdd = async () => {
     if (!canEdit) return;
-
     const t = text.trim();
     if (!t) return;
-
     if (!notasRef) {
-      setError("No se encontró la fase para guardar la nota (phaseId vacío).");
+      setError("No se encontró la fase para guardar la nota.");
       return;
     }
 
     setSaving(true);
     setError("");
-    setOk("");
 
     try {
       await addDoc(notasRef, {
@@ -88,13 +90,61 @@ export default function NotasFase({
         createdBy: "admin",
         visibleToClient: true,
       });
-
       setText("");
-      setOk("Nota guardada.");
-      setTimeout(() => setOk(""), 2000);
+      flash("Nota guardada.");
     } catch (e) {
       console.error(e);
-      setError("No se pudo guardar la nota. Revisa permisos o conexión.");
+      setError("No se pudo guardar la nota.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Eliminar nota ─────────────────────────────────────────────
+  const onDelete = async (nota) => {
+    if (!canEdit || !notasRef) return;
+    const sure = confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.");
+    if (!sure) return;
+
+    setDeleting(nota.id);
+    setError("");
+
+    try {
+      await deleteDoc(doc(notasRef, nota.id));
+      flash("Nota eliminada.");
+    } catch (e) {
+      console.error(e);
+      setError("No se pudo eliminar la nota.");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  // ── Editar nota ───────────────────────────────────────────────
+  const startEdit = (nota) => {
+    setEditing({ id: nota.id, text: nota.text });
+  };
+
+  const cancelEdit = () => setEditing(null);
+
+  const saveEdit = async () => {
+    if (!canEdit || !notasRef || !editing) return;
+    const t = editing.text.trim();
+    if (!t) return;
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await updateDoc(doc(notasRef, editing.id), {
+        text: t,
+        editedAt: serverTimestamp(),
+      });
+      setEditing(null);
+      flash("Nota actualizada.");
+    } catch (e) {
+      console.error(e);
+      setError("No se pudo actualizar la nota.");
     } finally {
       setSaving(false);
     }
@@ -111,7 +161,6 @@ export default function NotasFase({
               : "Registra avances o decisiones. El cliente verá estas notas."}
           </p>
         </div>
-
         <div className="text-right">
           <p className="text-[10px] text-ink/50">Última actualización</p>
           <p className="text-[11px] text-ink/70 font-medium">
@@ -120,13 +169,12 @@ export default function NotasFase({
         </div>
       </div>
 
-      {/* ✅ Solo mostrar error si NO hay nada cargado */}
       {error && items.length === 0 && (
         <p className="mt-2 text-[12px] text-red-600">{error}</p>
       )}
-
       {ok && <p className="mt-2 text-[12px] text-ink/70">{ok}</p>}
 
+      {/* Formulario nueva nota */}
       {canEdit && (
         <div className="mt-3 space-y-2">
           <textarea
@@ -151,18 +199,84 @@ export default function NotasFase({
         </div>
       )}
 
+      {/* Lista de notas */}
       <div className="mt-3 grid gap-2">
         {items.length === 0 ? (
-          <p className="text-[12px] text-ink/60">
-            Aún no hay notas para esta fase.
-          </p>
+          <p className="text-[12px] text-ink/60">Aún no hay notas para esta fase.</p>
         ) : (
           items.map((n) => (
             <div key={n.id} className="rounded-xl border border-sand bg-white p-3">
-              <p className="text-[13px] text-ink/80 whitespace-pre-wrap">{n.text}</p>
-              <p className="mt-2 text-[10px] text-ink/50">
-                {timeAgoSmart(n.createdAt)}
-              </p>
+
+              {/* ── Modo edición ── */}
+              {editing?.id === n.id ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={editing.text}
+                    onChange={(e) =>
+                      setEditing((prev) => ({ ...prev, text: e.target.value }))
+                    }
+                    rows={3}
+                    maxLength={500}
+                    className="input w-full text-[13px] resize-none"
+                    disabled={saving}
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      className="btn-outline text-[12px]"
+                      onClick={cancelEdit}
+                      disabled={saving}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-primary text-[12px]"
+                      onClick={saveEdit}
+                      disabled={saving || !editing.text.trim()}
+                    >
+                      {saving ? "Guardando…" : "Guardar"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* ── Modo lectura ── */
+                <>
+                  <p className="text-[13px] text-ink/80 whitespace-pre-wrap">{n.text}</p>
+
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-[10px] text-ink/50">
+                      {timeAgoSmart(n.createdAt)}
+                      {n.editedAt && (
+                        <span className="ml-1 text-ink/40">(editada)</span>
+                      )}
+                    </p>
+
+                    {/* Botones solo admin */}
+                    {canEdit && !clientView && (
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(n)}
+                          disabled={!!deleting}
+                          className="text-[11px] text-ink/50 hover:text-ink transition-colors"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDelete(n)}
+                          disabled={deleting === n.id}
+                          className="text-[11px] text-ink/40 hover:text-red-500 transition-colors"
+                        >
+                          {deleting === n.id ? "Eliminando…" : "Eliminar"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           ))
         )}
@@ -181,13 +295,9 @@ function timeAgoSmart(value) {
 
   if (s < 10) return "hace unos segundos";
   if (s < 60) return `hace ${s}s`;
-
   const m = Math.floor(s / 60);
   if (m < 60) return `hace ${m} min`;
-
   const h = Math.floor(m / 60);
   if (h < 24) return `hace ${h} h`;
-
-  const days = Math.floor(h / 24);
-  return `hace ${days} d`;
+  return `hace ${Math.floor(h / 24)} d`;
 }

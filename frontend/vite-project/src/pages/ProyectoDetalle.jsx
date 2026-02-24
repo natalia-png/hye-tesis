@@ -8,8 +8,8 @@ import FasesProyecto from "../components/FasesProyecto.jsx";
 import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
 
 export default function ProyectoDetalle({
-  canManageDocuments = false, // viene desde App.jsx según la ruta
-  clientView = false,         // true si es vista de cliente
+  canManageDocuments = false,
+  clientView = false,
 }) {
   const { id } = useParams();
   const nav = useNavigate();
@@ -35,7 +35,6 @@ export default function ProyectoDetalle({
 
         const data = snap.data() || {};
 
-        // Fases (compatibilidad con datos viejos)
         const fasesFromDb = Array.isArray(data.fases)
           ? data.fases
           : Array.isArray(data.phases)
@@ -47,7 +46,7 @@ export default function ProyectoDetalle({
             ? fasesFromDb
             : cloneFases(DEFAULT_FASES);
 
-        const avanceCalculado = calcAvanceGlobal(fasesSafe);
+        const avanceReal = calcAvanceGlobal(fasesSafe);
 
         setProject({
           id: snap.id,
@@ -56,29 +55,20 @@ export default function ProyectoDetalle({
           client: data.client || data.cliente || "Cliente sin nombre",
           status: data.status || data.estado || "Sin estado",
 
-          // progreso legacy (no se muestra, solo compat)
-          progressStored:
-            typeof data.progress === "number"
-              ? data.progress
-              : typeof data.avance === "number"
-              ? data.avance
-              : 0,
-
-          // progreso real mostrado
-          progress: avanceCalculado,
+          progressReal: avanceReal,
           fases: fasesSafe,
+
+          startDate: data.startDate || data.fechaInicio || null,
+          endDate: data.endDate || data.fechaEntrega || null,
 
           type: data.type || data.tipo || null,
           location: data.location || data.ubicacion || null,
           leadArchitect: data.leadArchitect || data.arquitecto || null,
           engineer: data.engineer || data.ingeniero || null,
           lawyer: data.lawyer || data.abogado || null,
-          budget: data.budget || data.presupuesto || null,
-          startDate: data.startDate || data.fechaInicio || null,
-          endDate: data.endDate || data.fechaEntrega || null,
+          budget: data.budget ?? data.presupuesto ?? null,
           description: data.description || data.descripcion || "",
 
-          // para "Actualizado hace..."
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
         });
@@ -97,7 +87,6 @@ export default function ProyectoDetalle({
     nav(clientView ? "/mis-proyectos" : "/proyectos");
   };
 
-  // 🔐 Solo admin puede editar fases
   const canEditFases = canManageDocuments && !clientView;
 
   if (loading) {
@@ -128,7 +117,7 @@ export default function ProyectoDetalle({
     name,
     client,
     status,
-    progress,
+    progressReal,
     fases,
     type,
     location,
@@ -149,7 +138,7 @@ export default function ProyectoDetalle({
     <section className="space-y-4">
       <HeaderDetalle onBack={goBack} />
 
-      {/* Cabecera */}
+      {/* Cabecera del proyecto */}
       <div className="card space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -165,9 +154,7 @@ export default function ProyectoDetalle({
             </p>
             <p className="text-[11px] text-ink/50 mt-1">
               Actualizado:{" "}
-              <span className="font-medium">
-                {timeAgoSmart(lastUpdate)}
-              </span>
+              <span className="font-medium">{timeAgoSmart(lastUpdate)}</span>
             </p>
           </div>
 
@@ -189,26 +176,29 @@ export default function ProyectoDetalle({
         </div>
 
         <p className="text-[12px] text-ink/65">
-          Esta ficha resume la información clave del proyecto para la dirección
-          de la firma: alcance, responsables, fechas y avance general.
+          Esta ficha resume la información clave del proyecto para la dirección:
+          alcance, responsables, fechas y avance general.
         </p>
 
-        {/* Avance global */}
+        {/* Barra de avance real global */}
         <div className="mt-1">
           <div className="flex justify-between text-[11px] text-ink/60 mb-1">
-            <span>Avance global</span>
-            <span>{progress}%</span>
+            <span>Avance real</span>
+            <span>{progressReal}%</span>
           </div>
           <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
-            <div className="h-full bg-ink" style={{ width: `${progress}%` }} />
+            <div
+              className="h-full bg-ink"
+              style={{ width: `${progressReal}%` }}
+            />
           </div>
           <p className="text-[11px] text-ink/50 mt-1">
-            Calculado a partir de las fases del proyecto.
+            Calculado a partir del avance por fases.
           </p>
         </div>
       </div>
 
-      {/* 🔑 Fases del proyecto */}
+      {/* Fases del proyecto */}
       <FasesProyecto
         projectId={id}
         fases={fases}
@@ -233,14 +223,14 @@ export default function ProyectoDetalle({
           <h2 className="text-[14px] font-semibold text-ink">
             Equipo responsable
           </h2>
-          <InfoRow label="Arquitecta líder" value={leadArchitect || "Luisa H&E"} />
+          <InfoRow label="Arquitecta líder" value={leadArchitect || "H&E"} />
           <InfoRow label="Ingeniería" value={engineer} />
           <InfoRow label="Jurídica" value={lawyer} />
         </div>
 
         <div className="card space-y-2">
           <h2 className="text-[14px] font-semibold text-ink">
-            Fechas clave
+            Fechas clave (plan)
           </h2>
           <InfoRow label="Inicio" value={formatDate(startDate)} />
           <InfoRow label="Entrega estimada" value={formatDate(endDate)} />
@@ -251,18 +241,16 @@ export default function ProyectoDetalle({
             Alcance y notas
           </h2>
           <p className="text-[13px] text-ink/70">
-            {description || "Aún no se ha registrado una descripción detallada."}
+            {description ||
+              "Aún no se ha registrado una descripción detallada."}
           </p>
         </div>
       </div>
-
-      
-
     </section>
   );
 }
 
-/* ---------- helpers ---------- */
+/* ─── UI helpers ─── */
 
 function HeaderDetalle({ onBack }) {
   return (
@@ -287,9 +275,12 @@ function InfoRow({ label, value }) {
   );
 }
 
+/* ─── data helpers ─── */
+
 function formatDate(value) {
   if (!value) return "—";
-  if (value?.seconds) return new Date(value.seconds * 1000).toLocaleDateString("es-CO");
+  if (value?.seconds)
+    return new Date(value.seconds * 1000).toLocaleDateString("es-CO");
   try {
     return new Date(value).toLocaleDateString("es-CO");
   } catch {
@@ -298,7 +289,7 @@ function formatDate(value) {
 }
 
 function formatMoney(value) {
-  if (value == null) return "—";
+  if (value == null || value === "") return "—";
   if (typeof value === "number") {
     return value.toLocaleString("es-CO", {
       style: "currency",
@@ -306,24 +297,28 @@ function formatMoney(value) {
       maximumFractionDigits: 0,
     });
   }
-  return value;
+  const n = Number(String(value).replace(/[^\d]/g, ""));
+  if (Number.isFinite(n) && n > 0) {
+    return n.toLocaleString("es-CO", {
+      style: "currency",
+      currency: "COP",
+      maximumFractionDigits: 0,
+    });
+  }
+  return String(value);
 }
 
 function timeAgoSmart(value) {
   if (!value) return "—";
-
-  let d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
+  const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
   if (Number.isNaN(d.getTime())) return "—";
 
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
   if (s < 10) return "hace unos segundos";
   if (s < 60) return `hace ${s}s`;
-
   const m = Math.floor(s / 60);
   if (m < 60) return `hace ${m} min`;
-
   const h = Math.floor(m / 60);
   if (h < 24) return `hace ${h} h`;
-
   return `hace ${Math.floor(h / 24)} d`;
 }

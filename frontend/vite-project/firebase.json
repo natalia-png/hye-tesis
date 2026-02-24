@@ -1,6 +1,13 @@
 {
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
   "hosting": {
-    "public": "dist",
+    "public": "frontend/vite-project/dist",
     "ignore": [
       "firebase.json",
       "**/.*",

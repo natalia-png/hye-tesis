@@ -2,108 +2,115 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { getToken, onMessage } from "firebase/messaging";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db, getMessagingInstance, firebaseConfig } from "../lib/firebase";
+import { db, getMessagingInstance } from "../lib/firebase";
 
-const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BA3qpDeenkxzqQrLWz5mxB9-sO2S4klLkVdKKJOAh7LMpt-UIQ9UbKm7sfnRcGG511Vh68WV11DJ4RZUreshQv8";
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+
+// Standalone — fuera del hook para evitar problemas de closure
+async function saveToken(userId, token) {
+  await setDoc(
+    doc(db, "users", userId, "fcmTokens", token),
+    { token, updatedAt: serverTimestamp(), userAgent: navigator.userAgent },
+    { merge: true }
+  );
+}
+
+async function registerSW() {
+  const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+  await navigator.serviceWorker.ready;
+  return reg;
+}
 
 export function usePushNotifications(uid, onForegroundMessage) {
+  const swRef = useRef(null);   // <-- ref, nunca state
   const unsubRef = useRef(null);
-  const [permissionStatus, setPermissionStatus] = useState(Notification.permission);
-  const [serviceWorkerReg, setServiceWorkerReg] = useState(null);
+  const cbRef = useRef(onForegroundMessage);
+  cbRef.current = onForegroundMessage;
 
-  // Inicialización (silenciosa)
+  const [permissionStatus, setPermissionStatus] = useState(
+    typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
+
+  // Init silenciosa: registra SW y saca token si ya hay permiso
   useEffect(() => {
     if (!uid) return;
     let cancelled = false;
 
-    const init = async () => {
+    (async () => {
       try {
         const messaging = await getMessagingInstance();
         if (!messaging || cancelled) return;
 
-        // Registrar SW
-        const swReg = await navigator.serviceWorker.register(
-          "/firebase-messaging-sw.js",
-          { scope: "/" }
-        );
-        await navigator.serviceWorker.ready;
-        setServiceWorkerReg(swReg);
+        const reg = await registerSW();
+        if (cancelled) return;
+        swRef.current = reg;   // guardar en ref — disponible INMEDIATAMENTE
 
-        if (swReg.active) {
-          swReg.active.postMessage({
-            type: "__FIREBASE_CONFIG__",
-            config: firebaseConfig,
-          });
-        }
-
-        // Si ya hay permisos otorgados, escuchamos onMessage y refrescamos el token
         if (Notification.permission === "granted") {
-          const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
-          if (token && !cancelled) {
-            await saveTokenToFirestore(uid, token);
-          }
-
-          unsubRef.current = onMessage(messaging, payload => {
-            if (cancelled) return;
-            onForegroundMessage?.(payload);
+          const token = await getToken(messaging, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: reg,
           });
+          if (token && !cancelled) {
+            await saveToken(uid, token);
+            console.log("[Push] Init token OK");
+          }
+          if (!unsubRef.current) {
+            unsubRef.current = onMessage(messaging, p => {
+              if (!cancelled) cbRef.current?.(p);
+            });
+          }
         }
-      } catch (err) {
-        if (!cancelled) console.warn("Push notifications (init):", err.message);
+      } catch (e) {
+        if (!cancelled) console.warn("[Push] Init:", e.message);
       }
-    };
-    init();
+    })();
 
     return () => {
       cancelled = true;
       unsubRef.current?.();
     };
-  }, [uid, onForegroundMessage]);
+  }, [uid]);
 
-  const saveTokenToFirestore = async (userId, token) => {
-    await setDoc(
-      doc(db, "users", userId, "fcmTokens", token),
-      {
-        token,
-        updatedAt: serverTimestamp(),
-        userAgent: navigator.userAgent,
-        platform: navigator.platform || "web",
-      },
-      { merge: true }
-    );
-  };
-
-  // Función manual (para atar a un click de botón)
   const requestPermission = useCallback(async () => {
     try {
-      if (!uid || !serviceWorkerReg) throw new Error("Aún no está listo el servicio o no hay usuario.");
+      if (!uid) { console.warn("[Push] Sin uid"); return false; }
 
-      const permission = await window.Notification.requestPermission();
+      // swRef.current siempre tiene el valor actual — sin problema de closure
+      if (!swRef.current) {
+        console.log("[Push] Registrando SW...");
+        swRef.current = await registerSW();
+      }
+
+      console.log("[Push] Pidiendo permiso al navegador...");
+      const permission = await Notification.requestPermission();
+      console.log("[Push] Resultado:", permission);
       setPermissionStatus(permission);
 
-      if (permission === 'granted') {
-        const messaging = await getMessagingInstance();
-        const token = await getToken(messaging, {
-          vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: serviceWorkerReg,
-        });
+      if (permission !== "granted") return false;
 
-        if (token) {
-          await saveTokenToFirestore(uid, token);
+      const messaging = await getMessagingInstance();
+      if (!messaging) { console.warn("[Push] Sin messaging"); return false; }
 
-          // Activamos el listener que no se activó en el mount inicial por falta de permisos
-          if (!unsubRef.current) {
-            unsubRef.current = onMessage(messaging, payload => onForegroundMessage?.(payload));
-          }
-          return true;
-        }
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: swRef.current,
+      });
+
+      if (!token) { console.warn("[Push] Sin token"); return false; }
+
+      console.log("[Push] Token:", token.slice(0, 20) + "...");
+      await saveToken(uid, token);
+
+      if (!unsubRef.current) {
+        unsubRef.current = onMessage(messaging, p => cbRef.current?.(p));
       }
-      return false;
-    } catch (err) {
-      console.error("Error pidiendo permiso de notificaciones:", err);
+
+      return true;
+    } catch (e) {
+      console.error("[Push] Error:", e);
       return false;
     }
-  }, [uid, serviceWorkerReg, onForegroundMessage]);
+  }, [uid]); // solo uid — swRef es ref, no necesita estar en deps
 
   return { permissionStatus, requestPermission };
 }

@@ -6,6 +6,7 @@ import { doc, getDoc, collection, onSnapshot, orderBy, query, where, limit } fro
 import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
+import { useReportePDF } from "../hooks/useReportePDF";
 
 export default function ProyectoDetalleCliente() {
   const { id } = useParams();
@@ -111,16 +112,14 @@ export default function ProyectoDetalleCliente() {
               {project.status}
             </span>
             {diasRestantes !== null && (
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border ${
-                diasRestantes < 0 ? "bg-red-500/20 text-red-300 border-red-500/30"
+              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border ${diasRestantes < 0 ? "bg-red-500/20 text-red-300 border-red-500/30"
                 : diasRestantes <= 14 ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                : "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  diasRestantes < 0 ? "bg-red-400"
+                  : "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${diasRestantes < 0 ? "bg-red-400"
                   : diasRestantes <= 14 ? "bg-amber-400"
-                  : "bg-emerald-400"
-                }`} />
+                    : "bg-emerald-400"
+                  }`} />
                 {diasRestantes < 0 ? `Vencido` : `${diasRestantes}d`}
               </span>
             )}
@@ -148,6 +147,34 @@ export default function ProyectoDetalleCliente() {
               <span className="text-[10px] text-ivory/25">{project.endDate ? `Entrega ${formatFecha(project.endDate, "corta")}` : ""}</span>
             </div>
           )}
+
+          {/* ── Botón PDF ── */}
+          <BtnPDF project={project} />
+
+          {/* ── Botón Garantías ── */}
+          <div className="mt-2">
+            <button
+              onClick={() => nav(`/mis-proyectos/${id}/garantias`)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "13px",
+                padding: "8px 16px",
+                borderRadius: "12px",
+                border: "1px solid rgba(255,255,255,0.5)",
+                color: "rgba(255,255,255,0.9)",
+                background: "rgba(255,255,255,0.05)",
+                cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+            >
+              <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Garantías y Posventa
+            </button>
+          </div>
         </div>
       </div>
 
@@ -194,11 +221,10 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
   const isActive = !isDone && (fase.estado === "en_curso" || pct > 0);
 
   return (
-    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${
-      isDone ? "bg-[#141414] border-[#141414]"
+    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${isDone ? "bg-[#141414] border-[#141414]"
       : isActive ? "bg-white border-black/20"
-      : "bg-white border-black/[0.06]"
-    } ${isOpen ? "shadow-md" : "shadow-sm"}`}>
+        : "bg-white border-black/[0.06]"
+      } ${isOpen ? "shadow-md" : "shadow-sm"}`}>
 
       {/* Header */}
       <button
@@ -207,11 +233,10 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
         className="w-full px-4 py-3.5 flex items-center gap-3 text-left"
       >
         {/* Número / check */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${
-          isDone ? "bg-ivory/15 text-ivory"
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${isDone ? "bg-ivory/15 text-ivory"
           : isActive ? "bg-[#141414] text-ivory"
-          : "bg-black/[0.05] text-ink/30"
-        }`}>
+            : "bg-black/[0.05] text-ink/30"
+          }`}>
           {isDone ? (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8">
               <polyline points="20 6 9 17 4 12" />
@@ -224,9 +249,8 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
             {fase.nombre}
           </p>
           <div className="flex items-center gap-1.5 mt-[3px]">
-            <span className={`w-[5px] h-[5px] rounded-full ${
-              isDone ? "bg-emerald-400" : isActive ? "bg-amber-400" : "bg-ink/20"
-            }`} />
+            <span className={`w-[5px] h-[5px] rounded-full ${isDone ? "bg-emerald-400" : isActive ? "bg-amber-400" : "bg-ink/20"
+              }`} />
             <span className={`text-[11px] ${isDone ? "text-ivory/45" : isActive ? "text-ink/55" : "text-ink/30"}`}>
               {isDone ? "Completada" : isActive ? `En curso · ${pct}%` : "Pendiente"}
             </span>
@@ -412,10 +436,9 @@ function ArchivosPanel({ projectId, phaseId }) {
                 <p className="text-[12px] font-medium text-ink truncate">{a.fileName || "Documento"}</p>
                 {a.size && <p className="text-[10px] text-ink/35">{formatSize(a.size)}</p>}
               </div>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                busy ? "border-2 border-ink/15 border-t-ink/60 animate-spin"
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${busy ? "border-2 border-ink/15 border-t-ink/60 animate-spin"
                 : "bg-[#F2EEE7] group-hover:bg-[#141414]"
-              }`}>
+                }`}>
                 {!busy && (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                     className="text-ink/40 group-hover:text-ivory transition-colors">
@@ -429,6 +452,55 @@ function ArchivosPanel({ projectId, phaseId }) {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/* ── BOTÓN PDF ── */
+function BtnPDF({ project }) {
+  const { generar, loading } = useReportePDF();
+  return (
+    <div className="mt-4 pt-3 border-t border-white/10">
+      <button
+        onClick={() => generar(project, false)}
+        disabled={loading || !project}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "13px",
+          padding: "8px 16px",
+          borderRadius: "12px",
+          border: "1px solid rgba(255,255,255,0.5)",
+          color: "rgba(255,255,255,0.9)",
+          background: "rgba(255,255,255,0.05)",
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.5 : 1,
+          transition: "all 0.15s",
+        }}
+      >
+        {loading ? (
+          <>
+            <svg style={{ width: 14, height: 14, animation: "spin 1s linear infinite" }}
+              fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"
+                style={{ opacity: 0.25 }} />
+              <path fill="currentColor" style={{ opacity: 0.75 }}
+                d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Generando...
+          </>
+        ) : (
+          <>
+            <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor"
+              viewBox="0 0 24 24" strokeWidth="1.8">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                d="M12 10v6m0 0-3-3m3 3 3-3M3 17a4 4 0 004 4h10a4 4 0 004-4V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0014.586 3H7a4 4 0 00-4 4v10z" />
+            </svg>
+            Descargar reporte PDF
+          </>
+        )}
+      </button>
     </div>
   );
 }
@@ -471,17 +543,17 @@ function timeAgo(value) {
 function getFileType(filename) {
   const ext = (filename.split(".").pop() || "").toLowerCase();
   const map = {
-    pdf:  { ext: "PDF", bg: "bg-red-50 text-red-500" },
-    doc:  { ext: "DOC", bg: "bg-blue-50 text-blue-500" },
+    pdf: { ext: "PDF", bg: "bg-red-50 text-red-500" },
+    doc: { ext: "DOC", bg: "bg-blue-50 text-blue-500" },
     docx: { ext: "DOC", bg: "bg-blue-50 text-blue-500" },
-    xls:  { ext: "XLS", bg: "bg-emerald-50 text-emerald-600" },
+    xls: { ext: "XLS", bg: "bg-emerald-50 text-emerald-600" },
     xlsx: { ext: "XLS", bg: "bg-emerald-50 text-emerald-600" },
-    jpg:  { ext: "IMG", bg: "bg-violet-50 text-violet-500" },
+    jpg: { ext: "IMG", bg: "bg-violet-50 text-violet-500" },
     jpeg: { ext: "IMG", bg: "bg-violet-50 text-violet-500" },
-    png:  { ext: "IMG", bg: "bg-violet-50 text-violet-500" },
-    dwg:  { ext: "DWG", bg: "bg-amber-50 text-amber-600" },
-    dxf:  { ext: "DXF", bg: "bg-amber-50 text-amber-600" },
-    zip:  { ext: "ZIP", bg: "bg-zinc-100 text-zinc-500" },
+    png: { ext: "IMG", bg: "bg-violet-50 text-violet-500" },
+    dwg: { ext: "DWG", bg: "bg-amber-50 text-amber-600" },
+    dxf: { ext: "DXF", bg: "bg-amber-50 text-amber-600" },
+    zip: { ext: "ZIP", bg: "bg-zinc-100 text-zinc-500" },
   };
   return map[ext] || { ext: ext.toUpperCase().slice(0, 3) || "DOC", bg: "bg-zinc-100 text-zinc-500" };
 }

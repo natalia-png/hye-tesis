@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import BtnReportePDF from "../components/BtnReportePDF";
+
 
 import FasesProyecto from "../components/FasesProyecto.jsx";
 import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
@@ -38,8 +40,8 @@ export default function ProyectoDetalle({
         const fasesFromDb = Array.isArray(data.fases)
           ? data.fases
           : Array.isArray(data.phases)
-          ? data.phases
-          : null;
+            ? data.phases
+            : null;
 
         const fasesSafe =
           fasesFromDb && fasesFromDb.length > 0
@@ -172,6 +174,16 @@ export default function ProyectoDetalle({
                 Editar
               </button>
             )}
+            {canManageDocuments && !clientView && (
+              <button
+                type="button"
+                onClick={() => nav(`/proyectos/${id}/garantias`)}
+                className="text-[11px] text-ink/70 hover:text-ink underline"
+              >
+                Garantías
+              </button>
+            )}
+            <BtnReportePDF proyecto={project} isAdmin={!clientView} />
           </div>
         </div>
 

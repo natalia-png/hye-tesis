@@ -3,10 +3,12 @@ import { useEffect, useMemo, useState } from "react";
 import { collection, getDocs, limit, query } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useNavigate } from "react-router-dom";
 
 export default function DashboardAdmin() {
   const { user, ready } = useAuth();
+  const { permissionStatus, requestPermission } = usePushNotifications(user?.uid || null, null);
   const nav = useNavigate();
 
   // Guard robusto: cualquier rol que no sea "cliente" puede ver el dashboard admin
@@ -114,6 +116,36 @@ export default function DashboardAdmin() {
         </div>
       </div>
 
+      {/* ── Banner notificaciones push ── */}
+      {typeof Notification !== "undefined" && Notification.permission !== "granted" && (
+        <div className="rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[12px] font-semibold text-amber-800">🔔 Activa las notificaciones</p>
+            <p className="text-[11px] text-amber-700/80 mt-0.5">
+              Recibe alertas de solicitudes de garantía y cambios en proyectos.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              console.log("[Push] click - requestPermission tipo:", typeof requestPermission);
+              try {
+                const ok = await requestPermission();
+                console.log("[Push] resultado:", ok, "permission:", Notification.permission);
+                if (Notification.permission === "granted") alert("¡Notificaciones activadas!");
+                else alert("Permiso denegado o cancelado.");
+              } catch (e) {
+                console.error("[Push] error:", e);
+                alert("Error: " + e.message);
+              }
+            }}
+            className="flex-shrink-0 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-[12px] font-semibold px-4 py-2 rounded-xl transition-all"
+          >
+            Activar
+          </button>
+        </div>
+      )}
+
       {projects.length === 0 ? (
         <div className="rounded-2xl bg-white border border-black/[0.06] p-6 text-center space-y-2">
           <p className="text-[14px] font-semibold text-ink">Sin proyectos aún</p>
@@ -124,10 +156,10 @@ export default function DashboardAdmin() {
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3">
-            <KpiCard label="Avance global"     value={`${computed.progress}%`}              hint={computed.progressHint} />
-            <KpiCard label="Días a entrega"    value={computed.daysLeftLabel}               hint={computed.deadlineHint} />
+            <KpiCard label="Avance global" value={`${computed.progress}%`} hint={computed.progressHint} />
+            <KpiCard label="Días a entrega" value={computed.daysLeftLabel} hint={computed.deadlineHint} />
             <KpiCard label="Fases completadas" value={`${computed.completed}/${computed.total}`} hint={computed.phaseHint} />
-            <KpiCard label="Riesgo"            value={computed.riskLabel}                   hint={computed.riskHint}
+            <KpiCard label="Riesgo" value={computed.riskLabel} hint={computed.riskHint}
               highlight={computed.riskLabel === "Alto" ? "red" : computed.riskLabel === "Medio" ? "amber" : "green"} />
           </div>
 
@@ -191,10 +223,9 @@ function PlanVsRealCard({ proyecto }) {
           <p className="text-[11px] text-ink/45 mt-0.5">Cronograma vs avance registrado.</p>
         </div>
         {diasRestantes != null && (
-          <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${
-            estadoGlobal === "vencido" ? "bg-red-50 text-red-600 border-red-200"
-            : estadoGlobal === "proximo" ? "bg-amber-50 text-amber-700 border-amber-200"
-            : "bg-[#F2EEE7] text-ink/60 border-black/[0.06]"}`}>
+          <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${estadoGlobal === "vencido" ? "bg-red-50 text-red-600 border-red-200"
+              : estadoGlobal === "proximo" ? "bg-amber-50 text-amber-700 border-amber-200"
+                : "bg-[#F2EEE7] text-ink/60 border-black/[0.06]"}`}>
             {diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`}
           </span>
         )}

@@ -6,13 +6,15 @@ import Login from "./pages/auth/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
-import TestFCMToken from "./pages/TestFCMToken.jsx";
+
 
 
 import Proyectos from "./pages/Proyectos.jsx";
 import ProyectosCliente from "./pages/ProyectosCliente.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ProyectoDetalle from "./pages/ProyectoDetalle.jsx";
+import GarantiasCliente from "./pages/GarantiasCliente";
+import GarantiasAdmin from "./pages/GarantiasAdmin";
 import ProyectoDetalleCliente from "./pages/ProyectoDetalleCliente.jsx";
 import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
@@ -63,7 +65,13 @@ export default function App() {
         <Route path="mis-proyectos/:id" element={
           <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><ProyectoDetalleCliente /></RoleRoute>
         } />
-        <Route path="test-fcm" element={<TestFCMToken />} />
+        <Route path="mis-proyectos/:id/garantias" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><GarantiasCliente /></RoleRoute>
+        } />
+        <Route path="proyectos/:id/garantias" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><GarantiasAdmin /></RoleRoute>
+        } />
+
 
       </Route>
 

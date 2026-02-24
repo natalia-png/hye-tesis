@@ -1,0 +1,430 @@
+// src/pages/GarantiasAdmin.jsx
+// Módulo de Garantías y Posventa — Vista Admin (Luisa)
+// Luisa puede ver todas las solicitudes, responder y cambiar el estado
+
+import { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+    collection, onSnapshot, orderBy, query,
+    doc, getDoc, updateDoc, arrayUnion, serverTimestamp,
+} from "firebase/firestore";
+import { db, storage } from "../lib/firebase";
+import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+
+const ESTADOS = ["pendiente", "en_revision", "resuelto"];
+const ESTADO_LABEL = {
+    pendiente: "Pendiente",
+    en_revision: "En revisión",
+    resuelto: "Resuelto",
+};
+const ESTADO_STYLE = {
+    pendiente: "bg-amber-50  text-amber-700  border-amber-200",
+    en_revision: "bg-blue-50   text-blue-700   border-blue-200",
+    resuelto: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+export default function GarantiasAdmin() {
+    const { id: projectId } = useParams();
+    const nav = useNavigate();
+
+    const [projectName, setProjectName] = useState("");
+    const [solicitudes, setSolicitudes] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [filtro, setFiltro] = useState("todas");
+
+    useEffect(() => {
+        getDoc(doc(db, "projects", projectId)).then(snap => {
+            if (snap.exists()) {
+                const d = snap.data();
+                setProjectName(d.name || d.nombre || "Proyecto");
+            }
+        });
+    }, [projectId]);
+
+    useEffect(() => {
+        const q = query(
+            collection(db, "garantias", projectId, "solicitudes"),
+            orderBy("createdAt", "desc")
+        );
+        const unsub = onSnapshot(q, snap => {
+            setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+            setLoading(false);
+        }, () => setLoading(false));
+        return () => unsub();
+    }, [projectId]);
+
+    const filtradas = filtro === "todas"
+        ? solicitudes
+        : solicitudes.filter(s => s.estado === filtro);
+
+    const conteo = {
+        todas: solicitudes.length,
+        pendiente: solicitudes.filter(s => s.estado === "pendiente").length,
+        en_revision: solicitudes.filter(s => s.estado === "en_revision").length,
+        resuelto: solicitudes.filter(s => s.estado === "resuelto").length,
+    };
+
+    return (
+        <section className="space-y-4">
+
+            {/* Back */}
+            <button
+                onClick={() => nav(`/proyectos/${projectId}`)}
+                className="text-[12px] text-ink/60 hover:text-ink inline-flex items-center gap-1"
+            >
+                ‹ Volver al proyecto
+            </button>
+
+            {/* Header */}
+            <div>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-ink/40 font-medium">
+                    {projectName}
+                </p>
+                <h1 className="text-[20px] font-bold text-ink leading-tight">
+                    Garantías y Posventa
+                </h1>
+                <p className="text-[12px] text-ink/50 mt-0.5">
+                    {solicitudes.length} solicitud{solicitudes.length !== 1 ? "es" : ""} en total
+                </p>
+            </div>
+
+            {/* Filtros */}
+            <div className="flex gap-2 overflow-x-auto pb-1">
+                {[
+                    { key: "todas", label: "Todas" },
+                    { key: "pendiente", label: "Pendientes" },
+                    { key: "en_revision", label: "En revisión" },
+                    { key: "resuelto", label: "Resueltas" },
+                ].map(({ key, label }) => (
+                    <button
+                        key={key}
+                        type="button"
+                        onClick={() => setFiltro(key)}
+                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${filtro === key
+                                ? "bg-ink text-ivory border-ink"
+                                : "bg-white text-ink/60 border-ink/15 hover:border-ink/30"
+                            }`}
+                    >
+                        {label}
+                        {conteo[key] > 0 && (
+                            <span className={`ml-1.5 text-[10px] ${filtro === key ? "opacity-70" : "text-ink/40"}`}>
+                                {conteo[key]}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* Lista */}
+            {loading ? (
+                <div className="flex items-center gap-2 py-6">
+                    <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
+                    <p className="text-[13px] text-ink/50">Cargando…</p>
+                </div>
+            ) : filtradas.length === 0 ? (
+                <div className="card text-center py-10 space-y-2">
+                    <p className="text-3xl">✅</p>
+                    <p className="text-[13px] text-ink/60">
+                        {filtro === "todas"
+                            ? "Sin solicitudes de garantía"
+                            : `Sin solicitudes ${ESTADO_LABEL[filtro]?.toLowerCase()}`}
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {filtradas.map(s => (
+                        <TarjetaSolicitudAdmin
+                            key={s.id}
+                            solicitud={s}
+                            projectId={projectId}
+                        />
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
+
+/* ── TARJETA SOLICITUD (vista admin) ── */
+function TarjetaSolicitudAdmin({ solicitud, projectId }) {
+    const [expanded, setExpanded] = useState(false);
+    const [respuesta, setRespuesta] = useState("");
+    const [archivoRespuesta, setArchivoRespuesta] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [changingEstado, setChangingEstado] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const fecha = solicitud.createdAt?.toDate
+        ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
+            day: "2-digit", month: "short", year: "numeric",
+        })
+        : "—";
+
+    const solRef = doc(db, "garantias", projectId, "solicitudes", solicitud.id);
+
+    const cambiarEstado = async (nuevoEstado) => {
+        if (nuevoEstado === solicitud.estado) return;
+        setChangingEstado(true);
+        try {
+            await updateDoc(solRef, { estado: nuevoEstado });
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setChangingEstado(false);
+        }
+    };
+
+    const enviarRespuesta = async () => {
+        if (!respuesta.trim() && !archivoRespuesta) return;
+        setSaving(true);
+        try {
+            let archivoData = null;
+
+            // Subir archivo si hay
+            if (archivoRespuesta) {
+                const path = `garantias/${projectId}/respuestas/${Date.now()}_${archivoRespuesta.name}`;
+                const sRef = storageRef(storage, path);
+                await new Promise((res, rej) => {
+                    const task = uploadBytesResumable(sRef, archivoRespuesta);
+                    task.on("state_changed",
+                        snap => setUploadProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
+                        rej,
+                        async () => {
+                            const url = await getDownloadURL(task.snapshot.ref);
+                            archivoData = { url, name: archivoRespuesta.name, path };
+                            res();
+                        }
+                    );
+                });
+                setUploadProgress(0);
+            }
+
+            await updateDoc(solRef, {
+                respuestas: arrayUnion({
+                    texto: respuesta.trim() || "",
+                    archivo: archivoData,
+                    fecha: new Date(),
+                    autor: "Luisa — H&E Arquitectos",
+                }),
+                ...(solicitud.estado === "pendiente" ? { estado: "en_revision" } : {}),
+            });
+
+            setRespuesta("");
+            setArchivoRespuesta(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className={`card space-y-3 ${solicitud.prioridad === "urgente" ? "border-l-4 border-l-red-400" : ""}`}>
+
+            {/* Header */}
+            <button
+                type="button"
+                onClick={() => setExpanded(e => !e)}
+                className="w-full text-left"
+            >
+                <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                        {solicitud.prioridad === "urgente" && (
+                            <span className="inline-block text-[10px] font-bold text-red-500 mb-1">
+                                🚨 URGENTE
+                            </span>
+                        )}
+                        <p className="text-[13px] font-medium text-ink line-clamp-2">
+                            {solicitud.descripcion}
+                        </p>
+                        <p className="text-[11px] text-ink/40 mt-0.5">
+                            {solicitud.nombreCliente || "Cliente"} · {fecha}
+                        </p>
+                        {solicitud.fechaLimite && (
+                            <p className="text-[11px] text-amber-600 mt-0.5">
+                                ⏱ Límite: {new Date(solicitud.fechaLimite).toLocaleDateString("es-CO")}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${ESTADO_STYLE[solicitud.estado] || ESTADO_STYLE.pendiente}`}>
+                            {ESTADO_LABEL[solicitud.estado] || solicitud.estado}
+                        </span>
+                        {solicitud.fotos?.length > 0 && (
+                            <span className="text-[10px] text-ink/40">
+                                📎 {solicitud.fotos.length} foto{solicitud.fotos.length > 1 ? "s" : ""}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <div className="flex justify-end mt-1">
+                    <svg
+                        className={`w-4 h-4 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`}
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                        <polyline points="6 9 12 15 18 9" strokeWidth="2" />
+                    </svg>
+                </div>
+            </button>
+
+            {/* Detalle expandido */}
+            {expanded && (
+                <div className="space-y-4 pt-1 border-t border-sand">
+
+                    {/* Descripción completa */}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold mb-1">
+                            Descripción completa
+                        </p>
+                        <p className="text-[13px] text-ink/70 leading-relaxed whitespace-pre-wrap">
+                            {solicitud.descripcion}
+                        </p>
+                    </div>
+
+                    {/* Fotos */}
+                    {solicitud.fotos?.length > 0 && (
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold mb-2">
+                                Fotos adjuntas
+                            </p>
+                            <div className="flex gap-2 flex-wrap">
+                                {solicitud.fotos.map((f, i) => (
+                                    <a key={i} href={f.url} target="_blank" rel="noopener noreferrer">
+                                        <img
+                                            src={f.url}
+                                            alt={f.name}
+                                            className="w-24 h-24 rounded-xl object-cover border border-ink/10 hover:opacity-80 transition-opacity"
+                                        />
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Cambiar estado */}
+                    <div>
+                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold mb-2">
+                            Estado de la solicitud
+                        </p>
+                        <div className="flex gap-2">
+                            {ESTADOS.map(estado => (
+                                <button
+                                    key={estado}
+                                    type="button"
+                                    onClick={() => cambiarEstado(estado)}
+                                    disabled={changingEstado}
+                                    className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-all disabled:opacity-50 ${solicitud.estado === estado
+                                            ? estado === "resuelto"
+                                                ? "bg-emerald-500 text-white border-emerald-500"
+                                                : estado === "en_revision"
+                                                    ? "bg-blue-500 text-white border-blue-500"
+                                                    : "bg-amber-400 text-white border-amber-400"
+                                            : "bg-white text-ink/50 border-ink/15 hover:border-ink/30"
+                                        }`}
+                                >
+                                    {ESTADO_LABEL[estado]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Respuestas anteriores */}
+                    {solicitud.respuestas?.length > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
+                                Respuestas enviadas
+                            </p>
+                            {solicitud.respuestas.map((r, i) => (
+                                <div key={i} className="bg-sand/50 rounded-xl px-3 py-2.5 space-y-2">
+                                    {r.texto && <p className="text-[12px] text-ink/80 leading-relaxed">{r.texto}</p>}
+                                    {r.archivo && (
+                                        <a
+                                            href={r.archivo.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg px-2.5 py-1.5"
+                                        >
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                            </svg>
+                                            {r.archivo.name}
+                                        </a>
+                                    )}
+                                    <p className="text-[10px] text-ink/35">
+                                        {r.autor || "H&E"} · {r.fecha ? new Date(r.fecha.seconds * 1000).toLocaleDateString("es-CO") : "—"}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Agregar respuesta */}
+                    {solicitud.estado !== "resuelto" && (
+                        <div className="space-y-2">
+                            <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
+                                Agregar respuesta
+                            </p>
+                            <textarea
+                                value={respuesta}
+                                onChange={e => setRespuesta(e.target.value)}
+                                placeholder="Escribe una respuesta al cliente… (opcional si adjuntas archivo)"
+                                rows={3}
+                                className="input w-full resize-none text-[13px]"
+                            />
+
+                            {/* Adjunto */}
+                            <div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    onChange={e => setArchivoRespuesta(e.target.files?.[0] || null)}
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full border-2 border-dashed border-ink/20 rounded-xl py-2.5 text-[12px] text-ink/50 hover:border-ink/40 hover:text-ink/70 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                    {archivoRespuesta ? archivoRespuesta.name : "Adjuntar documento (opcional)"}
+                                </button>
+                                {archivoRespuesta && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setArchivoRespuesta(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                                        className="text-[11px] text-ink/40 hover:text-red-500 mt-1 ml-1"
+                                    >
+                                        × Quitar adjunto
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Progreso subida */}
+                            {saving && archivoRespuesta && uploadProgress > 0 && (
+                                <div className="space-y-1">
+                                    <div className="h-1.5 bg-sand rounded-full overflow-hidden">
+                                        <div className="h-full bg-ink rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                                    </div>
+                                    <p className="text-[11px] text-ink/50">Subiendo archivo… {uploadProgress}%</p>
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={enviarRespuesta}
+                                disabled={saving || (!respuesta.trim() && !archivoRespuesta)}
+                                className="w-full btn-primary text-[13px] disabled:opacity-50"
+                            >
+                                {saving ? "Enviando…" : "Enviar respuesta"}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}

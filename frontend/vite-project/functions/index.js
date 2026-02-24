@@ -155,6 +155,105 @@ exports.onFaseAvance = onDocumentUpdated(
    ENDPOINT HTTP — pruebas manuales
    POST /sendPush  { userId, title, body }
 ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   TRIGGER 5 — Nueva solicitud de garantía
+   garantias/{projectId}/solicitudes/{solicitudId}
+═══════════════════════════════════════════════════════════════ */
+exports.onGarantiaCreada = onDocumentCreated(
+  "garantias/{projectId}/solicitudes/{solicitudId}",
+  async (event) => {
+    const { projectId } = event.params;
+    const solicitud = event.data?.data();
+    if (!solicitud) return;
+
+    // Buscar al admin por email fijo
+    const adminEmail = "admin@hye.com";
+    const adminSnap = await db.collection("users")
+      .where("email", "==", adminEmail)
+      .limit(1).get();
+
+    if (adminSnap.empty) {
+      console.log("Admin no encontrado para notificación de garantía");
+      return;
+    }
+
+    const adminUid = adminSnap.docs[0].id;
+
+    // Obtener nombre del proyecto
+    const projectSnap = await db.collection("projects").doc(projectId).get();
+    const projectName = projectSnap.exists
+      ? (projectSnap.data().name || projectSnap.data().nombre || "un proyecto")
+      : "un proyecto";
+
+    const prioridad = solicitud.prioridad === "urgente" ? "🚨 URGENTE — " : "";
+    const payload = {
+      type: "nueva_garantia",
+      title: `${prioridad}Nueva solicitud de garantía`,
+      body: `${solicitud.nombreCliente || "Un cliente"} reportó un problema en ${projectName}.`,
+      projectId,
+      projectName,
+      phaseId: "",
+      phaseName: "",
+    };
+
+    return Promise.all([
+      sendPushToUser(adminUid, payload),
+      createInAppNotification(adminUid, payload),
+    ]);
+  }
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   TRIGGER 6 — Luisa responde una solicitud de garantía
+   Se activa cuando el array "respuestas" crece
+═══════════════════════════════════════════════════════════════ */
+exports.onGarantiaRespondida = onDocumentUpdated(
+  "garantias/{projectId}/solicitudes/{solicitudId}",
+  async (event) => {
+    const { projectId } = event.params;
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    if (!before || !after) return;
+
+    // Solo actuar si el array de respuestas creció
+    const respAntes = (before.respuestas || []).length;
+    const respDespues = (after.respuestas || []).length;
+    if (respDespues <= respAntes) return;
+
+    // Buscar al cliente por uid guardado en la solicitud
+    const clientUid = after.creadoPor;
+    if (!clientUid) return;
+
+    const projectSnap = await db.collection("projects").doc(projectId).get();
+    const projectName = projectSnap.exists
+      ? (projectSnap.data().name || projectSnap.data().nombre || "tu proyecto")
+      : "tu proyecto";
+
+    // Última respuesta agregada
+    const ultimaRespuesta = after.respuestas[after.respuestas.length - 1];
+    const textoPreview = ultimaRespuesta?.texto
+      ? ultimaRespuesta.texto.substring(0, 100)
+      : ultimaRespuesta?.archivo
+        ? `Archivo adjunto: ${ultimaRespuesta.archivo.name}`
+        : "El equipo ha respondido tu solicitud.";
+
+    const payload = {
+      type: "garantia_respondida",
+      title: "Respuesta a tu solicitud de garantía",
+      body: textoPreview,
+      projectId,
+      projectName,
+      phaseId: "",
+      phaseName: "",
+    };
+
+    return Promise.all([
+      sendPushToUser(clientUid, payload),
+      createInAppNotification(clientUid, payload),
+    ]);
+  }
+);
+
 exports.sendPush = onRequest(
   { cors: true },
   async (req, res) => {

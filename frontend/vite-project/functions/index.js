@@ -1,6 +1,18 @@
 "use strict";
 
 const admin = require("firebase-admin");
+const nodemailer = require("nodemailer");
+
+// Configurar transporte de email (Gmail)
+// Requiere: firebase functions:config:set gmail.user="..." gmail.pass="..."
+function getTransporter() {
+  const user = process.env.GMAIL_USER || (functions?.config?.()?.gmail?.user);
+  const pass = process.env.GMAIL_PASS || (functions?.config?.()?.gmail?.pass);
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: { user, pass },
+  });
+}
 
 // En firebase-functions v6 los triggers se importan directamente
 const {
@@ -250,6 +262,79 @@ exports.onGarantiaRespondida = onDocumentUpdated(
     return Promise.all([
       sendPushToUser(clientUid, payload),
       createInAppNotification(clientUid, payload),
+    ]);
+  }
+);
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TRIGGER 7 — Solicitud comercial aprobada o rechazada
+   Envía email al prospecto cuando Luisa cambia el estado
+═══════════════════════════════════════════════════════════════ */
+exports.onSolicitudComercialUpdated = onDocumentUpdated(
+  "solicitudesComerciales/{solicitudId}",
+  async (event) => {
+    const before = event.data?.before?.data();
+    const after = event.data?.after?.data();
+    if (!before || !after) return;
+
+    const estadoAntes = before.estado;
+    const estadoDespues = after.estado;
+
+    const esRespuesta = ["aprobada", "rechazada"].includes(estadoDespues);
+    if (!esRespuesta || estadoAntes === estadoDespues) return;
+
+    const { email, emailEnviado } = after;
+    if (!email || !emailEnviado) return;
+
+    const { asunto, cuerpo } = emailEnviado;
+    if (!asunto || !cuerpo) return;
+
+    try {
+      const transporter = getTransporter();
+      await transporter.sendMail({
+        from: '"H&E Arquitectos" <noreply@hyearquitectos.com>',
+        to: email,
+        subject: asunto,
+        text: cuerpo,
+      });
+      console.log(`Email enviado a ${email} — estado: ${estadoDespues}`);
+    } catch (e) {
+      console.error("Error enviando email:", e.message);
+    }
+  }
+);
+
+exports.onSolicitudComercialCreada = onDocumentCreated(
+  "solicitudesComerciales/{solicitudId}",
+  async (event) => {
+    const solicitud = event.data?.data();
+    if (!solicitud) return;
+
+    // Buscar uid del admin por email
+    const adminSnap = await db.collection("users")
+      .where("email", "==", "admin@hye.com")
+      .limit(1).get();
+
+    if (adminSnap.empty) return;
+    const adminUid = adminSnap.docs[0].id;
+
+    const nombre = solicitud.nombre || "Un prospecto";
+    const tipoObra = solicitud.tipoObra || "proyecto";
+
+    const payload = {
+      type: "nueva_solicitud_comercial",
+      title: "🏗 Nueva solicitud de servicio",
+      body: `${nombre} quiere cotizar: ${tipoObra}.`,
+      projectId: "",
+      projectName: "",
+      phaseId: "",
+      phaseName: "",
+    };
+
+    return Promise.all([
+      sendPushToUser(adminUid, payload),
+      createInAppNotification(adminUid, payload),
     ]);
   }
 );

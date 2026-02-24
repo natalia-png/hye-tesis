@@ -18,22 +18,22 @@ export default function FasesProyecto({
   const safeFases = useMemo(() => normalizeFases(fases), [fases]);
   const [localFases, setLocalFases] = useState(safeFases);
   const initialRef = useRef(safeFases);
-  const [openId, setOpenId]   = useState(safeFases?.[0]?.id || null);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState("");
-  const [toast, setToast]     = useState("");
+  const [openId, setOpenId] = useState(safeFases?.[0]?.id || null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     setLocalFases(safeFases);
     initialRef.current = safeFases;
     if (!openId && safeFases?.[0]?.id) setOpenId(safeFases[0].id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeFases]);
 
-  const canEditHere  = !!canEdit && !clientView;
+  const canEditHere = !!canEdit && !clientView;
   const avanceGlobal = useMemo(() => calcAvanceGlobal(localFases), [localFases]);
-  const completed    = localFases.filter(f => f.estado === "completada").length;
-  const lastUpdate   = updatedAt || createdAt;
+  const completed = localFases.filter(f => f.estado === "completada").length;
+  const lastUpdate = updatedAt || createdAt;
 
   const dirty = useMemo(() => {
     const a = JSON.stringify(initialRef.current?.map(pickComparable));
@@ -63,16 +63,24 @@ export default function FasesProyecto({
     setError("");
 
     try {
-      const prevFases    = initialRef.current;
-      const nextFases    = localFases;
-      const progress     = calcAvanceGlobal(nextFases);
+      const prevFases = initialRef.current;
+      const nextFases = localFases;
+      const progress = calcAvanceGlobal(nextFases);
       const prevProgress = calcAvanceGlobal(prevFases);
 
       // 1 ── Guardar en Firestore
+      // Auto-finalizar si todas las fases llegan al 100%
+      const todasCompletas = nextFases.length > 0 &&
+        nextFases.every(f => (f.porcentaje || 0) >= 100);
+
       await updateDoc(doc(db, "projects", projectId), {
         fases: nextFases,
         progress,
         updatedAt: serverTimestamp(),
+        ...(todasCompletas ? {
+          estado: "finalizado",
+          fechaCierre: serverTimestamp(),
+        } : {}),
       });
       initialRef.current = nextFases;
 
@@ -80,7 +88,7 @@ export default function FasesProyecto({
       try {
         const projectSnap = await getDoc(doc(db, "projects", projectId));
         const projectData = projectSnap.data() || {};
-        const clientUid   = await getClientUid(projectData);
+        const clientUid = await getClientUid(projectData);
 
         if (clientUid) {
           const changes = detectChanges(prevFases, nextFases, progress, prevProgress);
@@ -151,7 +159,7 @@ export default function FasesProyecto({
       {/* Acordeón */}
       <div className="grid gap-2">
         {localFases.map(f => {
-          const pct    = clampInt(f.porcentaje, 0, 100);
+          const pct = clampInt(f.porcentaje, 0, 100);
           const isOpen = openId === f.id;
 
           return (
@@ -223,7 +231,7 @@ function EstadoChip({ estado }) {
   const label = labelEstado(estado);
   const cls = estado === "completada" ? "bg-ivory border-taupe/30 text-ink"
     : estado === "en_curso" ? "bg-sand border-taupe/30 text-ink"
-    : "bg-white border-sand text-ink/80";
+      : "bg-white border-sand text-ink/80";
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-[2px] text-[10px] ${cls}`}>
       {label}

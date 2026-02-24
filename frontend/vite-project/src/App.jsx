@@ -7,17 +7,16 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
 
-
-
 import Proyectos from "./pages/Proyectos.jsx";
 import ProyectosCliente from "./pages/ProyectosCliente.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ProyectoDetalle from "./pages/ProyectoDetalle.jsx";
-import GarantiasCliente from "./pages/GarantiasCliente";
-import GarantiasAdmin from "./pages/GarantiasAdmin";
 import ProyectoDetalleCliente from "./pages/ProyectoDetalleCliente.jsx";
 import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
+import SolicitudServicio from "./pages/SolicitudServicio";
+import ComercialAdmin from "./pages/ComercialAdmin";
+import HistorialProyectos from "./pages/HistorialProyectos.jsx";
 
 function ShellLayout() {
   return (
@@ -37,6 +36,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/solicitar" element={<SolicitudServicio />} />
 
       <Route element={<ProtectedRoute><ShellLayout /></ProtectedRoute>}>
 
@@ -65,11 +65,11 @@ export default function App() {
         <Route path="mis-proyectos/:id" element={
           <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><ProyectoDetalleCliente /></RoleRoute>
         } />
-        <Route path="mis-proyectos/:id/garantias" element={
-          <RoleRoute allow={ACCESS.PROYECTOS_CLIENTE}><GarantiasCliente /></RoleRoute>
+        <Route path="comercial" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ComercialAdmin /></RoleRoute>
         } />
-        <Route path="proyectos/:id/garantias" element={
-          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><GarantiasAdmin /></RoleRoute>
+        <Route path="historial" element={
+          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><HistorialProyectos /></RoleRoute>
         } />
 
 

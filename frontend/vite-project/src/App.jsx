@@ -1,11 +1,13 @@
 // src/App.jsx
 import { Routes, Route, Outlet } from "react-router-dom";
+import { useAuth } from "./app/useAuth";
 import Header from "./components/header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Login from "./pages/auth/Login.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
+
 
 import Proyectos from "./pages/Proyectos.jsx";
 import ProyectosCliente from "./pages/ProyectosCliente.jsx";
@@ -14,9 +16,19 @@ import ProyectoDetalle from "./pages/ProyectoDetalle.jsx";
 import ProyectoDetalleCliente from "./pages/ProyectoDetalleCliente.jsx";
 import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
+import HistorialProyectos from "./pages/HistorialProyectos";
+import GestionColaboradores from "./pages/GestionColaboradores";
 import SolicitudServicio from "./pages/SolicitudServicio";
 import ComercialAdmin from "./pages/ComercialAdmin";
-import HistorialProyectos from "./pages/HistorialProyectos.jsx";
+
+// Wrapper que decide canManageDocuments según el rol
+function ProyectoDetalleWrapper() {
+  const { user } = useAuth();
+  const role = user?.role || "sin-rol";
+  // Admin y colaborador pueden gestionar — la lógica por-fase vive en FasesProyecto
+  const canManage = role === "admin" || role === "colaborador";
+  return <ProyectoDetalle canManageDocuments={canManage} clientView={false} />;
+}
 
 function ShellLayout() {
   return (
@@ -44,14 +56,14 @@ export default function App() {
 
         {/* Admin */}
         <Route path="proyectos" element={
-          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><Proyectos /></RoleRoute>
+          <RoleRoute allow={["admin", "colaborador"]}><Proyectos /></RoleRoute>
         } />
         <Route path="proyectos/nuevo" element={
           <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ProyectoNuevo /></RoleRoute>
         } />
         <Route path="proyectos/:id" element={
           <RoleRoute allow={ACCESS.PROYECTOS_LIST}>
-            <ProyectoDetalle canManageDocuments={true} clientView={false} />
+            <ProyectoDetalleWrapper />
           </RoleRoute>
         } />
         <Route path="proyectos/:id/editar" element={
@@ -69,9 +81,11 @@ export default function App() {
           <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ComercialAdmin /></RoleRoute>
         } />
         <Route path="historial" element={
-          <RoleRoute allow={ACCESS.PROYECTOS_LIST}><HistorialProyectos /></RoleRoute>
+          <RoleRoute allow={["admin"]}><HistorialProyectos /></RoleRoute>
         } />
-
+        <Route path="colaboradores" element={
+          <RoleRoute allow={["admin"]}><GestionColaboradores /></RoleRoute>
+        } />
 
       </Route>
 

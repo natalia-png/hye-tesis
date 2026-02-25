@@ -1,22 +1,62 @@
 // src/data/roles.js
+// Sistema de roles H&E Arquitectos
+// admin        → Luisa (control total)
+// colaborador  → Equipo interno (jurídica, sistemas, arquitecto)
+// cliente      → Dueño del proyecto
 
-// Definición de roles base
 export const ROLES = {
   ADMIN: "admin",
+  COLABORADOR: "colaborador",
   CLIENTE: "cliente",
+};
+
+export const SUB_ROLES = {
+  JURIDICA: "juridica",
+  SISTEMAS: "sistemas",
   ARQUITECTO: "arquitecto",
-  INGENIERO: "ingeniero",
-  ABOGADO: "abogado",
 };
 
-// Accesos por módulo o vista
+export const SUB_ROLE_LABEL = {
+  juridica: "Jurídica",
+  sistemas: "Sistemas",
+  arquitecto: "Arquitecto",
+};
+
+export const SUB_ROLE_COLOR = {
+  juridica: "bg-violet-50 text-violet-700 border-violet-200",
+  sistemas: "bg-blue-50   text-blue-700   border-blue-200",
+  arquitecto: "bg-amber-50  text-amber-700  border-amber-200",
+};
+
+// ── Permisos por sección ──────────────────────────────────────
 export const ACCESS = {
-  DASHBOARD: ["admin", "arquitecto", "ingeniero", "abogado"],
-  PROYECTOS_LIST: ["admin", "arquitecto", "ingeniero", "abogado"],
+  // Admin + colaborador pueden ver lista de proyectos
+  PROYECTOS_LIST: ["admin", "colaborador"],
+  // Solo admin puede crear / editar proyectos
+  PROYECTOS_EDIT: ["admin"],
+  // Solo cliente ve sus proyectos
   PROYECTOS_CLIENTE: ["cliente"],
+  // Admin + colaborador ven historial
+  HISTORIAL: ["admin"],
+  // Solo admin ve módulo comercial
+  COMERCIAL: ["admin"],
+  // Admin + colaborador ven garantías admin
+  GARANTIAS_ADMIN: ["admin", "colaborador"],
 };
 
-// 👇 ESTA FUNCIÓN es la que faltaba
+// Helper para RoleRoute
 export function isOneOf(role, allowed = []) {
-  return allowed.includes(role);
+  if (!role) return false;
+  return allowed.includes(role.toLowerCase().trim());
+}
+
+// Helper para saber si puede editar una fase específica
+// Admin puede todo. Colaborador solo si es el responsableUid de esa fase.
+export function canEditFase(userRole, userUid, fase) {
+  if (!userRole) return false;
+  if (userRole === "admin") return true;
+  if (userRole === "colaborador") {
+    return fase?.responsableUid === userUid;
+  }
+  return false;
 }

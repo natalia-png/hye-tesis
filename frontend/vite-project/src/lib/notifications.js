@@ -1,13 +1,5 @@
 // src/lib/notifications.js
-// Opción C — Firestore Trigger
-//
-// El frontend SOLO escribe en Firestore.
-// La Cloud Function onNotificationCreated se activa automáticamente
-// en el servidor y envía el push FCM sin que el frontend haga nada más.
-//
-// Ventaja: si el cliente pierde conexión a mitad del guardado,
-// Firestore sincroniza en cuanto recupera red y el trigger dispara igual.
-
+// Crea notificaciones in-app (Firestore) y envía push FCM al cliente
 import {
   collection, addDoc, serverTimestamp,
   query, where, getDocs, limit,
@@ -16,20 +8,56 @@ import { db } from "./firebase";
 
 /* ─────────────────────────────────────────────────────────────
    createNotification
-   Escribe en Firestore → el trigger del servidor envía el push
+   Escribe en Firestore + dispara push FCM si el cliente tiene token
 ───────────────────────────────────────────────────────────── */
 export async function createNotification(toUid, payload) {
   if (!toUid || !payload?.title) return;
 
+  // 1 ── Notificación in-app (tiempo real vía onSnapshot)
   try {
     await addDoc(collection(db, "notifications", toUid, "items"), {
       ...payload,
       read: false,
       createdAt: serverTimestamp(),
     });
-    // ✅ Eso es todo — la Cloud Function se encarga del push automáticamente
   } catch (e) {
-    console.error("createNotification:", e);
+    console.error("createNotification (Firestore):", e);
+  }
+
+  // 2 ── Push FCM (si el usuario tiene tokens guardados)
+  try {
+    const tokensSnap = await getDocs(
+      collection(db, "users", toUid, "fcmTokens")
+    );
+    if (tokensSnap.empty) return;
+
+    const tokens = tokensSnap.docs.map(d => d.data().token).filter(Boolean);
+    if (tokens.length === 0) return;
+
+    // URL de la Cloud Function
+    const projectIdFirebase = db.app.options.projectId;
+    const fnUrl = `https://us-central1-${projectIdFirebase}.cloudfunctions.net/sendPush`;
+
+    await fetch(fnUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tokens, // Arreglo de tokens devuelto por firestore
+        title: payload.title,
+        body: payload.body,
+        data: {
+          type: payload.type || "general",
+          projectId: payload.projectId || "",
+          projectName: payload.projectName || "",
+          phaseId: payload.phaseId || "",
+          phaseName: payload.phaseName || "",
+          role: payload.role || "general",
+        },
+      }),
+    });
+  } catch (e) {
+    // Push falla silenciosamente — la notif in-app ya se guardó
+    console.warn("Push FCM (no crítico):", e.message);
   }
 }
 
@@ -89,7 +117,7 @@ export function detectChanges(prevFases = [], nextFases = [], projectProgress = 
 
 /* ─────────────────────────────────────────────────────────────
    getClientUid
-   Obtiene el UID del cliente de un proyecto
+   Obtiene el UID del cliente del proyecto
 ───────────────────────────────────────────────────────────── */
 export async function getClientUid(projectData) {
   if (projectData?.clientId) return projectData.clientId;

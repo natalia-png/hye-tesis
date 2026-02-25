@@ -2,6 +2,7 @@
 import { useAuth } from "../app/useAuth";
 import DashboardAdmin from "./DashboardAdmin.jsx";
 import DashboardCliente from "./DashboardCliente.jsx";
+import DashboardColaborador from "./DashboardColaborador.jsx";
 
 export default function Dashboard() {
   const { user, ready } = useAuth();
@@ -13,6 +14,7 @@ export default function Dashboard() {
   const role = (user?.role || "sin-rol").toLowerCase().trim();
 
   if (role === "cliente") return <DashboardCliente />;
+  if (role === "colaborador") return <DashboardColaborador />;
 
   return <DashboardAdmin />;
 }

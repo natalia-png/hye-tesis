@@ -60,11 +60,11 @@ export default function ArchivosFase({
     // ✅ Admin ve todos, cliente solo los visibles
     const qs = clientView
       ? query(
-          colRef,
-          where("visibleToClient", "==", true),
-          orderBy("createdAt", "desc"),
-          limit(50)
-        )
+        colRef,
+        where("visibleToClient", "==", true),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      )
       : query(colRef, orderBy("createdAt", "desc"), limit(50));
 
     const unsub = onSnapshot(
@@ -205,9 +205,17 @@ export default function ArchivosFase({
     setOk("");
 
     try {
+      // Intentar borrar de Storage (puede fallar si el archivo es muy viejo)
       if (file.storagePath) {
-        await deleteObject(storageRef(storage, file.storagePath));
+        try {
+          await deleteObject(storageRef(storage, file.storagePath));
+        } catch (storageErr) {
+          // Si Storage falla por permisos o archivo no existe, continuar igual
+          // El documento de Firestore se borra de todas formas
+          console.warn("Storage delete (no crítico):", storageErr.code);
+        }
       }
+      // Siempre borrar el documento de Firestore
       await deleteDoc(doc(colRef, file.id));
       setOk("Archivo eliminado ✅");
       setTimeout(() => setOk(""), 2000);
@@ -221,12 +229,13 @@ export default function ArchivosFase({
 
   const onDownload = async (file) => {
     try {
-      if (clientView) {
-        if (!file?.downloadURL) {
-          setError("Este archivo aún no está publicado para el cliente.");
-          return;
-        }
+      // Usar downloadURL guardado en Firestore (evita llamar Storage directamente)
+      if (file?.downloadURL) {
         window.open(file.downloadURL, "_blank", "noopener,noreferrer");
+        return;
+      }
+      if (clientView) {
+        setError("Este archivo aún no está publicado para el cliente.");
         return;
       }
 
@@ -346,11 +355,10 @@ export default function ArchivosFase({
                     <>
                       <button
                         type="button"
-                        className={`text-[12px] px-3 py-1.5 rounded-full border transition ${
-                          f.visibleToClient
+                        className={`text-[12px] px-3 py-1.5 rounded-full border transition ${f.visibleToClient
                             ? "border-ink/30 text-ink/70 hover:bg-sand"
                             : "border-ink bg-ink text-ivory hover:bg-ink/80"
-                        }`}
+                          }`}
                         onClick={() => onToggleVisible(f.id, f.visibleToClient)}
                         disabled={busy}
                       >

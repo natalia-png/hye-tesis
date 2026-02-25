@@ -339,6 +339,119 @@ exports.onSolicitudComercialCreada = onDocumentCreated(
   }
 );
 
+
+/* ═══════════════════════════════════════════════════════════════
+   ENDPOINT — Crear colaborador
+   POST /crearColaborador { name, email, password, subRole }
+   Solo ejecutable por admin (verificado por token)
+═══════════════════════════════════════════════════════════════ */
+exports.crearColaborador = onRequest(
+  { cors: true },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    // Verificar que quien llama es admin (token de Firebase Auth)
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) {
+      res.status(401).json({ error: "No autorizado" });
+      return;
+    }
+
+    let callerUid;
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      callerUid = decoded.uid;
+    } catch {
+      res.status(401).json({ error: "Token inválido" });
+      return;
+    }
+
+    // Verificar rol admin en Firestore
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      res.status(403).json({ error: "Solo el admin puede crear colaboradores" });
+      return;
+    }
+
+    const { name, email, password, subRole } = req.body;
+    if (!name || !email || !password || !subRole) {
+      res.status(400).json({ error: "name, email, password y subRole son obligatorios" });
+      return;
+    }
+
+    try {
+      // Crear usuario en Firebase Auth con Admin SDK (no afecta sesión del admin)
+      const userRecord = await admin.auth().createUser({
+        email: email.trim().toLowerCase(),
+        password,
+        displayName: name.trim(),
+      });
+
+      // Guardar perfil en Firestore
+      await db.collection("users").doc(userRecord.uid).set({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        role: "colaborador",
+        subRole: subRole,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      res.json({ success: true, uid: userRecord.uid });
+    } catch (e) {
+      const msgs = {
+        "auth/email-already-exists": "Este correo ya está registrado.",
+        "auth/invalid-email": "El correo no es válido.",
+        "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+      };
+      res.status(400).json({ error: msgs[e.code] || e.message });
+    }
+  }
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   ENDPOINT — Eliminar colaborador
+   DELETE /eliminarColaborador { uid }
+═══════════════════════════════════════════════════════════════ */
+exports.eliminarColaborador = onRequest(
+  { cors: true },
+  async (req, res) => {
+    if (req.method !== "DELETE") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const callerDoc = await db.collection("users").doc(decoded.uid).get();
+      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+        res.status(403).json({ error: "Solo el admin puede eliminar colaboradores" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Token inválido" }); return;
+    }
+
+    const { uid } = req.body;
+    if (!uid) { res.status(400).json({ error: "uid es obligatorio" }); return; }
+
+    try {
+      await admin.auth().deleteUser(uid);
+      await db.collection("users").doc(uid).delete();
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
 exports.sendPush = onRequest(
   { cors: true },
   async (req, res) => {

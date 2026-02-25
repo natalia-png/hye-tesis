@@ -1,7 +1,9 @@
 // src/components/FasesProyecto.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { useAuth } from "../app/useAuth";
+import { canEditFase, SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
 import NotasFase from "./NotasFase.jsx";
 import ArchivosFase from "./ArchivosFase.jsx";
 import { calcAvanceGlobal, clampInt, labelEstado, normalizeFases } from "../data/fases";
@@ -15,13 +17,31 @@ export default function FasesProyecto({
   updatedAt = null,
   createdAt = null,
 }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const isColab = user?.role === "colaborador";
+
+  // canEditHere global: admin puede editar todo, colaborador solo sus fases
+  // (la lógica por fase se evalúa en cada item)
   const safeFases = useMemo(() => normalizeFases(fases), [fases]);
   const [localFases, setLocalFases] = useState(safeFases);
+  const [colaboradores, setColaboradores] = useState([]);
   const initialRef = useRef(safeFases);
   const [openId, setOpenId] = useState(safeFases?.[0]?.id || null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
+
+  // Cargar lista de colaboradores para el selector de responsable
+  useEffect(() => {
+    if (!isAdmin) return;
+    getDocs(query(collection(db, "users"), where("role", "==", "colaborador")))
+      .then(snap => {
+        console.log("[Fases] Colaboradores encontrados:", snap.size);
+        setColaboradores(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+      })
+      .catch(e => console.error("[Fases] Error cargando colaboradores:", e));
+  }, [isAdmin]);
 
   useEffect(() => {
     setLocalFases(safeFases);
@@ -30,7 +50,31 @@ export default function FasesProyecto({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeFases]);
 
-  const canEditHere = !!canEdit && !clientView;
+  // Admin edita todo. Colaborador solo edita sus fases asignadas.
+  const canEditFaseActual = (fase) => {
+    if (clientView) return false;
+    if (!canEdit) return false;
+    if (isAdmin) return true;
+    if (isColab) {
+      const localFase = localFases.find(f => f.id === fase?.id);
+      const uid = localFase?.responsableUid || fase?.responsableUid;
+      console.log("[canEdit]", fase?.nombre, "| responsableUid:", uid, "| userUid:", user?.uid, "| match:", uid === user?.uid);
+      return uid === user?.uid;
+    }
+    return false;
+  };
+  // Para partes globales (botón guardar, header)
+  // Usamos safeFases (directo de props) para no depender del estado local desactualizado
+  const canEditHere = isAdmin
+    ? (!!canEdit && !clientView)
+    : (isColab && !clientView && safeFases.some(f => f.responsableUid === user?.uid));
+
+  // canEditFaseActual también lee de safeFases para la verificación de pertenencia
+  // pero aplica el cambio local si ya fue asignado en esta sesión
+  const responsableEnFase = (fase) => {
+    const local = localFases.find(f => f.id === fase?.id);
+    return local?.responsableUid || fase?.responsableUid;
+  };
   const avanceGlobal = useMemo(() => calcAvanceGlobal(localFases), [localFases]);
   const completed = localFases.filter(f => f.estado === "completada").length;
   const lastUpdate = updatedAt || createdAt;
@@ -64,7 +108,15 @@ export default function FasesProyecto({
 
     try {
       const prevFases = initialRef.current;
-      const nextFases = localFases;
+
+      // Colaborador: solo guarda sus fases, preserva las de otros sin cambios
+      const nextFases = isColab
+        ? localFases.map(f =>
+          f.responsableUid === user?.uid
+            ? f  // su fase — guarda los cambios
+            : (prevFases.find(p => p.id === f.id) || f) // fase ajena — restaura original
+        )
+        : localFases;
       const progress = calcAvanceGlobal(nextFases);
       const prevProgress = calcAvanceGlobal(prevFases);
 
@@ -84,11 +136,30 @@ export default function FasesProyecto({
       });
       initialRef.current = nextFases;
 
-      // 2 ── Enviar notificaciones al cliente (sin bloquear)
+      // 2 ── Enviar notificaciones al cliente y a colaboradores asignados
       try {
         const projectSnap = await getDoc(doc(db, "projects", projectId));
         const projectData = projectSnap.data() || {};
+        const projectName = projectData.name || projectData.nombre || "Proyecto";
         const clientUid = await getClientUid(projectData);
+
+        // Notificar a colaboradores recién asignados (admin asignó una fase)
+        if (isAdmin) {
+          const prevFasesRef = initialRef.current;
+          for (const f of nextFases) {
+            const prev = prevFasesRef.find(p => p.id === f.id);
+            // Si cambió el responsableUid y ahora tiene uno
+            if (f.responsableUid && f.responsableUid !== prev?.responsableUid) {
+              await createNotification(f.responsableUid, {
+                type: "fase_asignada",
+                title: "📋 Nueva fase asignada",
+                body: `Se te asignó "${f.nombre}" en el proyecto ${projectName}`,
+                projectId,
+                projectName,
+              });
+            }
+          }
+        }
 
         if (clientUid) {
           const changes = detectChanges(prevFases, nextFases, progress, prevProgress);
@@ -171,10 +242,15 @@ export default function FasesProyecto({
               >
                 <div className="min-w-0">
                   <p className="text-[13px] font-medium text-ink truncate">{f.nombre}</p>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <EstadoChip estado={f.estado} />
                     <span className="text-[11px] text-ink/60">{pct}%</span>
                     <span className="text-[11px] text-ink/40">· Peso {f.peso}</span>
+                    {f.responsableNombre && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${SUB_ROLE_COLOR[f.responsableSubRole] || "bg-sand text-ink/60 border-taupe/20"}`}>
+                        {f.responsableNombre.split(" ")[0]}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -191,7 +267,43 @@ export default function FasesProyecto({
                     </div>
                   </div>
 
-                  {canEditHere ? (
+                  {/* Selector de responsable — solo admin */}
+                  {isAdmin && colaboradores.length > 0 && (
+                    <div className="mt-3 space-y-1">
+                      <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
+                        Responsable
+                      </p>
+                      <select
+                        value={localFases.find(lf => lf.id === f.id)?.responsableUid || ""}
+                        onChange={e => {
+                          const uid = e.target.value;
+                          const col = colaboradores.find(c => c.uid === uid);
+                          setLocalFases(prev => prev.map(fase =>
+                            fase.id === f.id
+                              ? {
+                                ...fase,
+                                responsableUid: uid || null,
+                                responsableNombre: col?.name || null,
+                                responsableSubRole: col?.subRole || null,
+                              }
+                              : fase
+                          ));
+                          // dirty se detecta automáticamente via useMemo
+                        }}
+                        className="input w-full text-[12px]"
+                      >
+                        <option value="">Sin responsable</option>
+                        {colaboradores.map(col => (
+                          <option key={col.uid} value={col.uid}>
+                            {col.name} ({SUB_ROLE_LABEL[col.subRole] || col.subRole})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Slider — admin siempre, colaborador solo en sus fases */}
+                  {canEditFaseActual(f) ? (
                     <div className="mt-3">
                       <div className="flex items-center justify-between text-[11px] text-ink/60 mb-1">
                         <span>Ajustar avance</span><span>{pct}%</span>
@@ -204,13 +316,16 @@ export default function FasesProyecto({
                       <p className="text-[10px] text-ink/50 mt-1">Incrementos de 5% para consistencia.</p>
                     </div>
                   ) : (
-                    <p className="mt-3 text-[11px] text-ink/50">
-                      Esta fase es informativa. El avance lo actualiza el equipo de H&amp;E.
-                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/40">
+                      {isColab && f.responsableUid && f.responsableUid !== user?.uid
+                        ? <span>Esta fase está asignada a otro colaborador.</span>
+                        : <span>El avance lo actualiza el equipo de H&E.</span>
+                      }
+                    </div>
                   )}
 
-                  <NotasFase projectId={projectId} phaseId={f.id} canEdit={canEditHere} clientView={clientView} />
-                  <ArchivosFase projectId={projectId} phaseId={f.id} canEdit={canEditHere} clientView={clientView} />
+                  <NotasFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
+                  <ArchivosFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
                 </div>
               )}
             </div>
@@ -240,7 +355,13 @@ function EstadoChip({ estado }) {
 }
 
 function pickComparable(f) {
-  return { id: f?.id, porcentaje: clampInt(f?.porcentaje, 0, 100), estado: f?.estado, peso: f?.peso };
+  return {
+    id: f?.id,
+    porcentaje: clampInt(f?.porcentaje, 0, 100),
+    estado: f?.estado,
+    peso: f?.peso,
+    responsableUid: f?.responsableUid || null,
+  };
 }
 
 function timeAgoSmart(value) {

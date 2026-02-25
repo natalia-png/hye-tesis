@@ -18,6 +18,7 @@ import ProyectoNuevo from "./pages/ProyectoNuevo.jsx";
 import ProyectoEditar from "./pages/ProyectoEditar.jsx";
 import HistorialProyectos from "./pages/HistorialProyectos";
 import GestionColaboradores from "./pages/GestionColaboradores";
+import AsistenteIA from "./components/AsistenteIA";
 import SolicitudServicio from "./pages/SolicitudServicio";
 import ComercialAdmin from "./pages/ComercialAdmin";
 
@@ -40,6 +41,7 @@ function ShellLayout() {
         </div>
       </main>
       <BottomNav />
+      <AsistenteIA />
     </div>
   );
 }

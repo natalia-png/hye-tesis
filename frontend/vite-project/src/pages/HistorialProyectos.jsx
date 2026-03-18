@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, doc, deleteDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import BtnReportePDF from "../components/BtnReportePDF";
 
@@ -88,7 +88,9 @@ export default function HistorialProyectos() {
             ) : (
                 <div className="space-y-3">
                     {filtrados.map(p => (
-                        <TarjetaHistorial key={p.id} proyecto={p} nav={nav} />
+                        <TarjetaHistorial key={p.id} proyecto={p} nav={nav} onEliminar={id => {
+                            deleteDoc(doc(db, "projects", id)).catch(console.error);
+                        }} />
                     ))}
                 </div>
             )}
@@ -97,7 +99,16 @@ export default function HistorialProyectos() {
 }
 
 /* ── TARJETA ── */
-function TarjetaHistorial({ proyecto, nav }) {
+function TarjetaHistorial({ proyecto, nav, onEliminar }) {
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleEliminar = async () => {
+        setDeleting(true);
+        try { await onEliminar(proyecto.id); }
+        catch { setDeleting(false); setConfirmDelete(false); }
+    };
+
     const nombre = proyecto.name || proyecto.nombre || "Sin nombre";
     const cliente = proyecto.client || proyecto.cliente || "—";
     const tipo = proyecto.type || proyecto.tipo || "—";
@@ -179,6 +190,40 @@ function TarjetaHistorial({ proyecto, nav }) {
             {/* Reporte PDF */}
             <div className="pt-1">
                 <BtnReportePDF proyecto={proyecto} isAdmin={true} />
+            </div>
+
+            {/* Eliminar */}
+            <div className="border-t border-sand pt-3">
+                {!confirmDelete ? (
+                    <button
+                        type="button"
+                        onClick={() => setConfirmDelete(true)}
+                        className="text-[11px] text-ink/35 hover:text-red-500 transition-colors"
+                    >
+                        Eliminar proyecto del historial
+                    </button>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <p className="text-[11px] text-red-600 font-medium">
+                            ¿Eliminar permanentemente?
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleEliminar}
+                            disabled={deleting}
+                            className="px-3 py-1 rounded-lg bg-red-500 text-white text-[11px] font-medium disabled:opacity-50"
+                        >
+                            {deleting ? "Eliminando…" : "Sí, eliminar"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConfirmDelete(false)}
+                            className="px-3 py-1 rounded-lg text-[11px] text-ink/50 hover:text-ink transition"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );

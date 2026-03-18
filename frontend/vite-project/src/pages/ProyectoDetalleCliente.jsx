@@ -221,7 +221,7 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
   const isActive = !isDone && (fase.estado === "en_curso" || pct > 0);
 
   return (
-    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${isDone ? "bg-[#141414] border-[#141414]"
+    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${isDone ? "bg-[#5C5852] border-[#5C5852]"
       : isActive ? "bg-white border-black/20"
         : "bg-white border-black/[0.06]"
       } ${isOpen ? "shadow-md" : "shadow-sm"}`}>
@@ -234,7 +234,7 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
       >
         {/* Número / check */}
         <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${isDone ? "bg-ivory/15 text-ivory"
-          : isActive ? "bg-[#141414] text-ivory"
+          : isActive ? "bg-[#5C5852] text-ivory"
             : "bg-black/[0.05] text-ink/30"
           }`}>
           {isDone ? (
@@ -327,7 +327,7 @@ function NotasPanel({ projectId, phaseId }) {
     <div className="px-4 pt-4 pb-2">
       {/* Header sección */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded-full bg-[#141414] flex items-center justify-center flex-shrink-0">
+        <div className="w-5 h-5 rounded-full bg-[#5C5852] flex items-center justify-center flex-shrink-0">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
@@ -336,7 +336,7 @@ function NotasPanel({ projectId, phaseId }) {
           Actualizaciones
         </p>
         {notas.length > 0 && (
-          <span className="ml-auto text-[10px] bg-[#141414] text-ivory rounded-full px-1.5 py-0.5">
+          <span className="ml-auto text-[10px] bg-[#5C5852] text-ivory rounded-full px-1.5 py-0.5">
             {notas.length}
           </span>
         )}
@@ -350,7 +350,7 @@ function NotasPanel({ projectId, phaseId }) {
         <div className="space-y-3 mb-3">
           {notas.map(n => (
             <div key={n.id} className="flex gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-[#141414] flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-7 h-7 rounded-full bg-[#5C5852] flex items-center justify-center flex-shrink-0 mt-0.5">
                 <span className="text-[8px] font-bold text-ivory tracking-tight">HE</span>
               </div>
               <div className="flex-1 min-w-0">
@@ -405,7 +405,7 @@ function ArchivosPanel({ projectId, phaseId }) {
 
       {/* Header sección */}
       <div className="flex items-center gap-2 mb-3">
-        <div className="w-5 h-5 rounded-full bg-[#141414] flex items-center justify-center flex-shrink-0">
+        <div className="w-5 h-5 rounded-full bg-[#5C5852] flex items-center justify-center flex-shrink-0">
           <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
             <polyline points="13 2 13 9 20 9" />
@@ -437,7 +437,7 @@ function ArchivosPanel({ projectId, phaseId }) {
                 {a.size && <p className="text-[10px] text-ink/35">{formatSize(a.size)}</p>}
               </div>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${busy ? "border-2 border-ink/15 border-t-ink/60 animate-spin"
-                : "bg-[#F2EEE7] group-hover:bg-[#141414]"
+                : "bg-[#F2EEE7] group-hover:bg-[#5C5852]"
                 }`}>
                 {!busy && (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"

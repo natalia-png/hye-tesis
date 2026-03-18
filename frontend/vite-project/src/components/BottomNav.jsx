@@ -21,7 +21,8 @@ export default function BottomNav() {
   const isColaboradores = pathname.startsWith("/colaboradores");
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 border-t border-black/5 bg-ivory/95 backdrop-blur-sm">
+    <nav className="fixed bottom-0 inset-x-0 border-t border-black/5 bg-ivory/95 backdrop-blur-sm"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="mx-auto max-w-[500px] flex items-center justify-around py-2 text-[11px]">
 
         {/* INICIO */}

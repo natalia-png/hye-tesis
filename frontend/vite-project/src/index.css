@@ -24,6 +24,8 @@ a {
 body {
   background: #F2EEE7;
   color: #111111;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @layer components {

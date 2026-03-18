@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
     collection, onSnapshot, orderBy, query,
-    doc, updateDoc, serverTimestamp,
+    doc, updateDoc, serverTimestamp, deleteDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -152,6 +152,8 @@ function TarjetaSolicitud({ solicitud, nav }) {
     const [cambiandoEstado, setCambiandoEstado] = useState(false);
     const [modalEmail, setModalEmail] = useState(null); // { estado, asunto, cuerpo }
     const [enviandoEmail, setEnviandoEmail] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const fecha = solicitud.createdAt?.toDate
         ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
@@ -213,6 +215,17 @@ function TarjetaSolicitud({ solicitud, nav }) {
             console.error(e);
         } finally {
             setEnviandoEmail(false);
+        }
+    };
+
+    const eliminarSolicitud = async () => {
+        setDeleting(true);
+        try {
+            await deleteDoc(solRef);
+        } catch (e) {
+            console.error(e);
+            setDeleting(false);
+            setConfirmDelete(false);
         }
     };
 
@@ -398,6 +411,43 @@ function TarjetaSolicitud({ solicitud, nav }) {
                             Convertir a proyecto
                         </button>
                     )}
+                    {/* Eliminar solicitud */}
+                    <div className="pt-1 border-t border-sand">
+                        {!confirmDelete ? (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmDelete(true)}
+                                className="w-full text-[12px] text-red-400 hover:text-red-600 transition py-1"
+                            >
+                                Eliminar solicitud
+                            </button>
+                        ) : (
+                            <div className="space-y-2">
+                                <p className="text-[12px] text-red-600 text-center font-medium">
+                                    ¿Confirmar eliminación? Esta acción no se puede deshacer.
+                                </p>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmDelete(false)}
+                                        disabled={deleting}
+                                        className="flex-1 btn-outline text-[12px] py-2"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={eliminarSolicitud}
+                                        disabled={deleting}
+                                        className="flex-1 bg-red-500 hover:bg-red-600 text-white text-[12px]
+                                                   font-medium rounded-xl py-2 transition disabled:opacity-50"
+                                    >
+                                        {deleting ? "Eliminando…" : "Sí, eliminar"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
             {/* ── Modal editar email ── */}

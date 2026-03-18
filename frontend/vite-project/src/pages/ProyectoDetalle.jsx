@@ -1,7 +1,7 @@
 // src/pages/ProyectoDetalle.jsx
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import BtnReportePDF from "../components/BtnReportePDF";
 
@@ -19,6 +19,9 @@ export default function ProyectoDetalle({
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesValue, setNotesValue] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -50,6 +53,8 @@ export default function ProyectoDetalle({
 
         const avanceReal = calcAvanceGlobal(fasesSafe);
 
+        const adminNotes = data.adminNotes || "";
+        setNotesValue(adminNotes);
         setProject({
           id: snap.id,
           code: data.code || snap.id,
@@ -70,6 +75,7 @@ export default function ProyectoDetalle({
           lawyer: data.lawyer || data.abogado || null,
           budget: data.budget ?? data.presupuesto ?? null,
           description: data.description || data.descripcion || "",
+          adminNotes: data.adminNotes || "",
 
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
@@ -88,6 +94,19 @@ export default function ProyectoDetalle({
   const goBack = () => {
     nav(clientView ? "/mis-proyectos" : "/proyectos");
   };
+
+  async function saveNotes() {
+    setNotesSaving(true);
+    try {
+      await updateDoc(doc(db, "projects", id), { adminNotes: notesValue });
+      setProject(p => ({ ...p, adminNotes: notesValue }));
+      setEditingNotes(false);
+    } catch {
+      // silently ignore
+    } finally {
+      setNotesSaving(false);
+    }
+  }
 
   const canEditFases = canManageDocuments && !clientView;
 
@@ -123,13 +142,9 @@ export default function ProyectoDetalle({
     fases,
     type,
     location,
-    leadArchitect,
-    engineer,
-    lawyer,
     budget,
     startDate,
     endDate,
-    description,
     createdAt,
     updatedAt,
   } = project;
@@ -187,11 +202,6 @@ export default function ProyectoDetalle({
           </div>
         </div>
 
-        <p className="text-[12px] text-ink/65">
-          Esta ficha resume la información clave del proyecto para la dirección:
-          alcance, responsables, fechas y avance general.
-        </p>
-
         {/* Barra de avance real global */}
         <div className="mt-1">
           <div className="flex justify-between text-[11px] text-ink/60 mb-1">
@@ -233,30 +243,69 @@ export default function ProyectoDetalle({
 
         <div className="card space-y-2">
           <h2 className="text-[14px] font-semibold text-ink">
-            Equipo responsable
-          </h2>
-          <InfoRow label="Arquitecta líder" value={leadArchitect || "H&E"} />
-          <InfoRow label="Ingeniería" value={engineer} />
-          <InfoRow label="Jurídica" value={lawyer} />
-        </div>
-
-        <div className="card space-y-2">
-          <h2 className="text-[14px] font-semibold text-ink">
             Fechas clave (plan)
           </h2>
           <InfoRow label="Inicio" value={formatDate(startDate)} />
           <InfoRow label="Entrega estimada" value={formatDate(endDate)} />
+          <DaysRemaining endDate={endDate} />
         </div>
 
-        <div className="card space-y-2">
-          <h2 className="text-[14px] font-semibold text-ink">
-            Alcance y notas
-          </h2>
-          <p className="text-[13px] text-ink/70">
-            {description ||
-              "Aún no se ha registrado una descripción detallada."}
-          </p>
-        </div>
+        {!clientView && (
+          <div className="card space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-semibold text-ink">
+                Notas internas
+              </h2>
+              {canManageDocuments && !editingNotes && (
+                <button
+                  type="button"
+                  onClick={() => setEditingNotes(true)}
+                  className="text-[12px] text-ink/50 hover:text-ink underline"
+                >
+                  Editar
+                </button>
+              )}
+            </div>
+
+            {editingNotes ? (
+              <div className="space-y-2">
+                <textarea
+                  rows={4}
+                  value={notesValue}
+                  onChange={e => setNotesValue(e.target.value)}
+                  placeholder="Escribe notas internas del proyecto..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#F7F4EE] border border-taupe/40
+                             text-[13px] text-ink outline-none focus:ring-2 focus:ring-ink/10
+                             focus:border-ink/40 resize-none transition"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={saveNotes}
+                    disabled={notesSaving}
+                    className="px-4 py-1.5 rounded-xl bg-ink text-white text-[12px]
+                               disabled:opacity-60 hover:brightness-110 transition"
+                  >
+                    {notesSaving ? "Guardando..." : "Guardar"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingNotes(false); setNotesValue(project.adminNotes || ""); }}
+                    className="px-4 py-1.5 rounded-xl text-[12px] text-ink/60 hover:text-ink transition"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-[13px] text-ink/70 whitespace-pre-wrap">
+                {project.adminNotes || (
+                  <span className="italic text-ink/40">Sin notas internas aún.</span>
+                )}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -318,6 +367,28 @@ function formatMoney(value) {
     });
   }
   return String(value);
+}
+
+function DaysRemaining({ endDate }) {
+  if (!endDate) return null;
+  const end = endDate?.seconds ? new Date(endDate.seconds * 1000) : new Date(endDate);
+  if (Number.isNaN(end.getTime())) return null;
+
+  const diff = Math.ceil((end.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (diff > 0) {
+    return (
+      <div className="flex justify-between gap-4 text-[13px]">
+        <span className="text-ink/60">Días restantes</span>
+        <span className="font-medium text-green-700">{diff} días</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex justify-between gap-4 text-[13px]">
+      <span className="text-ink/60">Días de retraso</span>
+      <span className="font-medium text-red-600">{Math.abs(diff)} días</span>
+    </div>
+  );
 }
 
 function timeAgoSmart(value) {

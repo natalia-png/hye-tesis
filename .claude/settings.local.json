@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(firebase deploy --only functions)",
+      "Bash(firebase functions:log --only onSolicitudComercialUpdated)"
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../app/useAuth";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../lib/firebase";
+import { findUserByEmail } from "../../lib/firestore";
 import Logo from "../../assets/hye-letrasblancas.png";
 import Bg from "../../assets/bg-arch.png";
 
@@ -48,11 +49,22 @@ export default function Login() {
     if (!resetEmail.trim()) { setResetError("Ingresa tu correo."); return; }
     setResetLoading(true);
     try {
-      await sendPasswordResetEmail(auth, resetEmail.trim());
-      setResetMsg("✅ Correo enviado. Revisa tu bandeja de entrada.");
-    } catch (err) {
-      if (err.code === "auth/user-not-found") setResetError("No existe una cuenta con ese correo.");
-      else setResetError("No se pudo enviar el correo. Intenta de nuevo.");
+      // Verificar si el correo existe en Firestore antes de enviar
+      const userRecord = await findUserByEmail(resetEmail.trim());
+      if (!userRecord) {
+        setResetError("No existe una cuenta registrada con ese correo.");
+        setResetLoading(false);
+        return;
+      }
+
+      const actionCodeSettings = {
+        url: window.location.origin + "/login",
+        handleCodeInApp: false,
+      };
+      await sendPasswordResetEmail(auth, resetEmail.trim(), actionCodeSettings);
+      setResetMsg("✅ Correo enviado. Revisa tu bandeja de entrada (y la carpeta de spam).");
+    } catch {
+      setResetError("No se pudo enviar el correo. Intenta de nuevo.");
     } finally {
       setResetLoading(false);
     }
@@ -60,7 +72,7 @@ export default function Login() {
 
   return (
     <div
-      className="min-h-screen relative flex items-center justify-center overflow-hidden bg-cover bg-center"
+      className="min-h-[100dvh] relative flex items-center justify-center overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: `url(${Bg})` }}
     >
       <div className="absolute inset-0 bg-black/60" />
@@ -188,9 +200,17 @@ export default function Login() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-[#0F0F10]/75">
-                  <label className="inline-flex items-center gap-2 select-none">
-                    <input type="checkbox" className="accent-black scale-110" />
-                    Recuérdame
+                  <label className="inline-flex items-center gap-2 select-none cursor-pointer">
+                    <span className="relative w-[18px] h-[18px] flex-shrink-0">
+                      <input type="checkbox" className="peer sr-only" />
+                      <span className="absolute inset-0 rounded-[5px] border border-[#A29B8E]/50 bg-[#F7F4EE]
+                                       peer-checked:bg-[#0F0F10] peer-checked:border-[#0F0F10] transition-all" />
+                      <svg className="absolute inset-0 m-auto w-2.5 h-2.5 opacity-0 peer-checked:opacity-100 transition-opacity"
+                           fill="none" stroke="white" strokeWidth="3" viewBox="0 0 12 12">
+                        <polyline points="1.5 6 4.5 9 10.5 3" />
+                      </svg>
+                    </span>
+                    <span className="text-[13px] text-[#0F0F10]/65">Recuérdame</span>
                   </label>
                   <button
                     type="button"

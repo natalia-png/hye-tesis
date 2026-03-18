@@ -4,10 +4,15 @@ const admin = require("firebase-admin");
 const nodemailer = require("nodemailer");
 
 // Configurar transporte de email (Gmail)
-// Requiere: firebase functions:config:set gmail.user="..." gmail.pass="..."
+// Requiere variables de entorno: GMAIL_USER y GMAIL_PASS
+// Configurar con: firebase functions:secrets:set GMAIL_USER y GMAIL_PASS
+// O en functions/.env para desarrollo local
 function getTransporter() {
-  const user = process.env.GMAIL_USER || (functions?.config?.()?.gmail?.user);
-  const pass = process.env.GMAIL_PASS || (functions?.config?.()?.gmail?.pass);
+  const user = process.env.GMAIL_USER;
+  const pass = process.env.GMAIL_PASS;
+  if (!user || !pass) {
+    throw new Error("Faltan credenciales de Gmail (GMAIL_USER / GMAIL_PASS)");
+  }
   return nodemailer.createTransport({
     service: "gmail",
     auth: { user, pass },
@@ -272,7 +277,7 @@ exports.onGarantiaRespondida = onDocumentUpdated(
    Envía email al prospecto cuando Luisa cambia el estado
 ═══════════════════════════════════════════════════════════════ */
 exports.onSolicitudComercialUpdated = onDocumentUpdated(
-  "solicitudesComerciales/{solicitudId}",
+  { document: "solicitudesComerciales/{solicitudId}", secrets: ["GMAIL_USER", "GMAIL_PASS"] },
   async (event) => {
     const before = event.data?.before?.data();
     const after = event.data?.after?.data();
@@ -293,7 +298,7 @@ exports.onSolicitudComercialUpdated = onDocumentUpdated(
     try {
       const transporter = getTransporter();
       await transporter.sendMail({
-        from: '"H&E Arquitectos" <noreply@hyearquitectos.com>',
+        from: `"H&E Arquitectos" <${process.env.GMAIL_USER}>`,
         to: email,
         subject: asunto,
         text: cuerpo,
@@ -306,7 +311,7 @@ exports.onSolicitudComercialUpdated = onDocumentUpdated(
 );
 
 exports.onSolicitudComercialCreada = onDocumentCreated(
-  "solicitudesComerciales/{solicitudId}",
+  { document: "solicitudesComerciales/{solicitudId}", secrets: ["GMAIL_USER", "GMAIL_PASS"] },
   async (event) => {
     const solicitud = event.data?.data();
     if (!solicitud) return;
@@ -332,9 +337,11 @@ exports.onSolicitudComercialCreada = onDocumentCreated(
       phaseName: "",
     };
 
+    // Enviar notificación al admin y correo de confirmación al prospecto
     return Promise.all([
       sendPushToUser(adminUid, payload),
       createInAppNotification(adminUid, payload),
+      sendEmailConfirmacionSolicitud(solicitud),
     ]);
   }
 );
@@ -607,4 +614,74 @@ function toStrings(obj) {
   return Object.fromEntries(
     Object.entries(obj).map(([k, v]) => [k, String(v ?? "")])
   );
+}
+
+/**
+ * Envía email de confirmación al prospecto cuando crea una solicitud
+ */
+async function sendEmailConfirmacionSolicitud(solicitud) {
+  try {
+    if (!solicitud.email) {
+      console.log("No se pudo enviar email — falta dirección de correo");
+      return;
+    }
+
+    const transporter = getTransporter();
+    const nombre = solicitud.nombre?.split(" ")[0] || "Prospecto";
+    const tipoObra = solicitud.tipoObra || "tu proyecto";
+
+    const mailOptions = {
+      from: `"H&E Arquitectos" <${process.env.GMAIL_USER}>`,
+      to: solicitud.email,
+      subject: "✅ Solicitud recibida — H&E Arquitectos",
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+          <div style="background: #141414; color: white; padding: 20px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">¡Gracias por contactarnos!</h1>
+          </div>
+          
+          <div style="padding: 30px; background: #F2EEE7;">
+            <p>Hola <strong>${nombre}</strong>,</p>
+            
+            <p>Hemos recibido tu solicitud de cotización para <strong>${tipoObra}</strong>.</p>
+            
+            <p>Nuestro equipo revisará la información y nos pondremos en contacto contigo dentro de las próximas 24 horas al número <strong>${solicitud.telefono || "teléfono que proporcionaste"}</strong> o a este correo.</p>
+            
+            <div style="background: white; border-left: 4px solid #141414; padding: 15px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Tipo de obra:</strong> ${tipoObra}</p>
+              <p style="margin: 5px 0;"><strong>Ciudad:</strong> ${solicitud.ciudad || "No especificada"}</p>
+              <p style="margin: 5px 0;"><strong>Presupuesto:</strong> ${solicitud.presupuesto || "Por definir"}</p>
+            </div>
+            
+            <p>Si tienes alguna pregunta mientras esperas nuestra respuesta, no dudes en escribirnos.</p>
+            
+            <p style="margin-top: 30px; color: #999; font-size: 12px;">
+              <strong>H&E Arquitectos</strong><br>
+              Bogotá, Colombia<br>
+              <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
+            </p>
+          </div>
+        </div>
+      `,
+      text: `
+Hola ${nombre},
+
+Hemos recibido tu solicitud de cotización para ${tipoObra}.
+
+Nuestro equipo revisará la información y nos pondremos en contacto contigo dentro de las próximas 24 horas.
+
+Tipo de obra: ${tipoObra}
+Ciudad: ${solicitud.ciudad || "No especificada"}
+Presupuesto: ${solicitud.presupuesto || "Por definir"}
+
+H&E Arquitectos
+Bogotá, Colombia
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Email de confirmación enviado a ${solicitud.email}`);
+  } catch (error) {
+    console.error("❌ Error enviando email de confirmación:", error.message);
+  }
 }

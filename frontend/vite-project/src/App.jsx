@@ -4,6 +4,7 @@ import { useAuth } from "./app/useAuth";
 import Header from "./components/header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Login from "./pages/auth/Login.jsx";
+import ResetPassword from "./pages/auth/ResetPassword.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import RoleRoute from "./components/RoleRoute.jsx";
 import { ACCESS } from "./data/roles.js";
@@ -21,6 +22,10 @@ import GestionColaboradores from "./pages/GestionColaboradores";
 import AsistenteIA from "./components/AsistenteIA";
 import SolicitudServicio from "./pages/SolicitudServicio";
 import ComercialAdmin from "./pages/ComercialAdmin";
+import GarantiasAdmin from "./pages/GarantiasAdmin.jsx";
+import GarantiasCliente from "./pages/GarantiasCliente.jsx";
+
+
 
 // Wrapper que decide canManageDocuments según el rol
 function ProyectoDetalleWrapper() {
@@ -33,9 +38,12 @@ function ProyectoDetalleWrapper() {
 
 function ShellLayout() {
   return (
-    <div className="min-h-screen bg-[#F2EEE7]">
+    <div className="min-h-[100dvh] bg-[#F2EEE7]">
       <Header />
-      <main className="max-w-[500px] mx-auto px-4 pb-24 pt-16">
+      <main
+        className="max-w-[500px] mx-auto px-4 pt-16"
+        style={{ paddingBottom: 'max(6rem, calc(6rem + env(safe-area-inset-bottom, 0px)))' }}
+      >
         <div className="rounded-[18px] bg-ivory/90 border border-taupe/30 shadow-card p-3">
           <Outlet />
         </div>
@@ -50,6 +58,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/solicitar" element={<SolicitudServicio />} />
 
       <Route element={<ProtectedRoute><ShellLayout /></ProtectedRoute>}>
@@ -71,6 +80,10 @@ export default function App() {
         <Route path="proyectos/:id/editar" element={
           <RoleRoute allow={ACCESS.PROYECTOS_LIST}><ProyectoEditar /></RoleRoute>
         } />
+        {/* Sección de Garantías */}
+        <Route path="proyectos/:id/garantias" element={
+          <RoleRoute allow={["admin", "colaborador"]}><GarantiasAdmin /></RoleRoute>
+        } />
 
         {/* Cliente */}
         <Route path="mis-proyectos" element={
@@ -87,6 +100,9 @@ export default function App() {
         } />
         <Route path="colaboradores" element={
           <RoleRoute allow={["admin"]}><GestionColaboradores /></RoleRoute>
+        } />
+        <Route path="mis-proyectos/:id/garantias" element={
+          <RoleRoute allow={["cliente"]}><GarantiasCliente /></RoleRoute>
         } />
 
       </Route>

@@ -73,7 +73,7 @@ export default function SolicitudServicio() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F2EEE7] flex flex-col">
+        <div className="min-h-[100dvh] bg-[#F2EEE7] flex flex-col">
 
             {/* Header */}
             <header className="bg-[#141414] text-ivory px-6 py-4 flex items-center gap-3">

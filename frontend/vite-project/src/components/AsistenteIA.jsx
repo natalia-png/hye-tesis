@@ -162,9 +162,10 @@ export default function AsistenteIA() {
             <button
                 type="button"
                 onClick={() => setAbierto(v => !v)}
-                className={`fixed bottom-32 right-4 z-50 w-12 h-12 rounded-full shadow-lg
+                className={`fixed right-4 z-50 w-12 h-12 rounded-full shadow-lg
           flex items-center justify-center transition-all duration-200
           ${abierto ? "bg-ink text-ivory scale-95" : "bg-ink text-ivory hover:scale-110"}`}
+                style={{ bottom: 'calc(8rem + env(safe-area-inset-bottom, 0px))' }}
                 aria-label="Asistente IA"
             >
                 {abierto ? (
@@ -180,9 +181,9 @@ export default function AsistenteIA() {
             </button>
 
             {abierto && (
-                <div className="fixed bottom-48 right-4 z-50 w-[calc(100vw-2rem)] max-w-[380px]
+                <div className="fixed right-4 z-50 w-[calc(100vw-2rem)] max-w-[380px]
           bg-white rounded-2xl shadow-2xl border border-sand flex flex-col overflow-hidden"
-                    style={{ maxHeight: "60vh" }}>
+                    style={{ bottom: 'calc(13rem + env(safe-area-inset-bottom, 0px))', maxHeight: "55dvh" }}>
 
                     <div className="flex items-center justify-between px-4 py-3 bg-ink text-ivory flex-shrink-0">
                         <div className="flex items-center gap-2">

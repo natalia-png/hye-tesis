@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
-import { useNotifications } from "../hooks/useNotifications";
 import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
 
 export default function DashboardColaborador() {

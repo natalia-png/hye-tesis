@@ -299,11 +299,6 @@ export default function ArchivosFase({
       {error && <p className="mt-2 text-[12px] text-red-600">{error}</p>}
       {ok && <p className="mt-2 text-[12px] text-green-700">{ok}</p>}
 
-      {canEdit && (
-        <p className="mt-1 text-[10px] text-ink/30">
-          debug: listener={listenerStatus} · phaseId={phaseId} · items={items.length}
-        </p>
-      )}
 
       {/* Lista de archivos */}
       <div className="mt-3 grid gap-2">
@@ -317,12 +312,12 @@ export default function ArchivosFase({
           items.map((f) => (
             <div
               key={f.id}
-              className="rounded-xl border border-sand bg-white p-3"
+              className="rounded-xl border border-sand bg-white p-3 overflow-hidden"
             >
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 min-w-0">
                 {/* Info del archivo */}
-                <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-ink truncate">
+                <div className="min-w-0 w-full">
+                  <p className="text-[13px] font-medium text-ink truncate" title={f.fileName}>
                     {f.fileName || "Archivo"}
                   </p>
                   <p className="text-[11px] text-ink/60 mt-0.5">

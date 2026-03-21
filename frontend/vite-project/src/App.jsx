@@ -24,6 +24,8 @@ import SolicitudServicio from "./pages/SolicitudServicio";
 import ComercialAdmin from "./pages/ComercialAdmin";
 import GarantiasAdmin from "./pages/GarantiasAdmin.jsx";
 import GarantiasCliente from "./pages/GarantiasCliente.jsx";
+import BandejaMensajes from "./pages/mensajes/BandejaMensajes.jsx";
+import ChatPage from "./pages/mensajes/ChatPage.jsx";
 
 
 
@@ -104,6 +106,10 @@ export default function App() {
         <Route path="mis-proyectos/:id/garantias" element={
           <RoleRoute allow={["cliente"]}><GarantiasCliente /></RoleRoute>
         } />
+
+        {/* Mensajes — todos los roles */}
+        <Route path="mensajes" element={<BandejaMensajes />} />
+        <Route path="mensajes/:chatId" element={<ChatPage />} />
 
       </Route>
 

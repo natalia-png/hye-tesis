@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(firebase deploy --only functions)",
-      "Bash(firebase functions:log --only onSolicitudComercialUpdated)"
+      "Bash(firebase functions:log --only onSolicitudComercialUpdated)",
+      "Bash(npx eslint:*)",
+      "Bash(gcloud run:*)",
+      "Bash(npm install:*)",
+      "Bash(firebase deploy:*)",
+      "Bash(npm run:*)",
+      "Bash(firebase functions:delete onNotificationCreated --region us-central1 --force)"
     ]
   }
 }

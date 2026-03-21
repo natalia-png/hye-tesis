@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function DashboardAdmin() {
   const { user, ready } = useAuth();
-  const { permissionStatus, requestPermission } = usePushNotifications(user?.uid || null, null);
+  const { requestPermission } = usePushNotifications(user?.uid || null, null);
   const nav = useNavigate();
 
   // Guard robusto: cualquier rol que no sea "cliente" puede ver el dashboard admin
@@ -49,6 +49,7 @@ export default function DashboardAdmin() {
       }
     };
     load();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, isAdmin]);
 
   const selected = useMemo(() => projects.find(p => p.id === selectedId) || null, [projects, selectedId]);
@@ -191,6 +192,23 @@ export default function DashboardAdmin() {
               <button className="btn-primary text-[12px]" onClick={() => nav(`/proyectos/${selected.id}`)}>Abrir</button>
             </div>
           </div>
+
+          {/* Acceso rápido al historial */}
+          <button type="button" onClick={() => nav("/historial")}
+            className="w-full rounded-2xl border border-taupe/30 bg-white px-4 py-3 flex items-center justify-between gap-3 hover:border-ink/20 transition-colors">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-sand flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-ink/60" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <div className="text-left">
+                <p className="text-[13px] font-medium text-ink">Historial de proyectos</p>
+                <p className="text-[11px] text-ink/50">Archivados y finalizados.</p>
+              </div>
+            </div>
+            <span className="text-ink/40 text-[13px]">→</span>
+          </button>
         </>
       )}
     </section>

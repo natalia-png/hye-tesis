@@ -2,10 +2,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { db, auth } from "../lib/firebase";
+import { getAuth } from "firebase/auth";
 import { cloneFases, DEFAULT_FASES } from "../data/fases";
 import { useAuth } from "../app/useAuth";
 import { findUserByEmail } from "../lib/firestore";
+
+const FUNCTIONS_URL = "https://us-central1-hye-tesis.cloudfunctions.net";
+
+async function crearClienteNuevo(name, email) {
+  const token = await getAuth().currentUser.getIdToken();
+  const res = await fetch(`${FUNCTIONS_URL}/crearCliente`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, email }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Error al crear el cliente");
+  return data.uid;
+}
 
 const INITIAL_FORM = {
   code: "",
@@ -44,25 +62,31 @@ export default function ProyectoNuevo() {
 
     setSaving(true);
     try {
-      // ✅ Resolver clientId por email (si se ingresó)
+      // Resolver clientId por email — crea la cuenta si no existe
       let clientId = null;
       const email = form.clientEmail.trim().toLowerCase();
 
       if (email) {
         const found = await findUserByEmail(email);
-        if (!found) {
-          setError(
-            "No encontramos un usuario con ese email. Pídele al cliente que se registre/inicie sesión primero."
-          );
-          setSaving(false);
-          return;
+
+        if (found) {
+          // Ya existe — verificar que sea cliente
+          if ((found.role || "").toLowerCase() !== "cliente") {
+            setError("Ese email ya está registrado pero no es un usuario cliente.");
+            setSaving(false);
+            return;
+          }
+          clientId = found.uid;
+        } else {
+          // No existe — crear cuenta vía Cloud Function (Admin SDK + email Nodemailer)
+          try {
+            clientId = await crearClienteNuevo(form.client.trim(), email);
+          } catch (createErr) {
+            setError("No se pudo crear la cuenta del cliente: " + createErr.message);
+            setSaving(false);
+            return;
+          }
         }
-        if ((found.role || "").toLowerCase() !== "cliente") {
-          setError("Ese email existe, pero no corresponde a un usuario cliente.");
-          setSaving(false);
-          return;
-        }
-        clientId = found.uid;
       }
 
       const payload = {

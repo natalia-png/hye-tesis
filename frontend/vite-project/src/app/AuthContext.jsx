@@ -1,7 +1,8 @@
 // src/app/AuthContext.jsx
 import { useEffect, useState, useCallback } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { onSnapshot, doc } from "firebase/firestore";
+import { auth, db } from "../lib/firebase";
 import { fetchUserProfile } from "../lib/firestore";
 import { Ctx } from "./auth-ctx";
 import { usePushNotifications } from "../hooks/usePushNotifications.js";
@@ -58,7 +59,11 @@ export function AuthProvider({ children }) {
   const [foregroundNotif, setForegroundNotif] = useState(null);
 
   useEffect(() => {
+    let profileUnsub = null;
+
     const unsub = onAuthStateChanged(auth, async fbUser => {
+      // Cancelar listener de perfil anterior
+      if (profileUnsub) { profileUnsub(); profileUnsub = null; }
       setReady(false);
 
       if (!fbUser) {
@@ -70,8 +75,7 @@ export function AuthProvider({ children }) {
       try {
         await fbUser.getIdToken(true);
 
-        // Reintentar hasta 5 veces si el perfil no tiene rol aún
-        // (puede tardar unos segundos si lo creó Cloud Function)
+        // Carga inicial con reintentos (Cloud Function puede tardar en crear el perfil)
         let p = null;
         for (let i = 0; i < 5; i++) {
           p = await fetchUserProfile(fbUser.uid);
@@ -86,6 +90,20 @@ export function AuthProvider({ children }) {
           role: (p?.role || "sin-rol").toLowerCase(),
           subRole: (p?.subRole || "").toLowerCase(),
         });
+
+        // Listener en tiempo real: si el admin cambia el rol mientras hay sesión activa,
+        // la UI se actualiza automáticamente sin necesidad de cerrar sesión
+        profileUnsub = onSnapshot(doc(db, "users", fbUser.uid), snap => {
+          if (!snap.exists()) return;
+          const data = snap.data();
+          setUser(prev => prev ? {
+            ...prev,
+            role: (data.role || prev.role).toLowerCase(),
+            subRole: (data.subRole || "").toLowerCase(),
+            name: data.name || prev.name,
+          } : prev);
+        });
+
       } catch (e) {
         console.error("Perfil/rol:", e);
         setUser({
@@ -100,7 +118,7 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => unsub();
+    return () => { unsub(); if (profileUnsub) profileUnsub(); };
   }, []);
 
   // ── Activar push notifications cuando hay usuario logueado ──

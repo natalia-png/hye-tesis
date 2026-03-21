@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { doc, getDoc, getDocs, collection, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
-import { canEditFase, SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
+import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
 import NotasFase from "./NotasFase.jsx";
 import ArchivosFase from "./ArchivosFase.jsx";
 import { calcAvanceGlobal, clampInt, labelEstado, normalizeFases } from "../data/fases";
@@ -69,12 +69,6 @@ export default function FasesProyecto({
     ? (!!canEdit && !clientView)
     : (isColab && !clientView && safeFases.some(f => f.responsableUid === user?.uid));
 
-  // canEditFaseActual también lee de safeFases para la verificación de pertenencia
-  // pero aplica el cambio local si ya fue asignado en esta sesión
-  const responsableEnFase = (fase) => {
-    const local = localFases.find(f => f.id === fase?.id);
-    return local?.responsableUid || fase?.responsableUid;
-  };
   const avanceGlobal = useMemo(() => calcAvanceGlobal(localFases), [localFases]);
   const completed = localFases.filter(f => f.estado === "completada").length;
   const lastUpdate = updatedAt || createdAt;

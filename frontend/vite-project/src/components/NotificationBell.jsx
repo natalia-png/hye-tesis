@@ -19,7 +19,7 @@ const ICON_BG = {
 export default function NotificationBell() {
   const { user, permissionStatus, requestPermission } = useAuth(); // ✅ extraídos del contexto
   const nav = useNavigate();
-  const { items, unread, markAllRead, markRead } = useNotifications(user?.uid);
+  const { items, unread, markAllRead, markRead, deleteNotif, deleteAll } = useNotifications(user?.uid);
 
   const [open, setOpen] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -86,15 +86,26 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-taupe/20">
             <p className="text-[13px] font-semibold text-ink">Notificaciones</p>
-            {unread > 0 && (
-              <button
-                type="button"
-                onClick={markAllRead}
-                className="text-[11px] text-ink/50 hover:text-ink transition-colors"
-              >
-                Marcar todas
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {unread > 0 && (
+                <button
+                  type="button"
+                  onClick={markAllRead}
+                  className="text-[11px] text-ink/50 hover:text-ink transition-colors"
+                >
+                  Marcar leídas
+                </button>
+              )}
+              {items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={deleteAll}
+                  className="text-[11px] text-red-400 hover:text-red-600 transition-colors"
+                >
+                  Eliminar todas
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Banner push — solo si el permiso no está concedido ni denegado */}
@@ -134,28 +145,40 @@ export default function NotificationBell() {
               </div>
             ) : (
               items.map(n => (
-                <button
+                <div
                   key={n.id}
-                  type="button"
-                  onClick={() => handleClick(n)}
-                  className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[#F2EEE7] transition-colors ${!n.read ? "bg-amber-50/50" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-3 ${!n.read ? "bg-amber-50/50" : ""}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold mt-0.5 ${ICON_BG[n.type] || "bg-sand text-ink"}`}>
-                    {ICONS[n.type] || "·"}
-                  </div>
+                  {/* Contenido clickeable */}
+                  <button
+                    type="button"
+                    onClick={() => handleClick(n)}
+                    className="flex items-start gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold mt-0.5 ${ICON_BG[n.type] || "bg-sand text-ink"}`}>
+                      {ICONS[n.type] || "·"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[12px] leading-snug ${!n.read ? "font-semibold text-ink" : "font-medium text-ink/80"}`}>
+                        {n.title}
+                      </p>
+                      <p className="text-[11px] text-ink/55 mt-0.5 leading-snug">{n.body}</p>
+                      <p className="text-[10px] text-ink/35 mt-1">{timeAgo(n.createdAt)}</p>
+                    </div>
+                  </button>
 
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[12px] leading-snug ${!n.read ? "font-semibold text-ink" : "font-medium text-ink/80"}`}>
-                      {n.title}
-                    </p>
-                    <p className="text-[11px] text-ink/55 mt-0.5 leading-snug">{n.body}</p>
-                    <p className="text-[10px] text-ink/35 mt-1">{timeAgo(n.createdAt)}</p>
-                  </div>
-
-                  {!n.read && (
-                    <span className="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0 mt-1.5" />
-                  )}
-                </button>
+                  {/* Botón eliminar */}
+                  <button
+                    type="button"
+                    onClick={() => deleteNotif(n.id)}
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-ink/20 hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
+                    aria-label="Eliminar notificación"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               ))
             )}
           </div>

@@ -34,29 +34,6 @@ const db = admin.firestore();
 const messaging = admin.messaging();
 
 /* ═══════════════════════════════════════════════════════════════
-   TRIGGER 1 — Notificación in-app creada
-   notifications/{userId}/items/{notifId}
-═══════════════════════════════════════════════════════════════ */
-exports.onNotificationCreated = onDocumentCreated(
-  "notifications/{userId}/items/{notifId}",
-  async (event) => {
-    const { userId } = event.params;
-    const data = event.data?.data();
-    if (!data?.title) return;
-
-    return sendPushToUser(userId, {
-      title: data.title,
-      body: data.body || "",
-      type: data.type || "general",
-      projectId: data.projectId || "",
-      projectName: data.projectName || "",
-      phaseId: data.phaseId || "",
-      phaseName: data.phaseName || "",
-    });
-  }
-);
-
-/* ═══════════════════════════════════════════════════════════════
    TRIGGER 2 — Nueva nota en una fase
    projects/{projectId}/fases/{phaseId}/notas/{notaId}
 ═══════════════════════════════════════════════════════════════ */
@@ -172,6 +149,48 @@ exports.onFaseAvance = onDocumentUpdated(
    ENDPOINT HTTP — pruebas manuales
    POST /sendPush  { userId, title, body }
 ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   TRIGGER — Nuevo mensaje en un chat
+   chats/{chatId}/messages/{messageId}
+═══════════════════════════════════════════════════════════════ */
+exports.onMessageCreated = onDocumentCreated(
+  "chats/{chatId}/messages/{messageId}",
+  async (event) => {
+    const { chatId } = event.params;
+    const message = event.data?.data();
+    if (!message?.text || !message?.senderId) return;
+
+    const chatDoc = await db.collection("chats").doc(chatId).get();
+    if (!chatDoc.exists) return;
+    const chat = chatDoc.data();
+
+    const recipients = (chat.participants || []).filter(uid => uid !== message.senderId);
+    if (recipients.length === 0) return;
+
+    const chatName = chat.type === "project"
+      ? (chat.projectName || "Proyecto")
+      : (message.senderName || "Mensaje nuevo");
+
+    const preview = (message.text || "").substring(0, 80);
+
+    return Promise.all(recipients.map(uid => {
+      const payload = {
+        type: "new_message",
+        title: chatName,
+        body: `${message.senderName?.split(" ")[0] || "Alguien"}: ${preview}`,
+        projectId: chat.projectId || "",
+        projectName: chat.projectName || "",
+        phaseId: "",
+        phaseName: "",
+      };
+      return Promise.all([
+        sendPushToUser(uid, payload),
+        createInAppNotification(uid, payload),
+      ]);
+    }));
+  }
+);
+
 /* ═══════════════════════════════════════════════════════════════
    TRIGGER 5 — Nueva solicitud de garantía
    garantias/{projectId}/solicitudes/{solicitudId}
@@ -490,6 +509,184 @@ exports.sendPush = onRequest(
 );
 
 /* ═══════════════════════════════════════════════════════════════
+   ENDPOINT — Crear cliente nuevo
+   POST /crearCliente { name, email }
+   Crea cuenta en Auth + Firestore + envía email de bienvenida
+═══════════════════════════════════════════════════════════════ */
+exports.crearCliente = onRequest(
+  { cors: true, invoker: "public", secrets: ["GMAIL_USER", "GMAIL_PASS"] },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    // Verificar token admin
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const callerDoc = await db.collection("users").doc(decoded.uid).get();
+      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+        res.status(403).json({ error: "Solo el admin puede crear clientes" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Token inválido" }); return;
+    }
+
+    const { name, email } = req.body;
+    if (!name || !email) {
+      res.status(400).json({ error: "name y email son obligatorios" });
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = name.trim();
+
+    try {
+      // 1 — Crear usuario en Firebase Auth
+      const userRecord = await admin.auth().createUser({
+        email: cleanEmail,
+        displayName: cleanName,
+        emailVerified: false,
+      });
+
+      // 2 — Guardar perfil en Firestore
+      await db.collection("users").doc(userRecord.uid).set({
+        name: cleanName,
+        email: cleanEmail,
+        role: "cliente",
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 3 — Generar link de establecer contraseña
+      const resetLink = await admin.auth().generatePasswordResetLink(cleanEmail);
+
+      // 4 — Enviar email de bienvenida vía Nodemailer
+      const transporter = getTransporter();
+      const firstName = cleanName.split(" ")[0];
+      await transporter.sendMail({
+        from: `"H&E Arquitectos" <${process.env.GMAIL_USER}>`,
+        to: cleanEmail,
+        subject: "Bienvenido/a a H&E Arquitectos — Accede a tu proyecto",
+        html: `
+          <div style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;">
+            <div style="background:#141414;color:white;padding:24px;text-align:center;">
+              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:1px;">H&E Arquitectos</h1>
+            </div>
+            <div style="padding:32px;background:#F2EEE7;">
+              <p style="font-size:16px;">Hola <strong>${firstName}</strong>,</p>
+              <p>Luisa ha creado tu acceso a la <strong>Plataforma de Proyectos H&E Arquitectos</strong>, donde podrás seguir el avance de tu proyecto en tiempo real.</p>
+              <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el botón:</p>
+              <div style="text-align:center;margin:28px 0;">
+                <a href="${resetLink}" style="background:#141414;color:white;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">
+                  Establecer mi contraseña →
+                </a>
+              </div>
+              <p style="font-size:13px;color:#666;">Este enlace expira en 24 horas. Si no esperabas este correo, puedes ignorarlo.</p>
+              <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
+              <p style="font-size:12px;color:#999;margin:0;">
+                <strong>H&E Arquitectos</strong> · Bogotá, Colombia
+              </p>
+            </div>
+          </div>
+        `,
+        text: `Hola ${firstName},\n\nLuisa ha creado tu acceso a la Plataforma H&E Arquitectos.\n\nEstablece tu contraseña aquí:\n${resetLink}\n\nEste enlace expira en 24 horas.\n\nH&E Arquitectos`,
+      });
+
+      res.json({ success: true, uid: userRecord.uid });
+    } catch (e) {
+      const msgs = {
+        "auth/email-already-exists": "Este correo ya tiene una cuenta registrada.",
+        "auth/invalid-email": "El correo no es válido.",
+      };
+      res.status(400).json({ error: msgs[e.code] || e.message });
+    }
+  }
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   ENDPOINT — Eliminar proyecto permanentemente
+   DELETE /eliminarProyecto { projectId }
+   Si el cliente no tiene otros proyectos → elimina su cuenta Auth + Firestore
+═══════════════════════════════════════════════════════════════ */
+exports.eliminarProyecto = onRequest(
+  { cors: true, invoker: "public" },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "DELETE, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "DELETE") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    // Verificar token admin
+    const authHeader = req.headers.authorization || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
+
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const callerDoc = await db.collection("users").doc(decoded.uid).get();
+      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+        res.status(403).json({ error: "Solo el admin puede eliminar proyectos" });
+        return;
+      }
+    } catch {
+      res.status(401).json({ error: "Token inválido" }); return;
+    }
+
+    const { projectId } = req.body;
+    if (!projectId) { res.status(400).json({ error: "projectId es obligatorio" }); return; }
+
+    try {
+      // Obtener datos del proyecto
+      const projectDoc = await db.collection("projects").doc(projectId).get();
+      if (!projectDoc.exists) { res.status(404).json({ error: "Proyecto no encontrado" }); return; }
+
+      const projectData = projectDoc.data();
+      const clientId = projectData.clientId || null;
+
+      // Eliminar el proyecto
+      await db.collection("projects").doc(projectId).delete();
+
+      let clienteEliminado = false;
+
+      // Si tiene cliente asignado, verificar si tiene otros proyectos
+      if (clientId) {
+        const otrosProyectos = await db.collection("projects")
+          .where("clientId", "==", clientId)
+          .limit(1)
+          .get();
+
+        if (otrosProyectos.empty) {
+          // No tiene otros proyectos — eliminar cuenta
+          try {
+            await admin.auth().deleteUser(clientId);
+          } catch (authErr) {
+            // Si ya no existe en Auth, ignorar
+            if (authErr.code !== "auth/user-not-found") throw authErr;
+          }
+          await db.collection("users").doc(clientId).delete();
+          clienteEliminado = true;
+        }
+      }
+
+      res.json({ success: true, clienteEliminado });
+    } catch (e) {
+      console.error("eliminarProyecto:", e);
+      res.status(500).json({ error: e.message });
+    }
+  }
+);
+
+/* ═══════════════════════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════════════════════ */
 
@@ -543,8 +740,12 @@ async function sendPushToUser(userId, payload) {
   try {
     const r = await messaging.sendEachForMulticast({
       tokens,
-      notification: { title: payload.title, body: payload.body },
+      // Solo data — el service worker (onBackgroundMessage) muestra la notificación.
+      // Si se envía también "notification" top-level, FCM la muestra automáticamente
+      // y el SW la muestra de nuevo → doble notificación.
       data: toStrings({
+        title: payload.title || "H&E Arquitectos",
+        body: payload.body || "",
         type: payload.type || "general",
         projectId: payload.projectId || "",
         projectName: payload.projectName || "",
@@ -552,23 +753,15 @@ async function sendPushToUser(userId, payload) {
         phaseName: payload.phaseName || "",
       }),
       webpush: {
-        notification: {
-          title: payload.title,
-          body: payload.body,
-          icon: "/logo-header.png",
-          vibrate: [200, 100, 200],
-        },
         fcmOptions: {
           link: payload.projectId
             ? `https://hye-tesis.web.app/mis-proyectos/${payload.projectId}`
             : "https://hye-tesis.web.app",
         },
       },
-      android: {
-        notification: { channelId: "hye_updates", priority: "high", sound: "default" },
-      },
       apns: {
-        payload: { aps: { sound: "default", badge: 1 } },
+        payload: { aps: { sound: "default", badge: 1, contentAvailable: true } },
+        headers: { "apns-priority": "5" },
       },
     });
 

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     collection, onSnapshot, orderBy, query,
-    doc, getDoc, updateDoc, arrayUnion, serverTimestamp,
+    doc, getDoc, updateDoc, arrayUnion,
 } from "firebase/firestore";
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";

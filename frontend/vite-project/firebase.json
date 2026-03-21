@@ -7,7 +7,7 @@
     "runtime": "nodejs20"
   },
   "hosting": {
-    "public": "frontend/vite-project/dist",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",

@@ -7,6 +7,23 @@ import { collection, getDocs, query, where, limit, orderBy } from "firebase/fire
 import { db, geminiModel } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 
+const EMPRESA_INFO = `
+## Sobre H&E Arquitectos
+- **Nombre completo**: H&E Arquitectos (HYE — Espacios Humanos)
+- **Misión**: Diseñamos espacios con propósito y visión colaborativa.
+- **Fundadora**: Luisa Erazo, arquitecta y directora de la firma.
+- **Ubicación**: Cali, Colombia.
+- **Teléfono / WhatsApp**: 321 885 6680
+- **Instagram**: @hye.arquitectos
+- **Horario de atención**: Lunes a viernes, 7:00 a.m. – 5:00 p.m.
+- **Servicios**:
+  · Diseño arquitectónico (vivienda, comercial, institucional)
+  · Diseño de interiores
+  · Consultorías especializadas en arquitectura y construcción
+- **Equipo**: H&E cuenta con un equipo multidisciplinario de profesionales en arquitectura, diseño, ingeniería y gestión de proyectos, seleccionados por su experiencia y compromiso con la calidad.
+- **Filosofía**: Cada proyecto es único. Trabajamos de cerca con el cliente para entender sus necesidades, garantizando diseños funcionales, estéticos y sostenibles.
+`;
+
 function buildSystemPrompt(user, proyectos) {
     const rol = user?.role || "sin-rol";
     const nombre = user?.name?.split(" ")[0] || "Usuario";
@@ -21,13 +38,15 @@ function buildSystemPrompt(user, proyectos) {
             }).join("\n")
             : "Sin proyectos registrados.";
 
-        return `Eres el asistente inteligente de H&E Arquitectos. Estás hablando con Luisa, la administradora.
+        return `Eres el asistente inteligente de H&E Arquitectos. Estás hablando con ${nombre}, la administradora de la firma.
+
+${EMPRESA_INFO}
 
 Estado actual de los proyectos:
 ${resumen}
 
 Ayúdala con consultas sobre proyectos, alertas de fases, preguntas técnicas de arquitectura y uso de la plataforma.
-Responde siempre en español, profesional y conciso. Máximo 3 párrafos.`;
+Responde siempre en español, de forma profesional y concisa. Máximo 3 párrafos.`;
     }
 
     if (rol === "colaborador") {
@@ -40,7 +59,9 @@ Responde siempre en español, profesional y conciso. Máximo 3 párrafos.`;
                 }
             });
         });
-        return `Eres el asistente de H&E Arquitectos. Estás hablando con ${nombre}, del área de ${subRoleLabel}.
+        return `Eres el asistente de H&E Arquitectos. Estás hablando con ${nombre}, colaborador del área de ${subRoleLabel}.
+
+${EMPRESA_INFO}
 
 Fases asignadas:
 ${misFases.length ? misFases.join("\n") : "Sin fases asignadas aún."}
@@ -57,11 +78,13 @@ Ayúdalo con sus fases, preguntas técnicas y uso de la plataforma. Responde en 
             ).join("\n");
             info = `Proyecto: "${p.name || p.nombre}" — ${p.progress || 0}% avance\nFases:\n${fases}`;
         }
-        return `Eres el asistente de H&E Arquitectos. Estás hablando con ${nombre}, cliente.
+        return `Eres el asistente de H&E Arquitectos. Estás hablando con ${nombre}, cliente de la firma.
+
+${EMPRESA_INFO}
 
 ${info}
 
-Ayúdalo con el estado de su proyecto, explicar fases y preguntas de arquitectura. No compartas info de otros clientes. Responde en español, amigable. Máximo 3 párrafos.`;
+Tu rol es orientar al cliente sobre el estado de su proyecto, explicar las fases del proceso, responder preguntas sobre arquitectura y brindar información general sobre la firma cuando lo solicite. No compartas información de otros clientes. Responde en español, de forma amigable y profesional. Máximo 3 párrafos.`;
     }
 
     return "Eres el asistente de H&E Arquitectos. Responde en español de forma profesional.";
@@ -154,7 +177,7 @@ export default function AsistenteIA() {
     const sugerencias = {
         admin: ["¿Cómo van los proyectos?", "¿Qué fases están en curso?", "¿Qué es un anteproyecto?"],
         colaborador: ["¿Qué fases tengo asignadas?", "¿Cómo está mi avance?", "¿Qué entregables necesito?"],
-        cliente: ["¿Cómo va mi proyecto?", "¿Qué fase viene?", "¿Cuánto falta para terminar?"],
+        cliente: ["¿Cómo va mi proyecto?", "¿Qué servicios ofrecen?", "¿Cómo los contacto?"],
     }[user.role] || ["¿En qué me puedes ayudar?"];
 
     return (

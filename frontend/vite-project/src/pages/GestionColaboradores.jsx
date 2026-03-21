@@ -3,7 +3,7 @@
 // Usa initializeApp secundario para crear usuarios sin cerrar sesión de Luisa
 
 import { useState, useEffect } from "react";
-import { collection, onSnapshot, doc, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc } from "firebase/firestore";
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { setDoc, serverTimestamp } from "firebase/firestore";
@@ -105,7 +105,6 @@ export default function GestionColaboradores() {
         if (!confirm(`¿Eliminar a ${nombre} del equipo?`)) return;
         try {
             // Eliminar de Auth + Firestore via Cloud Function
-            const secondaryAuth = getSecondaryAuth();
             const mainAuth = getAuth();
             const token = await mainAuth.currentUser.getIdToken();
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   collection, onSnapshot, orderBy, query,
-  limit, writeBatch, doc, where, getDocs,
+  limit, writeBatch, doc, where, getDocs, deleteDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
@@ -58,5 +58,27 @@ export function useNotifications(uid) {
     }
   }, [uid]);
 
-  return { items, unread, ready, markAllRead, markRead };
+  // Elimina una notificación
+  const deleteNotif = useCallback(async (notifId) => {
+    if (!uid || !notifId) return;
+    try {
+      await deleteDoc(doc(db, "notifications", uid, "items", notifId));
+    } catch (e) {
+      console.error("deleteNotif:", e);
+    }
+  }, [uid]);
+
+  // Elimina todas las notificaciones
+  const deleteAll = useCallback(async () => {
+    if (!uid || items.length === 0) return;
+    try {
+      const batch = writeBatch(db);
+      items.forEach(n => batch.delete(doc(db, "notifications", uid, "items", n.id)));
+      await batch.commit();
+    } catch (e) {
+      console.error("deleteAll:", e);
+    }
+  }, [uid, items]);
+
+  return { items, unread, ready, markAllRead, markRead, deleteNotif, deleteAll };
 }

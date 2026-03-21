@@ -723,7 +723,9 @@ async function getUserTokens(userId) {
   try {
     const snap = await db.collection("users").doc(userId)
       .collection("fcmTokens").get();
-    return snap.docs.map(d => d.data().token).filter(Boolean);
+    return snap.docs
+      .map(d => ({ token: d.data().token, platform: d.data().platform || "web" }))
+      .filter(t => Boolean(t.token));
   } catch (e) {
     console.error("getUserTokens:", e);
     return [];
@@ -731,60 +733,95 @@ async function getUserTokens(userId) {
 }
 
 async function sendPushToUser(userId, payload) {
-  const tokens = await getUserTokens(userId);
-  if (tokens.length === 0) {
+  const tokenDocs = await getUserTokens(userId);
+  if (tokenDocs.length === 0) {
     console.log(`${userId} sin tokens FCM.`);
     return;
   }
 
+  const dataPayload = toStrings({
+    title: payload.title || "H&E Arquitectos",
+    body: payload.body || "",
+    type: payload.type || "general",
+    projectId: payload.projectId || "",
+    projectName: payload.projectName || "",
+    phaseId: payload.phaseId || "",
+    phaseName: payload.phaseName || "",
+  });
+
+  const link = payload.projectId
+    ? `https://hye-tesis.web.app/mis-proyectos/${payload.projectId}`
+    : "https://hye-tesis.web.app";
+
+  // Separar tokens por plataforma
+  const webTokens     = tokenDocs.filter(t => t.platform !== "android").map(t => t.token);
+  const androidTokens = tokenDocs.filter(t => t.platform === "android").map(t => t.token);
+
+  const allTokens = tokenDocs.map(t => t.token);
+
   try {
-    const r = await messaging.sendEachForMulticast({
-      tokens,
-      // Solo data — el service worker (onBackgroundMessage) muestra la notificación.
-      // Si se envía también "notification" top-level, FCM la muestra automáticamente
-      // y el SW la muestra de nuevo → doble notificación.
-      data: toStrings({
-        title: payload.title || "H&E Arquitectos",
-        body: payload.body || "",
-        type: payload.type || "general",
-        projectId: payload.projectId || "",
-        projectName: payload.projectName || "",
-        phaseId: payload.phaseId || "",
-        phaseName: payload.phaseName || "",
-      }),
-      webpush: {
-        fcmOptions: {
-          link: payload.projectId
-            ? `https://hye-tesis.web.app/mis-proyectos/${payload.projectId}`
-            : "https://hye-tesis.web.app",
+    const messages = tokenDocs.map(({ token, platform }) => {
+      const base = { token, data: dataPayload };
+
+      if (platform === "android") {
+        // Android nativo: FCM muestra la notificación automáticamente en background
+        return {
+          ...base,
+          notification: {
+            title: payload.title || "H&E Arquitectos",
+            body: payload.body || "",
+          },
+          android: {
+            notification: {
+              icon: "ic_notification",
+              color: "#141414",
+              sound: "default",
+              clickAction: "FLUTTER_NOTIFICATION_CLICK",
+            },
+          },
+        };
+      }
+
+      // Web/PWA: solo data — el service worker muestra la notificación
+      return {
+        ...base,
+        webpush: {
+          fcmOptions: { link },
         },
-      },
-      apns: {
-        payload: { aps: { sound: "default", badge: 1, contentAvailable: true } },
-        headers: { "apns-priority": "5" },
-      },
+      };
     });
 
-    console.log(`Push → ${userId}: ${r.successCount} ok, ${r.failureCount} fallidos`);
+    const results = await Promise.allSettled(
+      messages.map(m => messaging.send(m))
+    );
 
-    if (r.failureCount > 0) {
-      const invalid = [
-        "messaging/invalid-registration-token",
-        "messaging/registration-token-not-registered",
-      ];
-      const batch = db.batch();
-      let cleaned = 0;
-      r.responses.forEach((resp, i) => {
-        if (!resp.success && invalid.includes(resp.error?.code)) {
+    let successCount = 0;
+    let failureCount = 0;
+    const invalid = [
+      "messaging/invalid-registration-token",
+      "messaging/registration-token-not-registered",
+    ];
+    const batch = db.batch();
+    let cleaned = 0;
+
+    results.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        successCount++;
+      } else {
+        failureCount++;
+        const code = result.reason?.errorInfo?.code;
+        if (invalid.includes(code)) {
           batch.delete(
             db.collection("users").doc(userId)
-              .collection("fcmTokens").doc(tokens[i])
+              .collection("fcmTokens").doc(allTokens[i])
           );
           cleaned++;
         }
-      });
-      if (cleaned > 0) await batch.commit();
-    }
+      }
+    });
+
+    if (cleaned > 0) await batch.commit();
+    console.log(`Push → ${userId}: ${successCount} ok, ${failureCount} fallidos (${cleaned} limpiados)`);
   } catch (err) {
     console.error("sendPushToUser:", err);
   }

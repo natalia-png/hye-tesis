@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import logoHye from "../assets/logo-header.png";
 
 const TIPOS_OBRA = [
     "Diseño arquitectónico",
@@ -77,7 +78,7 @@ export default function SolicitudServicio() {
 
             {/* Header */}
             <header className="bg-[#141414] text-ivory px-6 py-4 flex items-center gap-3">
-                <img src="/logo-header.png" alt="H&E" className="h-8 object-contain invert" />
+                <img src={logoHye} alt="H&E" className="h-8 object-contain invert" />
                 <div>
                     <p className="text-[13px] font-semibold leading-tight">H&E Arquitectos</p>
                     <p className="text-[10px] text-ivory/50">Solicitud de servicio</p>

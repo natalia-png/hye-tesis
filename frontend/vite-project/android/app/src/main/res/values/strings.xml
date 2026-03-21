@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">H&amp;E Arquitectos</string>
+    <string name="title_activity_main">H&amp;E Arquitectos</string>
+    <string name="package_name">com.hye.arquitectos</string>
+    <string name="custom_url_scheme">com.hye.arquitectos</string>
+</resources>

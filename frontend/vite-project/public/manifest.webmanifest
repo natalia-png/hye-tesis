@@ -1,15 +1,26 @@
 {
-  "name": "Plataforma H&E",
+  "name": "Plataforma H&E Arquitectos",
   "short_name": "H&E",
+  "description": "Plataforma de gestión de proyectos de H&E Arquitectos — Espacios Humanos",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#F2EEE7",
-  "theme_color": "#111827",
+  "theme_color": "#141414",
+  "lang": "es",
   "icons": [
+    {
+      "src": "/hye-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/hye-icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

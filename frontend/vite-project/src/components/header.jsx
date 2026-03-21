@@ -1,6 +1,7 @@
 // src/components/header.jsx
 import { useAuth } from "../app/useAuth";
 import NotificationBell from "./NotificationBell.jsx";
+import logoHye from "../assets/logo-header.png";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -15,7 +16,7 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center flex-shrink-0">
             <img
-              src="/logo-header.png"
+              src={logoHye}
               alt="H&E Arquitectos"
               className="h-9 w-auto object-contain max-w-[120px]"
               draggable={false}

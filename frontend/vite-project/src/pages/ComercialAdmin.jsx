@@ -189,7 +189,6 @@ function TarjetaSolicitud({ solicitud, nav }) {
         try {
             await updateDoc(solRef, { estado: nuevoEstado, updatedAt: serverTimestamp() });
         } catch (e) {
-            console.error(e);
         } finally {
             setCambiandoEstado(false);
         }
@@ -212,7 +211,6 @@ function TarjetaSolicitud({ solicitud, nav }) {
             });
             setModalEmail(null);
         } catch (e) {
-            console.error(e);
         } finally {
             setEnviandoEmail(false);
         }
@@ -223,7 +221,6 @@ function TarjetaSolicitud({ solicitud, nav }) {
         try {
             await deleteDoc(solRef);
         } catch (e) {
-            console.error(e);
             setDeleting(false);
             setConfirmDelete(false);
         }
@@ -234,7 +231,6 @@ function TarjetaSolicitud({ solicitud, nav }) {
         try {
             await updateDoc(solRef, { notaAdmin: nota, updatedAt: serverTimestamp() });
         } catch (e) {
-            console.error(e);
         } finally {
             setSaving(false);
         }

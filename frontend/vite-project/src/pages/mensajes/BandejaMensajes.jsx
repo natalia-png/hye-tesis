@@ -147,7 +147,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   const handleArchive = async (e) => {
     e.stopPropagation();
     setLoading(true);
-    try { await archiveChat(chat.id, currentUid); } catch (err) { console.error(err); }
+    try { await archiveChat(chat.id, currentUid); } catch (err) { }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -161,7 +161,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
       } else {
         await archiveChat(chat.id, currentUid);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -171,7 +171,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     setLoading(true);
     try {
       await updateDoc(doc(db, "chats", chat.id), { hiddenFor: arrayRemove(currentUid) });
-    } catch (err) { console.error(err); }
+    } catch (err) { }
     setLoading(false);
   };
 
@@ -363,7 +363,6 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
       );
       onCreated(chatId);
     } catch (e) {
-      console.error(e);
       setCreating(null);
     }
   };
@@ -464,7 +463,6 @@ function PermisosPanel() {
         : p
       ));
     } catch (e) {
-      console.error("togglePermiso:", e);
     } finally {
       setSaving(s => ({ ...s, [key]: false }));
     }

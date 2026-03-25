@@ -95,7 +95,6 @@ export default function GestionColaboradores() {
                 "auth/invalid-email": "El correo no es válido.",
             };
             setError(msgs[e.code] || "Error al crear el colaborador.");
-            console.error(e);
         } finally {
             setSaving(false);
         }

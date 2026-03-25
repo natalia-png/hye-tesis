@@ -48,7 +48,6 @@ export default function Proyectos() {
       setProjects(items);
       setLoading(false);
     }, e => {
-      console.error("Error cargando proyectos:", e);
       setError("No se pudieron cargar los proyectos.");
       setLoading(false);
     });
@@ -89,7 +88,6 @@ export default function Proyectos() {
       });
       // onSnapshot lo elimina automáticamente de la lista
     } catch (e) {
-      console.error("Error archivando proyecto:", e);
     }
   };
 

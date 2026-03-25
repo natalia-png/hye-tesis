@@ -37,10 +37,9 @@ export default function FasesProyecto({
     if (!isAdmin) return;
     getDocs(query(collection(db, "users"), where("role", "==", "colaborador")))
       .then(snap => {
-        console.log("[Fases] Colaboradores encontrados:", snap.size);
         setColaboradores(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
       })
-      .catch(e => console.error("[Fases] Error cargando colaboradores:", e));
+      .catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => {
@@ -58,7 +57,6 @@ export default function FasesProyecto({
     if (isColab) {
       const localFase = localFases.find(f => f.id === fase?.id);
       const uid = localFase?.responsableUid || fase?.responsableUid;
-      console.log("[canEdit]", fase?.nombre, "| responsableUid:", uid, "| userUid:", user?.uid, "| match:", uid === user?.uid);
       return uid === user?.uid;
     }
     return false;
@@ -166,13 +164,11 @@ export default function FasesProyecto({
           }
         }
       } catch (notifErr) {
-        console.warn("Notificaciones (no crítico):", notifErr);
       }
 
       setToast("✅ Cambios guardados.");
       setTimeout(() => setToast(""), 2500);
     } catch (e) {
-      console.error("Error guardando fases:", e);
       setError("No se pudieron guardar los cambios. Revisa permisos o conexión.");
     } finally {
       setSaving(false);

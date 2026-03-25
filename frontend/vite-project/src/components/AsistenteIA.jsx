@@ -117,7 +117,7 @@ export default function AsistenteIA() {
                     if (snap.empty) snap = await getDocs(query(col, where("clientEmail", "==", user.email), limit(5)));
                 }
                 setProyectos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (e) { console.warn("AsistenteIA:", e.message); }
+            } catch (e) { }
         };
         cargar();
     }, [user?.uid, user?.role, user?.email]);
@@ -150,7 +150,6 @@ export default function AsistenteIA() {
             const respuesta = result.response.text();
             setMensajes(prev => [...prev, { role: "assistant", content: respuesta }]);
         } catch (e) {
-            console.error("Gemini:", e);
             setError("No pude conectar con el asistente. Intenta de nuevo.");
         } finally {
             setCargando(false);

@@ -43,7 +43,7 @@ export default function GarantiasCliente() {
                 const d = snap.data();
                 setProjectName(d.name || d.nombre || "Proyecto");
             }
-        });
+        }).catch(() => {});
     }, [projectId]);
 
     // Escuchar solicitudes en tiempo real
@@ -154,7 +154,6 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                 });
                 setFechasOcupadas(ocupadas);
             } catch (e) {
-                console.error("Error cargando fechas:", e);
             }
         };
         cargarFechas();
@@ -217,7 +216,6 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
             onClose();
         } catch (e) {
-            console.error("Error al crear solicitud:", e);
             alert("Ocurrió un error. Intenta de nuevo.");
         } finally {
             setSaving(false);

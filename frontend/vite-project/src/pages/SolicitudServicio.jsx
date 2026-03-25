@@ -66,7 +66,6 @@ export default function SolicitudServicio() {
             });
             setPaso(2);
         } catch (e) {
-            console.error(e);
             setError("Ocurrió un error al enviar. Intenta de nuevo.");
         } finally {
             setSaving(false);

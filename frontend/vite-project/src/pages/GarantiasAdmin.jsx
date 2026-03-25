@@ -38,7 +38,7 @@ export default function GarantiasAdmin() {
                 const d = snap.data();
                 setProjectName(d.name || d.nombre || "Proyecto");
             }
-        });
+        }).catch(() => {});
     }, [projectId]);
 
     useEffect(() => {
@@ -169,7 +169,6 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
         try {
             await updateDoc(solRef, { estado: nuevoEstado });
         } catch (e) {
-            console.error(e);
         } finally {
             setChangingEstado(false);
         }
@@ -214,7 +213,6 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
             setArchivoRespuesta(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
         } catch (e) {
-            console.error(e);
         } finally {
             setSaving(false);
         }

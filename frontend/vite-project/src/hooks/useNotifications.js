@@ -23,8 +23,7 @@ export function useNotifications(uid) {
       setItems(list);
       setUnread(list.filter(n => !n.read).length);
       setReady(true);
-    }, err => {
-      console.error("useNotifications:", err);
+    }, () => {
       setReady(true);
     });
 
@@ -42,7 +41,6 @@ export function useNotifications(uid) {
       snap.docs.forEach(d => batch.update(doc(db, "notifications", uid, "items", d.id), { read: true }));
       await batch.commit();
     } catch (e) {
-      console.error("markAllRead:", e);
     }
   }, [uid, unread]);
 
@@ -54,7 +52,6 @@ export function useNotifications(uid) {
       batch.update(doc(db, "notifications", uid, "items", notifId), { read: true });
       await batch.commit();
     } catch (e) {
-      console.error("markRead:", e);
     }
   }, [uid]);
 
@@ -64,7 +61,6 @@ export function useNotifications(uid) {
     try {
       await deleteDoc(doc(db, "notifications", uid, "items", notifId));
     } catch (e) {
-      console.error("deleteNotif:", e);
     }
   }, [uid]);
 
@@ -76,7 +72,6 @@ export function useNotifications(uid) {
       items.forEach(n => batch.delete(doc(db, "notifications", uid, "items", n.id)));
       await batch.commit();
     } catch (e) {
-      console.error("deleteAll:", e);
     }
   }, [uid, items]);
 

@@ -76,7 +76,6 @@ export default function ChatPage() {
 
         setResolvedChatId(cId);
       } catch (e) {
-        console.error("ChatPage init:", e);
         setAccessDenied(true);
       } finally {
         setInitializing(false);

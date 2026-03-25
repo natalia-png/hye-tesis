@@ -21,7 +21,6 @@ export async function createNotification(toUid, payload) {
       createdAt: serverTimestamp(),
     });
   } catch (e) {
-    console.error("createNotification (Firestore):", e);
   }
 
   // 2 ── Push FCM (si el usuario tiene tokens guardados)
@@ -57,7 +56,6 @@ export async function createNotification(toUid, payload) {
     });
   } catch (e) {
     // Push falla silenciosamente — la notif in-app ya se guardó
-    console.warn("Push FCM (no crítico):", e.message);
   }
 }
 
@@ -131,7 +129,6 @@ export async function getClientUid(projectData) {
     );
     if (!snap.empty) return snap.docs[0].id;
   } catch (e) {
-    console.error("getClientUid:", e);
   }
 
   return null;

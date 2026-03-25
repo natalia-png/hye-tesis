@@ -85,7 +85,6 @@ export default function ArchivosFase({
         setListenerStatus(`ok-${list.length}`); // debug: cuántos docs trajo
       },
       (e) => {
-        console.error("ArchivosFase listener error:", e.code, e.message);
         setListenerStatus(`error-${e.code}`); // debug: qué error dio
 
         if (hadSuccessRef.current) return;
@@ -165,7 +164,6 @@ export default function ArchivosFase({
       setOk("✅ Archivo subido. Marca 'Mostrar' para que el cliente lo vea.");
       setTimeout(() => setOk(""), 4000);
     } catch (e2) {
-      console.error(e2);
       setError("No se pudo subir el archivo. Revisa permisos o conexión.");
     } finally {
       setBusy(false);
@@ -185,7 +183,6 @@ export default function ArchivosFase({
       setOk(!current ? "✅ Visible para cliente." : "✅ Oculto para cliente.");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
-      console.error(e);
       setError("No se pudo actualizar la visibilidad.");
     } finally {
       setBusy(false);
@@ -209,10 +206,9 @@ export default function ArchivosFase({
       if (file.storagePath) {
         try {
           await deleteObject(storageRef(storage, file.storagePath));
-        } catch (storageErr) {
+        } catch {
           // Si Storage falla por permisos o archivo no existe, continuar igual
           // El documento de Firestore se borra de todas formas
-          console.warn("Storage delete (no crítico):", storageErr.code);
         }
       }
       // Siempre borrar el documento de Firestore
@@ -220,7 +216,6 @@ export default function ArchivosFase({
       setOk("Archivo eliminado ✅");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
-      console.error(e);
       setError("No se pudo eliminar el archivo.");
     } finally {
       setBusy(false);
@@ -248,7 +243,6 @@ export default function ArchivosFase({
       const url = await getDownloadURL(storageRef(storage, file.storagePath));
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      console.error(e);
       setError("No se pudo descargar.");
     }
   };

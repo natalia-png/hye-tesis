@@ -42,7 +42,6 @@ export default function DashboardAdmin() {
         setProjects(list);
         setSelectedId(cur => cur || list[0]?.id || "");
       } catch (e) {
-        console.error("DashboardAdmin:", e);
         setErr("No se pudieron cargar los proyectos. Revisa permisos de Firestore.");
       } finally {
         setLoading(false);
@@ -129,14 +128,11 @@ export default function DashboardAdmin() {
           <button
             type="button"
             onClick={async () => {
-              console.log("[Push] click - requestPermission tipo:", typeof requestPermission);
               try {
                 const ok = await requestPermission();
-                console.log("[Push] resultado:", ok, "permission:", Notification.permission);
                 if (Notification.permission === "granted") alert("¡Notificaciones activadas!");
                 else alert("Permiso denegado o cancelado.");
               } catch (e) {
-                console.error("[Push] error:", e);
                 alert("Error: " + e.message);
               }
             }}

@@ -63,7 +63,6 @@ export default function DashboardCliente() {
         setProjects(list);
         setSelected(list[0] || null);
       } catch (e) {
-        console.error("DashboardCliente load error:", e);
         setErr("No se pudo cargar tu Dashboard.");
       } finally {
         setLoading(false);

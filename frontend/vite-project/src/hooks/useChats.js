@@ -32,8 +32,7 @@ export function useChats(uid) {
       const total = active.reduce((acc, c) => acc + (c.unread?.[uid] || 0), 0);
       setUnreadTotal(Math.min(total, 99));
       setReady(true);
-    }, err => {
-      console.error("useChats:", err);
+    }, () => {
       setReady(true);
     });
 

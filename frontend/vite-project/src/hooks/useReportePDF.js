@@ -322,7 +322,6 @@ export function useReportePDF() {
 
             doc.save(nombreArchivo);
         } catch (err) {
-            console.error("Error generando PDF:", err);
             alert("Ocurrió un error al generar el reporte. Intenta de nuevo.");
         } finally {
             setLoading(false);

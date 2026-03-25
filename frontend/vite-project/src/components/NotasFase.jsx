@@ -54,7 +54,6 @@ export default function NotasFase({
         setError("");
       },
       (e) => {
-        console.error(e);
         if (hadSuccessRef.current) return;
         setError("No se pudieron cargar las notas.");
       }
@@ -93,7 +92,6 @@ export default function NotasFase({
       setText("");
       flash("Nota guardada.");
     } catch (e) {
-      console.error(e);
       setError("No se pudo guardar la nota.");
     } finally {
       setSaving(false);
@@ -113,7 +111,6 @@ export default function NotasFase({
       await deleteDoc(doc(notasRef, nota.id));
       flash("Nota eliminada.");
     } catch (e) {
-      console.error(e);
       setError("No se pudo eliminar la nota.");
     } finally {
       setDeleting(null);
@@ -143,7 +140,6 @@ export default function NotasFase({
       setEditing(null);
       flash("Nota actualizada.");
     } catch (e) {
-      console.error(e);
       setError("No se pudo actualizar la nota.");
     } finally {
       setSaving(false);

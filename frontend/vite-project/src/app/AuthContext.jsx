@@ -105,7 +105,6 @@ export function AuthProvider({ children }) {
         });
 
       } catch (e) {
-        console.error("Perfil/rol:", e);
         setUser({
           uid: fbUser.uid,
           email: (fbUser.email || "").trim().toLowerCase(),

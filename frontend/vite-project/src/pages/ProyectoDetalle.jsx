@@ -81,7 +81,6 @@ export default function ProyectoDetalle({
           updatedAt: data.updatedAt || null,
         });
       } catch (e) {
-        console.error("Error cargando proyecto:", e);
         setError("No se pudo cargar la información del proyecto.");
       } finally {
         setLoading(false);

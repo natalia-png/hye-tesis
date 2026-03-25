@@ -70,7 +70,6 @@ export default function ProyectosCliente() {
         setError("");
       },
       (e) => {
-        console.error("Error cargando proyectos cliente:", e);
         setItems([]);
         setLoading(false);
         setError("No se pudieron cargar tus proyectos. Verifica que tu proyecto tenga el email asignado correctamente.");

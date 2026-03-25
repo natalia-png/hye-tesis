@@ -8,7 +8,14 @@
       "Bash(npm install:*)",
       "Bash(firebase deploy:*)",
       "Bash(npm run:*)",
-      "Bash(firebase functions:delete onNotificationCreated --region us-central1 --force)"
+      "Bash(firebase functions:delete onNotificationCreated --region us-central1 --force)",
+      "Bash(node -e \":*)",
+      "Bash(magick --version)",
+      "Bash(convert --version)",
+      "Bash(python3 -c \"from PIL import Image; img = Image.open\\(''c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/public/hye-icon-512.png''\\); img.resize\\(\\(192,192\\), Image.LANCZOS\\).save\\(''c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/public/hye-icon-192.png''\\); print\\(''OK''\\)\")",
+      "Bash(node -e \"const sharp = require\\(''sharp''\\); sharp\\(''./public/hye-icon-512.png''\\).resize\\(192,192\\).toFile\\(''./public/hye-icon-192.png'', \\(e,i\\) => { if\\(e\\) console.error\\(e\\); else console.log\\(''OK'', i\\); }\\)\")",
+      "Bash(npx cap:*)",
+      "Bash(head -20 grep -n \"requestPermission\\\\|usePushNotifications\\\\|pushDone\" \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardColaborador.jsx\")"
     ]
   }
 }

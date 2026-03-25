@@ -44,7 +44,6 @@ export default function ProyectoDetalleCliente() {
         const activa = fases.find(f => f.estado === "en_curso" || (f.porcentaje > 0 && f.porcentaje < 100));
         setOpenFaseId(activa?.id || null);
       } catch (e) {
-        console.error(e);
         setError("No se pudo cargar el proyecto.");
       } finally {
         setLoading(false);
@@ -393,7 +392,7 @@ function ArchivosPanel({ projectId, phaseId }) {
     try {
       const url = a.downloadURL || await getDownloadURL(storageRef(storage, a.storagePath));
       window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) { console.error(e); }
+    } catch (e) { }
     finally { setDownloading(null); }
   };
 

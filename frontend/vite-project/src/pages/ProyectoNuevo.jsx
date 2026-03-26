@@ -147,7 +147,7 @@ export default function ProyectoNuevo() {
           <p className="text-[12px] text-ink/65 mt-1">
             Luisa puede asignar el proyecto a un cliente usando su email. El
             sistema enlaza internamente al UID para que el cliente vea el
-            proyecto en “Mis proyectos” sin exponer la base.
+            proyecto en "Mis proyectos" sin exponer la base.
           </p>
         </div>
 
@@ -156,10 +156,11 @@ export default function ProyectoNuevo() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-1">
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-code" className="block text-[11px] text-ink/60 mb-1">
                 Código interno
               </label>
               <input
+                id="nuevo-code"
                 name="code"
                 value={form.code}
                 onChange={handleChange}
@@ -168,10 +169,11 @@ export default function ProyectoNuevo() {
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-name" className="block text-[11px] text-ink/60 mb-1">
                 Nombre del proyecto *
               </label>
               <input
+                id="nuevo-name"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
@@ -183,10 +185,11 @@ export default function ProyectoNuevo() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">
+            <label htmlFor="nuevo-client" className="block text-[11px] text-ink/60 mb-1">
               Cliente / razón social *
             </label>
             <input
+              id="nuevo-client"
               name="client"
               value={form.client}
               onChange={handleChange}
@@ -198,10 +201,11 @@ export default function ProyectoNuevo() {
 
           {/* ✅ Amigable: asignación por email */}
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">
-              Email del cliente (para asignar “Mis proyectos”)
+            <label htmlFor="nuevo-clientEmail" className="block text-[11px] text-ink/60 mb-1">
+              Email del cliente (para asignar "Mis proyectos")
             </label>
             <input
+              id="nuevo-clientEmail"
               name="clientEmail"
               value={form.clientEmail}
               onChange={handleChange}
@@ -211,17 +215,18 @@ export default function ProyectoNuevo() {
             />
             <p className="text-[11px] text-ink/50 mt-1">
               El cliente debe haberse registrado antes. Si lo dejas vacío, el
-              proyecto se crea igual pero no aparecerá en “Mis proyectos”.
+              proyecto se crea igual pero no aparecerá en "Mis proyectos".
             </p>
           </div>
 
           {/* resto igual */}
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-type" className="block text-[11px] text-ink/60 mb-1">
                 Tipo de proyecto
               </label>
               <select
+                id="nuevo-type"
                 name="type"
                 value={form.type}
                 onChange={handleChange}
@@ -236,10 +241,11 @@ export default function ProyectoNuevo() {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-location" className="block text-[11px] text-ink/60 mb-1">
                 Ubicación
               </label>
               <input
+                id="nuevo-location"
                 name="location"
                 value={form.location}
                 onChange={handleChange}
@@ -250,10 +256,11 @@ export default function ProyectoNuevo() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">
+            <label htmlFor="nuevo-budget" className="block text-[11px] text-ink/60 mb-1">
               Presupuesto estimado (COP)
             </label>
             <input
+              id="nuevo-budget"
               name="budget"
               type="number"
               min="0"
@@ -267,10 +274,11 @@ export default function ProyectoNuevo() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-startDate" className="block text-[11px] text-ink/60 mb-1">
                 Fecha de inicio
               </label>
               <input
+                id="nuevo-startDate"
                 name="startDate"
                 type="date"
                 value={form.startDate}
@@ -279,10 +287,11 @@ export default function ProyectoNuevo() {
               />
             </div>
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">
+              <label htmlFor="nuevo-endDate" className="block text-[11px] text-ink/60 mb-1">
                 Entrega estimada
               </label>
               <input
+                id="nuevo-endDate"
                 name="endDate"
                 type="date"
                 value={form.endDate}
@@ -293,10 +302,11 @@ export default function ProyectoNuevo() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">
+            <label htmlFor="nuevo-description" className="block text-[11px] text-ink/60 mb-1">
               Descripción / alcance inicial
             </label>
             <textarea
+              id="nuevo-description"
               name="description"
               value={form.description}
               onChange={handleChange}

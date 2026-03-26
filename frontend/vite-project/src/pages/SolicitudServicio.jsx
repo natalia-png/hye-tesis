@@ -6,6 +6,7 @@ import { useState } from "react";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import logoHye from "../assets/logo-header.png";
+import PropTypes from "prop-types";
 
 const TIPOS_OBRA = [
     "Diseño arquitectónico",
@@ -151,10 +152,10 @@ export default function SolicitudServicio() {
 
                             {/* Tipo de obra */}
                             <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                                <label htmlFor="solicitud-tipo-obra" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                                     Tipo de obra *
                                 </label>
-                                <div className="flex flex-wrap gap-2">
+                                <div id="solicitud-tipo-obra" className="flex flex-wrap gap-2">
                                     {TIPOS_OBRA.map(t => (
                                         <button
                                             key={t}
@@ -173,10 +174,10 @@ export default function SolicitudServicio() {
 
                             {/* Presupuesto */}
                             <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                                <label htmlFor="solicitud-presupuesto" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                                     Presupuesto estimado
                                 </label>
-                                <div className="flex flex-wrap gap-2">
+                                <div id="solicitud-presupuesto" className="flex flex-wrap gap-2">
                                     {PRESUPUESTOS.map(p => (
                                         <button
                                             key={p}
@@ -199,10 +200,11 @@ export default function SolicitudServicio() {
 
                             {/* Fecha de inicio */}
                             <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                                <label htmlFor="solicitud-fecha-inicio" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                                     Fecha de inicio deseada
                                 </label>
                                 <input
+                                    id="solicitud-fecha-inicio"
                                     type="date"
                                     value={form.fechaInicio}
                                     onChange={e => set("fechaInicio", e.target.value)}
@@ -213,10 +215,11 @@ export default function SolicitudServicio() {
 
                             {/* Descripción */}
                             <div className="space-y-1.5">
-                                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                                <label htmlFor="solicitud-descripcion" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                                     Descripción de necesidades *
                                 </label>
                                 <textarea
+                                    id="solicitud-descripcion"
                                     value={form.descripcion}
                                     onChange={e => set("descripcion", e.target.value)}
                                     placeholder="Cuéntanos qué quieres construir, remodelar o diseñar…"
@@ -274,3 +277,16 @@ function InfoRow({ label, value }) {
         </div>
     );
 }
+
+Field.propTypes = {
+    label: PropTypes.string,
+    value: PropTypes.string,
+    onChange: PropTypes.func,
+    placeholder: PropTypes.string,
+    type: PropTypes.string,
+};
+
+InfoRow.propTypes = {
+    label: PropTypes.string,
+    value: PropTypes.any,
+};

@@ -380,7 +380,7 @@ function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return Num
 function calcPctEsperado(ini, fin) {
   if (!ini || !fin) return null;
   const a = new Date(ini), b = new Date(fin), h = new Date();
-  if (Number.isNaN(a) || isNaN(b) || b <= a) return null;
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null;
   return Math.max(0, Math.min(100, Math.round(((h - a) / (b - a)) * 100)));
 }
 function getSemaforo(esp, real, estado) {

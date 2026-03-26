@@ -75,7 +75,7 @@ export default function ProyectoEditar() {
 
   const budgetPretty = useMemo(() => {
     if (!form.budget) return "";
-    const n = Number(form.budget.replace(/[^\d]/g, ""));
+    const n = Number(form.budget.replaceAll(/[^\d]/g, ""));
     if (!Number.isFinite(n) || n <= 0) return "";
     return n.toLocaleString("es-CO");
   }, [form.budget]);
@@ -84,7 +84,7 @@ export default function ProyectoEditar() {
     const { name, value } = e.target;
     setForm((f) => ({
       ...f,
-      [name]: name === "budget" ? value.replace(/[^\d]/g, "") : value,
+      [name]: name === "budget" ? value.replaceAll(/[^\d]/g, "") : value,
     }));
   };
 
@@ -193,8 +193,9 @@ export default function ProyectoEditar() {
 
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-1">
-              <label className="block text-[11px] text-ink/60 mb-1">Código interno</label>
+              <label htmlFor="edit-code" className="block text-[11px] text-ink/60 mb-1">Código interno</label>
               <input
+                id="edit-code"
                 name="code"
                 value={form.code}
                 onChange={handleChange}
@@ -203,8 +204,9 @@ export default function ProyectoEditar() {
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-[11px] text-ink/60 mb-1">Nombre del proyecto *</label>
+              <label htmlFor="edit-name" className="block text-[11px] text-ink/60 mb-1">Nombre del proyecto *</label>
               <input
+                id="edit-name"
                 name="name"
                 value={form.name}
                 onChange={handleChange}
@@ -215,8 +217,9 @@ export default function ProyectoEditar() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">Cliente / razón social *</label>
+            <label htmlFor="edit-client" className="block text-[11px] text-ink/60 mb-1">Cliente / razón social *</label>
             <input
+              id="edit-client"
               name="client"
               value={form.client}
               onChange={handleChange}
@@ -227,8 +230,9 @@ export default function ProyectoEditar() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">Tipo de proyecto</label>
+              <label htmlFor="edit-type" className="block text-[11px] text-ink/60 mb-1">Tipo de proyecto</label>
               <select
+                id="edit-type"
                 name="type"
                 value={form.type}
                 onChange={handleChange}
@@ -243,8 +247,9 @@ export default function ProyectoEditar() {
               </select>
             </div>
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">Ubicación</label>
+              <label htmlFor="edit-location" className="block text-[11px] text-ink/60 mb-1">Ubicación</label>
               <input
+                id="edit-location"
                 name="location"
                 value={form.location}
                 onChange={handleChange}
@@ -254,8 +259,9 @@ export default function ProyectoEditar() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">Presupuesto estimado (COP)</label>
+            <label htmlFor="edit-budget" className="block text-[11px] text-ink/60 mb-1">Presupuesto estimado (COP)</label>
             <input
+              id="edit-budget"
               name="budget"
               type="text"
               inputMode="numeric"
@@ -272,8 +278,9 @@ export default function ProyectoEditar() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">Estado</label>
+            <label htmlFor="edit-status" className="block text-[11px] text-ink/60 mb-1">Estado</label>
             <select
+              id="edit-status"
               name="status"
               value={form.status}
               onChange={handleChange}
@@ -289,8 +296,9 @@ export default function ProyectoEditar() {
           </div>
 
           <div>
-            <label className="block text-[11px] text-ink/60 mb-1">Descripción / notas</label>
+            <label htmlFor="edit-description" className="block text-[11px] text-ink/60 mb-1">Descripción / notas</label>
             <textarea
+              id="edit-description"
               name="description"
               value={form.description}
               onChange={handleChange}
@@ -313,8 +321,9 @@ export default function ProyectoEditar() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">Inicio del proyecto</label>
+              <label htmlFor="edit-startDate" className="block text-[11px] text-ink/60 mb-1">Inicio del proyecto</label>
               <input
+                id="edit-startDate"
                 name="startDate"
                 type="date"
                 value={form.startDate || ""}
@@ -323,8 +332,9 @@ export default function ProyectoEditar() {
               />
             </div>
             <div>
-              <label className="block text-[11px] text-ink/60 mb-1">Entrega estimada</label>
+              <label htmlFor="edit-endDate" className="block text-[11px] text-ink/60 mb-1">Entrega estimada</label>
               <input
+                id="edit-endDate"
                 name="endDate"
                 type="date"
                 value={form.endDate || ""}
@@ -373,10 +383,11 @@ export default function ProyectoEditar() {
                   {/* Fechas */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] text-ink/55 mb-1">
+                      <label htmlFor={`fase-inicio-${f.id}`} className="block text-[10px] text-ink/55 mb-1">
                         Inicio planeado
                       </label>
                       <input
+                        id={`fase-inicio-${f.id}`}
                         type="date"
                         value={f.fechaInicioPlaneada || ""}
                         onChange={(e) =>
@@ -386,10 +397,11 @@ export default function ProyectoEditar() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-ink/55 mb-1">
+                      <label htmlFor={`fase-fin-${f.id}`} className="block text-[10px] text-ink/55 mb-1">
                         Fin planeado
                       </label>
                       <input
+                        id={`fase-fin-${f.id}`}
                         type="date"
                         value={f.fechaFinPlaneada || ""}
                         onChange={(e) =>

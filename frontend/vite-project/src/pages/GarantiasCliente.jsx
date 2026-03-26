@@ -234,10 +234,11 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
             {/* Descripción */}
             <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                <label htmlFor="garantia-descripcion" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                     Descripción del problema *
                 </label>
                 <textarea
+                    id="garantia-descripcion"
                     value={descripcion}
                     onChange={e => setDescripcion(e.target.value)}
                     placeholder="Describe detalladamente el problema o solicitud…"
@@ -248,7 +249,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
             {/* Prioridad */}
             <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                <label htmlFor="garantia-prioridad" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                     Prioridad
                 </label>
                 <div className="flex gap-2">
@@ -272,10 +273,11 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
             {/* Fecha límite */}
             <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                <label htmlFor="garantia-fecha-limite" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                     Fecha límite esperada — mínimo 5 días
                 </label>
                 <input
+                    id="garantia-fecha-limite"
                     type="date"
                     value={fechaLimite}
                     onChange={e => {
@@ -303,10 +305,11 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
             {/* Fotos */}
             <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
+                <label htmlFor="garantia-fotos" className="text-[11px] font-semibold uppercase tracking-[0.15em] text-ink/50">
                     Fotos adjuntas (máx. 4)
                 </label>
                 <input
+                    id="garantia-fotos"
                     ref={fileRef}
                     type="file"
                     accept="image/*"

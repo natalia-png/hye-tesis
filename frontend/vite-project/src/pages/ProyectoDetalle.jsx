@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import BtnReportePDF from "../components/BtnReportePDF";
+import PropTypes from "prop-types";
 
 
 import FasesProyecto from "../components/FasesProyecto.jsx";
@@ -357,7 +358,7 @@ function formatMoney(value) {
       maximumFractionDigits: 0,
     });
   }
-  const n = Number(String(value).replace(/[^\d]/g, ""));
+  const n = Number(String(value).replaceAll(/[^\d]/g, ""));
   if (Number.isFinite(n) && n > 0) {
     return n.toLocaleString("es-CO", {
       style: "currency",
@@ -404,3 +405,21 @@ function timeAgoSmart(value) {
   if (h < 24) return `hace ${h} h`;
   return `hace ${Math.floor(h / 24)} d`;
 }
+
+ProyectoDetalle.propTypes = {
+  canManageDocuments: PropTypes.bool,
+  clientView: PropTypes.bool,
+};
+
+HeaderDetalle.propTypes = {
+  onBack: PropTypes.func,
+};
+
+InfoRow.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+};
+
+DaysRemaining.propTypes = {
+  endDate: PropTypes.any,
+};

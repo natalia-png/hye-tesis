@@ -163,7 +163,10 @@ function TarjetaFase({ fase, nav, completada = false }) {
     return (
         <div
             className={`card space-y-3 cursor-pointer hover:shadow-md transition-shadow ${completada ? "opacity-60" : ""}`}
+            role="button"
+            tabIndex={0}
             onClick={() => nav(`/proyectos/${fase.proyectoId}`)}
+            onKeyDown={e => e.key === 'Enter' && nav(`/proyectos/${fase.proyectoId}`)}
         >
             <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">

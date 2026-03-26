@@ -375,7 +375,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
                         </a>
                         {solicitud.telefono && (
                             <a
-                                href={`https://wa.me/${solicitud.telefono.replace(/\D/g, "")}?text=Hola ${solicitud.nombre.split(" ")[0]}, soy Luisa de H%26E Arquitectos. Te contacto por tu solicitud de servicio.`}
+                                href={`https://wa.me/${solicitud.telefono.replaceAll(/\D/g, "")}?text=Hola ${solicitud.nombre.split(" ")[0]}, soy Luisa de H%26E Arquitectos. Te contacto por tu solicitud de servicio.`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="flex-1 text-center btn-outline text-[12px] py-2"
@@ -465,8 +465,9 @@ function TarjetaSolicitud({ solicitud, nav }) {
 
                         {/* Asunto */}
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Asunto</label>
+                            <label htmlFor="modal-email-asunto" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Asunto</label>
                             <input
+                                id="modal-email-asunto"
                                 type="text"
                                 value={modalEmail.asunto}
                                 onChange={e => setModalEmail(m => ({ ...m, asunto: e.target.value }))}
@@ -476,8 +477,9 @@ function TarjetaSolicitud({ solicitud, nav }) {
 
                         {/* Cuerpo */}
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Mensaje</label>
+                            <label htmlFor="modal-email-cuerpo" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Mensaje</label>
                             <textarea
+                                id="modal-email-cuerpo"
                                 value={modalEmail.cuerpo}
                                 onChange={e => setModalEmail(m => ({ ...m, cuerpo: e.target.value }))}
                                 rows={10}

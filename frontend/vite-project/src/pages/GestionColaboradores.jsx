@@ -3,6 +3,7 @@
 // Usa initializeApp secundario para crear usuarios sin cerrar sesión de Luisa
 
 import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { collection, onSnapshot, doc } from "firebase/firestore";
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
@@ -174,8 +175,8 @@ export default function GestionColaboradores() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Área</label>
-                            <div className="flex gap-2 flex-wrap">
+                            <label htmlFor="colab-area" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Área</label>
+                            <div id="colab-area" className="flex gap-2 flex-wrap">
                                 {SUB_ROLES_OPTIONS.map(opt => (
                                     <button key={opt.value} type="button" onClick={() => set("subRole", opt.value)}
                                         className={`px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-all ${form.subRole === opt.value
@@ -189,20 +190,20 @@ export default function GestionColaboradores() {
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Nombre completo</label>
-                            <input type="text" value={form.name} onChange={e => set("name", e.target.value)}
+                            <label htmlFor="colab-nombre" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Nombre completo</label>
+                            <input id="colab-nombre" type="text" value={form.name} onChange={e => set("name", e.target.value)}
                                 placeholder="Ej: Carlos Medina" className="input w-full text-[13px]" />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Correo electrónico</label>
-                            <input type="email" value={form.email} onChange={e => set("email", e.target.value)}
+                            <label htmlFor="colab-email" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Correo electrónico</label>
+                            <input id="colab-email" type="email" value={form.email} onChange={e => set("email", e.target.value)}
                                 placeholder="correo@ejemplo.com" className="input w-full text-[13px]" />
                         </div>
 
                         <div className="space-y-1">
-                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Contraseña temporal</label>
-                            <input type="password" value={form.password} onChange={e => set("password", e.target.value)}
+                            <label htmlFor="colab-password" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Contraseña temporal</label>
+                            <input id="colab-password" type="password" value={form.password} onChange={e => set("password", e.target.value)}
                                 placeholder="Mínimo 6 caracteres" className="input w-full text-[13px]" />
                             <p className="text-[10px] text-ink/40">El colaborador puede cambiarla después.</p>
                         </div>
@@ -258,3 +259,8 @@ function TarjetaColaborador({ colaborador, onEliminar }) {
         </div>
     );
 }
+
+TarjetaColaborador.propTypes = {
+    colaborador: PropTypes.object,
+    onEliminar: PropTypes.func,
+};

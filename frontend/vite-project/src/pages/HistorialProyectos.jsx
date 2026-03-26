@@ -1,6 +1,7 @@
 // src/pages/HistorialProyectos.jsx
 // Vista admin — proyectos Archivados y Finalizados
 import { useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -301,3 +302,13 @@ function Dato({ label, value }) {
     </div>
   );
 }
+
+TarjetaHistorial.propTypes = {
+  proyecto: PropTypes.object,
+  nav: PropTypes.func,
+};
+
+Dato.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+};

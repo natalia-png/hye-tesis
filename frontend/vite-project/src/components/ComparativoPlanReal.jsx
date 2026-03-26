@@ -15,7 +15,7 @@ function pctEsperado(inicioStr, finStr) {
   const fin = new Date(finStr);
   const hoy = new Date();
 
-  if (Number.isNaN(inicio) || isNaN(fin) || fin <= inicio) return null;
+  if (Number.isNaN(inicio) || Number.isNaN(fin) || fin <= inicio) return null;
 
   const total = fin - inicio;
   const transcurrido = hoy - inicio;

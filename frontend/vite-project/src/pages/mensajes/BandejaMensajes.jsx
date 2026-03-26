@@ -6,6 +6,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../app/useAuth";
 import { useChats } from "../../hooks/useChats";
 import { ensureDirectChat, archiveChat, leaveChat } from "../../hooks/useChatMessages";
+import PropTypes from "prop-types";
 
 export default function BandejaMensajes() {
   const { user } = useAuth();
@@ -538,3 +539,24 @@ function timeAgo(date) {
   if (h < 24) return `${h}h`;
   return date.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
 }
+
+ChatList.propTypes = {
+  chats: PropTypes.array,
+  ready: PropTypes.bool,
+  user: PropTypes.object,
+  nav: PropTypes.func,
+  isArchived: PropTypes.bool,
+};
+
+TarjetaChat.propTypes = {
+  chat: PropTypes.object,
+  currentUid: PropTypes.string,
+  onClick: PropTypes.func,
+  isArchived: PropTypes.bool,
+};
+
+NuevoChatDirecto.propTypes = {
+  currentUser: PropTypes.object,
+  onCreated: PropTypes.func,
+  onClose: PropTypes.func,
+};

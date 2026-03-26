@@ -7,6 +7,7 @@ import { getDownloadURL, ref as storageRef } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import { DEFAULT_FASES, calcAvanceGlobal, cloneFases } from "../data/fases";
 import { useReportePDF } from "../hooks/useReportePDF";
+import PropTypes from "prop-types";
 
 export default function ProyectoDetalleCliente() {
   const { id } = useParams();
@@ -556,3 +557,29 @@ function getFileType(filename) {
   };
   return map[ext] || { ext: ext.toUpperCase().slice(0, 3) || "DOC", bg: "bg-zinc-100 text-zinc-500" };
 }
+
+ProyectoDetalleCliente.propTypes = {
+  project: PropTypes.object,
+};
+
+FaseCard.propTypes = {
+  fase: PropTypes.object,
+  index: PropTypes.number,
+  projectId: PropTypes.string,
+  isOpen: PropTypes.bool,
+  onToggle: PropTypes.func,
+};
+
+NotasPanel.propTypes = {
+  projectId: PropTypes.string,
+  phaseId: PropTypes.string,
+};
+
+ArchivosPanel.propTypes = {
+  projectId: PropTypes.string,
+  phaseId: PropTypes.string,
+};
+
+BtnPDF.propTypes = {
+  project: PropTypes.object,
+};

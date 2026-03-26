@@ -7,6 +7,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../app/useAuth";
 import { useChatMessages, ensureProjectChat } from "../../hooks/useChatMessages";
 import ChatWindow from "../../components/ChatWindow";
+import PropTypes from "prop-types";
 
 export default function ChatPage() {
   const { chatId } = useParams();
@@ -187,3 +188,15 @@ function ChatInner({ chatId, user, onBack }) {
     </div>
   );
 }
+
+ChatPage.propTypes = {
+  chatId: PropTypes.string,
+  user: PropTypes.object,
+  onBack: PropTypes.func,
+};
+
+ChatInner.propTypes = {
+  chatId: PropTypes.string,
+  user: PropTypes.object,
+  onBack: PropTypes.func,
+};

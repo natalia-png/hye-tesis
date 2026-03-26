@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query, where, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import PropTypes from "prop-types";
 
 export default function ProyectosCliente() {
   const { user, ready } = useAuth();
@@ -126,7 +127,10 @@ export default function ProyectosCliente() {
           <article
             key={p.id}
             className="card space-y-2 cursor-pointer"
+            role="button"
+            tabIndex={0}
             onClick={() => nav(`/mis-proyectos/${p.id}`)}
+            onKeyDown={e => e.key === 'Enter' && nav(`/mis-proyectos/${p.id}`)}
           >
             <div className="flex items-center justify-between gap-2">
               <div>
@@ -163,3 +167,5 @@ export default function ProyectosCliente() {
     </section>
   );
 }
+
+ProyectosCliente.propTypes = {};

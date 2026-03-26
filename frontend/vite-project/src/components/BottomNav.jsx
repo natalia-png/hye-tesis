@@ -4,6 +4,26 @@ import { useAuth } from "../app/useAuth";
 import { useChats } from "../hooks/useChats";
 import PropTypes from "prop-types";
 
+function NavBtn({ onClick, active, children, label }) {
+  return (
+    <button type="button" onClick={onClick} className="flex flex-col items-center gap-0.5">
+      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
+        active ? "bg-ink border-ink" : "border-ink/20"
+      }`}>
+        {children}
+      </span>
+      <span className={`text-[10px] ${active ? "text-ink font-medium" : "text-ink/60"}`}>{label}</span>
+    </button>
+  );
+}
+
+NavBtn.propTypes = {
+  onClick: PropTypes.func,
+  active: PropTypes.bool,
+  children: PropTypes.node,
+  label: PropTypes.string,
+};
+
 export default function BottomNav() {
   const nav = useNavigate();
   const { pathname } = useLocation();
@@ -18,17 +38,6 @@ export default function BottomNav() {
   const isHistorial = pathname.startsWith("/historial");
   const isColaboradores = pathname.startsWith("/colaboradores");
   const isMensajes = pathname.startsWith("/mensajes");
-
-  const NavBtn = ({ onClick, active, children, label }) => (
-    <button type="button" onClick={onClick} className="flex flex-col items-center gap-0.5">
-      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full border ${
-        active ? "bg-ink border-ink" : "border-ink/20"
-      }`}>
-        {children}
-      </span>
-      <span className={`text-[10px] ${active ? "text-ink font-medium" : "text-ink/60"}`}>{label}</span>
-    </button>
-  );
 
   return (
     <nav
@@ -96,10 +105,3 @@ export default function BottomNav() {
 }
 
 BottomNav.propTypes = {};
-
-// NavBtn es un componente interno — se define dentro del scope de BottomNav
-// PropTypes se documentan aquí como referencia:
-// onClick: PropTypes.func.isRequired
-// active: PropTypes.bool
-// children: PropTypes.node
-// label: PropTypes.string

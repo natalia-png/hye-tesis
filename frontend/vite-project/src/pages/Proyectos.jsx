@@ -7,6 +7,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import PropTypes from "prop-types";
 
 export default function Proyectos() {
   const { user } = useAuth();
@@ -188,7 +189,10 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
       {/* Zona clickeable principal */}
       <div
         className="flex items-start justify-between gap-4 cursor-pointer"
+        role="button"
+        tabIndex={0}
         onClick={onNav}
+        onKeyDown={e => e.key === 'Enter' && onNav()}
       >
         <div>
           <h3 className="text-[15px] font-medium text-ink">{p.name}</h3>
@@ -203,7 +207,13 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
       </div>
 
       {/* Barra de progreso */}
-      <div className="mt-1 cursor-pointer" onClick={onNav}>
+      <div
+        className="mt-1 cursor-pointer"
+        role="button"
+        tabIndex={0}
+        onClick={onNav}
+        onKeyDown={e => e.key === 'Enter' && onNav()}
+      >
         <div className="flex justify-between text-[11px] text-ink/60 mb-1">
           <span>Avance</span>
           <span>{p.progress}%</span>
@@ -224,7 +234,13 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
             Archivar proyecto →
           </button>
         ) : (
-          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-2"
+            role="button"
+            tabIndex={0}
+            onClick={e => e.stopPropagation()}
+            onKeyDown={e => e.stopPropagation()}
+          >
             <p className="text-[11px] text-amber-700 font-medium">¿Mover al historial?</p>
             <button
               type="button"
@@ -247,3 +263,9 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
     </article>
   );
 }
+
+TarjetaProyecto.propTypes = {
+  proyecto: PropTypes.object,
+  onNav: PropTypes.func,
+  onArchivar: PropTypes.func,
+};

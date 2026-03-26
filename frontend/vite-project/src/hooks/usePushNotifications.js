@@ -36,7 +36,7 @@ async function initNativePush(uid) {
     }
     // "prompt" = aún no se ha pedido, tratarlo como "default" para mostrar el banner
     return receive === "prompt" ? "default" : receive;
-  } catch (e) {
+  } catch (_e) { /* ignored */
     return "default";
   }
 }
@@ -103,8 +103,7 @@ export function usePushNotifications(uid, onForegroundMessage) {
               });
             }
           }
-        } catch (e) {
-        }
+        } catch (_e) { /* ignored */ }
       }
     })();
 
@@ -148,7 +147,7 @@ export function usePushNotifications(uid, onForegroundMessage) {
       }
 
       return true;
-    } catch (e) {
+    } catch (_e) { /* ignored */
       return false;
     }
   }, [uid]);

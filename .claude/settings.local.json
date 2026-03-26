@@ -16,7 +16,12 @@
       "Bash(node -e \"const sharp = require\\(''sharp''\\); sharp\\(''./public/hye-icon-512.png''\\).resize\\(192,192\\).toFile\\(''./public/hye-icon-192.png'', \\(e,i\\) => { if\\(e\\) console.error\\(e\\); else console.log\\(''OK'', i\\); }\\)\")",
       "Bash(npx cap:*)",
       "Bash(head -20 grep -n \"requestPermission\\\\|usePushNotifications\\\\|pushDone\" \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardColaborador.jsx\")",
-      "Bash(grep -v \"//.*isNaN\")"
+      "Bash(grep -v \"//.*isNaN\")",
+      "Bash(head -10 grep -n \"cors\\\\|CORS\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/backend/src/services/notificationService.js)",
+      "Bash(sed -n '375,385p' \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardAdmin.jsx\")",
+      "Bash(sed -n '485,495p' \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardCliente.jsx\")",
+      "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/ComercialAdmin.jsx\")",
+      "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/HistorialProyectos.jsx\")"
     ]
   }
 }

@@ -58,7 +58,7 @@ export default function Login() {
       }
 
       const actionCodeSettings = {
-        url: window.location.origin + "/login",
+        url: globalThis.location.origin + "/login",
         handleCodeInApp: false,
       };
       await sendPasswordResetEmail(auth, resetEmail.trim(), actionCodeSettings);

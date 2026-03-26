@@ -81,7 +81,7 @@ export default function ProyectoDetalle({
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
         });
-      } catch (e) {
+      } catch (_e) { /* ignored */
         setError("No se pudo cargar la información del proyecto.");
       } finally {
         setLoading(false);

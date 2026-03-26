@@ -4,10 +4,9 @@
 
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { collection, onSnapshot, doc } from "firebase/firestore";
+import { collection, onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { setDoc, serverTimestamp } from "firebase/firestore";
 import { db, firebaseConfig } from "../lib/firebase";
 
 const FUNCTIONS_URL = "https://us-central1-hye-tesis.cloudfunctions.net";

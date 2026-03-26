@@ -753,10 +753,6 @@ async function sendPushToUser(userId, payload) {
     ? `https://hye-tesis.web.app/mis-proyectos/${payload.projectId}`
     : "https://hye-tesis.web.app";
 
-  // Separar tokens por plataforma
-  const webTokens     = tokenDocs.filter(t => t.platform !== "android").map(t => t.token);
-  const androidTokens = tokenDocs.filter(t => t.platform === "android").map(t => t.token);
-
   const allTokens = tokenDocs.map(t => t.token);
 
   try {
@@ -797,10 +793,10 @@ async function sendPushToUser(userId, payload) {
 
     let successCount = 0;
     let failureCount = 0;
-    const invalid = [
+    const invalid = new Set([
       "messaging/invalid-registration-token",
       "messaging/registration-token-not-registered",
-    ];
+    ]);
     const batch = db.batch();
     let cleaned = 0;
 
@@ -810,7 +806,7 @@ async function sendPushToUser(userId, payload) {
       } else {
         failureCount++;
         const code = result.reason?.errorInfo?.code;
-        if (invalid.includes(code)) {
+        if (invalid.has(code)) {
           batch.delete(
             db.collection("users").doc(userId)
               .collection("fcmTokens").doc(allTokens[i])

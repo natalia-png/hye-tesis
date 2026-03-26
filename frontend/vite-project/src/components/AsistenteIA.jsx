@@ -118,7 +118,7 @@ export default function AsistenteIA() {
                     if (snap.empty) snap = await getDocs(query(col, where("clientEmail", "==", user.email), limit(5)));
                 }
                 setProyectos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (e) { }
+            } catch (_e) { /* ignored */ }
         };
         cargar();
     }, [user?.uid, user?.role, user?.email]);
@@ -150,7 +150,7 @@ export default function AsistenteIA() {
             const result = await chatSessionRef.current.sendMessage(texto);
             const respuesta = result.response.text();
             setMensajes(prev => [...prev, { role: "assistant", content: respuesta }]);
-        } catch (e) {
+        } catch (_e) { /* ignored */
             setError("No pude conectar con el asistente. Intenta de nuevo.");
         } finally {
             setCargando(false);
@@ -233,7 +233,7 @@ export default function AsistenteIA() {
                             </div>
                         )}
                         {mensajes.map((m, i) => (
-                            <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                            <div key={m.id || String(i)} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                                 <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-[12px] leading-relaxed whitespace-pre-wrap ${m.role === "user" ? "bg-ink text-ivory rounded-br-sm" : "bg-sand text-ink rounded-bl-sm"
                                     }`}>{m.content}</div>
                             </div>

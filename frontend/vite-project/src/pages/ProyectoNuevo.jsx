@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import { getAuth } from "firebase/auth";
 import { cloneFases, DEFAULT_FASES } from "../data/fases";
 import { useAuth } from "../app/useAuth";
@@ -115,7 +115,7 @@ export default function ProyectoNuevo() {
 
       const docRef = await addDoc(collection(db, "projects"), payload);
       nav(`/proyectos/${docRef.id}`);
-    } catch (e) {
+    } catch (_e) { /* ignored */
       setError("No se pudo crear el proyecto. Intenta de nuevo.");
     } finally {
       setSaving(false);

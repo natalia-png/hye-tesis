@@ -88,8 +88,7 @@ export default function Proyectos() {
         archivedAt: serverTimestamp(),
       });
       // onSnapshot lo elimina automáticamente de la lista
-    } catch (e) {
-    }
+    } catch (_e) { /* ignored */ }
   };
 
   const firstName = user?.name?.split(" ")[0] || "Arquitecta";
@@ -187,12 +186,10 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
   return (
     <article className="card flex flex-col gap-2">
       {/* Zona clickeable principal */}
-      <div
-        className="flex items-start justify-between gap-4 cursor-pointer"
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        className="flex items-start justify-between gap-4 cursor-pointer w-full text-left"
         onClick={onNav}
-        onKeyDown={e => e.key === 'Enter' && onNav()}
       >
         <div>
           <h3 className="text-[15px] font-medium text-ink">{p.name}</h3>
@@ -204,15 +201,13 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
             {p.status}
           </span>
         </div>
-      </div>
+      </button>
 
       {/* Barra de progreso */}
-      <div
-        className="mt-1 cursor-pointer"
-        role="button"
-        tabIndex={0}
+      <button
+        type="button"
+        className="mt-1 cursor-pointer w-full text-left"
         onClick={onNav}
-        onKeyDown={e => e.key === 'Enter' && onNav()}
       >
         <div className="flex justify-between text-[11px] text-ink/60 mb-1">
           <span>Avance</span>
@@ -221,7 +216,7 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
         <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
           <div className="h-full bg-ink" style={{ width: `${p.progress}%` }} />
         </div>
-      </div>
+      </button>
 
       {/* Archivar */}
       <div className="border-t border-sand pt-2.5 mt-1">
@@ -236,10 +231,7 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
         ) : (
           <div
             className="flex items-center gap-2"
-            role="button"
-            tabIndex={0}
             onClick={e => e.stopPropagation()}
-            onKeyDown={e => e.stopPropagation()}
           >
             <p className="text-[11px] text-amber-700 font-medium">¿Mover al historial?</p>
             <button

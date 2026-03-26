@@ -1,5 +1,5 @@
 // src/app/AuthContext.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { onSnapshot, doc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
@@ -105,7 +105,7 @@ export function AuthProvider({ children }) {
           } : prev);
         });
 
-      } catch (e) {
+      } catch (_e) { /* ignored */
         setUser({
           uid: fbUser.uid,
           email: (fbUser.email || "").trim().toLowerCase(),
@@ -131,8 +131,13 @@ export function AuthProvider({ children }) {
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const logout = () => signOut(auth);
 
+  const ctxValue = useMemo(
+    () => ({ user, ready, login, logout, permissionStatus, requestPermission }),
+    [user, ready, login, logout, permissionStatus, requestPermission]
+  );
+
   return (
-    <Ctx.Provider value={{ user, ready, login, logout, permissionStatus, requestPermission }}>
+    <Ctx.Provider value={ctxValue}>
       {children}
 
       {/* Toast de notificación con app abierta */}

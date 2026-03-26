@@ -92,7 +92,7 @@ export default function NotasFase({
       });
       setText("");
       flash("Nota guardada.");
-    } catch (e) {
+    } catch (_e) { /* ignored */
       setError("No se pudo guardar la nota.");
     } finally {
       setSaving(false);
@@ -111,7 +111,7 @@ export default function NotasFase({
     try {
       await deleteDoc(doc(notasRef, nota.id));
       flash("Nota eliminada.");
-    } catch (e) {
+    } catch (_e) { /* ignored */
       setError("No se pudo eliminar la nota.");
     } finally {
       setDeleting(null);
@@ -140,7 +140,7 @@ export default function NotasFase({
       });
       setEditing(null);
       flash("Nota actualizada.");
-    } catch (e) {
+    } catch (_e) { /* ignored */
       setError("No se pudo actualizar la nota.");
     } finally {
       setSaving(false);

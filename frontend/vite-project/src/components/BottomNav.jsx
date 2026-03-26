@@ -35,7 +35,6 @@ export default function BottomNav() {
   const isHome = pathname === "/";
   const isProjects = pathname.startsWith("/proyectos") || pathname.startsWith("/mis-proyectos");
   const isComercial = pathname.startsWith("/comercial");
-  const isHistorial = pathname.startsWith("/historial");
   const isColaboradores = pathname.startsWith("/colaboradores");
   const isMensajes = pathname.startsWith("/mensajes");
 

@@ -44,7 +44,7 @@ export default function ProyectoDetalleCliente() {
         });
         const activa = fases.find(f => f.estado === "en_curso" || (f.porcentaje > 0 && f.porcentaje < 100));
         setOpenFaseId(activa?.id || null);
-      } catch (e) {
+      } catch (_e) { /* ignored */
         setError("No se pudo cargar el proyecto.");
       } finally {
         setLoading(false);
@@ -393,7 +393,7 @@ function ArchivosPanel({ projectId, phaseId }) {
     try {
       const url = a.downloadURL || await getDownloadURL(storageRef(storage, a.storagePath));
       window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) { }
+    } catch (_e) { /* ignored */ }
     finally { setDownloading(null); }
   };
 
@@ -558,9 +558,7 @@ function getFileType(filename) {
   return map[ext] || { ext: ext.toUpperCase().slice(0, 3) || "DOC", bg: "bg-zinc-100 text-zinc-500" };
 }
 
-ProyectoDetalleCliente.propTypes = {
-  project: PropTypes.object,
-};
+ProyectoDetalleCliente.propTypes = {};
 
 FaseCard.propTypes = {
   fase: PropTypes.object,

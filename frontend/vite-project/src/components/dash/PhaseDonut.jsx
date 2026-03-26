@@ -92,8 +92,6 @@ export default function PhaseDonut({ phases = [], size = 120 }) {
 PhaseDonut.propTypes = {
   phases: PropTypes.array,
   size: PropTypes.number,
-  label: PropTypes.string,
-  tone: PropTypes.string,
 };
 
 function Chip({ label, tone = "muted" }) {

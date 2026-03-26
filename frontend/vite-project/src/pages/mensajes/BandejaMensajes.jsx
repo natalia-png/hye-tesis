@@ -1,7 +1,7 @@
 // src/pages/mensajes/BandejaMensajes.jsx
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, getDoc, doc, updateDoc, arrayRemove, query, where, limit, documentId } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, arrayRemove, query, where, limit, documentId } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../app/useAuth";
 import { useChats } from "../../hooks/useChats";
@@ -148,7 +148,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   const handleArchive = async (e) => {
     e.stopPropagation();
     setLoading(true);
-    try { await archiveChat(chat.id, currentUid); } catch (err) { }
+    try { await archiveChat(chat.id, currentUid); } catch (_e) { /* ignored */ }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -162,7 +162,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
       } else {
         await archiveChat(chat.id, currentUid);
       }
-    } catch (err) { }
+    } catch (_e) { /* ignored */ }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -172,7 +172,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     setLoading(true);
     try {
       await updateDoc(doc(db, "chats", chat.id), { hiddenFor: arrayRemove(currentUid) });
-    } catch (err) { }
+    } catch (_e) { /* ignored */ }
     setLoading(false);
   };
 
@@ -363,7 +363,7 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
         otherUser.uid, otherUser.name || otherUser.email, otherUser.role,
       );
       onCreated(chatId);
-    } catch (e) {
+    } catch (_e) { /* ignored */
       setCreating(null);
     }
   };
@@ -463,7 +463,7 @@ function PermisosPanel() {
         ? { ...p, chatPermisos: { ...p.chatPermisos, [colaborador.uid]: nuevoValor } }
         : p
       ));
-    } catch (e) {
+    } catch (_e) { /* ignored */
     } finally {
       setSaving(s => ({ ...s, [key]: false }));
     }

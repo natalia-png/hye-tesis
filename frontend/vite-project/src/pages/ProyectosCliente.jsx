@@ -4,8 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query, where, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
-import PropTypes from "prop-types";
-
 export default function ProyectosCliente() {
   const { user, ready } = useAuth();
   const nav = useNavigate();
@@ -124,13 +122,11 @@ export default function ProyectosCliente() {
 
       <div className="space-y-3">
         {filtered.map((p) => (
-          <article
+          <button
             key={p.id}
-            className="card space-y-2 cursor-pointer"
-            role="button"
-            tabIndex={0}
+            type="button"
+            className="card space-y-2 cursor-pointer w-full text-left"
             onClick={() => nav(`/mis-proyectos/${p.id}`)}
-            onKeyDown={e => e.key === 'Enter' && nav(`/mis-proyectos/${p.id}`)}
           >
             <div className="flex items-center justify-between gap-2">
               <div>
@@ -155,7 +151,7 @@ export default function ProyectosCliente() {
                 <div className="h-full bg-ink" style={{ width: `${p.progress}%` }} />
               </div>
             </div>
-          </article>
+          </button>
         ))}
 
         {!loading && !error && ready && filtered.length === 0 && (

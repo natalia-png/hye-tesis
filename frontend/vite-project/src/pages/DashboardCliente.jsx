@@ -485,7 +485,7 @@ function computeProjectKPIs(p) {
     fases: fases.map(f => ({ id: f.id, nombre: f.nombre, porcentaje: clampInt(f.porcentaje, 0, 100), estado: f.estado, fechaInicioPlaneada: f.fechaInicioPlaneada || null, fechaFinPlaneada: f.fechaFinPlaneada || null })),
   };
 }
-function clampInt(v, a, b) { const n = Number(v); return Number.Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
+function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
 function calcDaysLeft(endDate) { if (!endDate) return null; const d = new Date(endDate); return Number.isNaN(d.getTime()) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000); }
 
 DashboardCliente.propTypes = {};

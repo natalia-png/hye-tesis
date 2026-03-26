@@ -66,7 +66,7 @@ export default function SolicitudServicio() {
                 createdAt: serverTimestamp(),
             });
             setPaso(2);
-        } catch (e) {
+        } catch (_e) { /* ignored */
             setError("Ocurrió un error al enviar. Intenta de nuevo.");
         } finally {
             setSaving(false);

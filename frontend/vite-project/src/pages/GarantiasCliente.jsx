@@ -156,8 +156,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                     if (f) ocupadas.add(f); // formato "YYYY-MM-DD"
                 });
                 setFechasOcupadas(ocupadas);
-            } catch (e) {
-            }
+            } catch (_e) { /* ignored */ }
         };
         cargarFechas();
     }, [projectId]);
@@ -218,7 +217,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
             });
 
             onClose();
-        } catch (e) {
+        } catch (_e) { /* ignored */
             alert("Ocurrió un error. Intenta de nuevo.");
         } finally {
             setSaving(false);

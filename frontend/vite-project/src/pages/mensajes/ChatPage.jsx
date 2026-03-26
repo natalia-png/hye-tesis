@@ -76,7 +76,7 @@ export default function ChatPage() {
         }
 
         setResolvedChatId(cId);
-      } catch (e) {
+      } catch (_e) { /* ignored */
         setAccessDenied(true);
       } finally {
         setInitializing(false);

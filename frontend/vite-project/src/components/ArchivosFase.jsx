@@ -164,7 +164,7 @@ export default function ArchivosFase({
 
       setOk("✅ Archivo subido. Marca 'Mostrar' para que el cliente lo vea.");
       setTimeout(() => setOk(""), 4000);
-    } catch (e2) {
+    } catch (_e2) {
       setError("No se pudo subir el archivo. Revisa permisos o conexión.");
     } finally {
       setBusy(false);
@@ -181,7 +181,7 @@ export default function ArchivosFase({
 
     try {
       await updateDoc(doc(colRef, id), { visibleToClient: !current });
-      setOk(!current ? "✅ Visible para cliente." : "✅ Oculto para cliente.");
+      setOk(current ? "✅ Oculto para cliente." : "✅ Visible para cliente.");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
       setError("No se pudo actualizar la visibilidad.");

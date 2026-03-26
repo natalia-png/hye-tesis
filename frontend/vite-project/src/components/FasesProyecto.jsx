@@ -164,8 +164,7 @@ export default function FasesProyecto({
             });
           }
         }
-      } catch (notifErr) {
-      }
+      } catch (_e) { /* ignored */ }
 
       setToast("✅ Cambios guardados.");
       setTimeout(() => setToast(""), 2500);
@@ -340,7 +339,6 @@ FasesProyecto.propTypes = {
   canEdit: PropTypes.bool,
   updatedAt: PropTypes.any,
   createdAt: PropTypes.any,
-  estado: PropTypes.string,
 };
 
 function EstadoChip({ estado }) {

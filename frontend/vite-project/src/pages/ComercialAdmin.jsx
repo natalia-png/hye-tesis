@@ -77,7 +77,7 @@ export default function ComercialAdmin() {
                 <button
                     type="button"
                     onClick={() => {
-                        const url = `${window.location.origin}/solicitar`;
+                        const url = `${globalThis.location.origin}/solicitar`;
                         navigator.clipboard?.writeText(url);
                         alert("Link copiado:\n" + url);
                     }}
@@ -191,7 +191,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setCambiandoEstado(true);
         try {
             await updateDoc(solRef, { estado: nuevoEstado, updatedAt: serverTimestamp() });
-        } catch (e) {
+        } catch (_e) { /* ignored */
         } finally {
             setCambiandoEstado(false);
         }
@@ -213,7 +213,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
                 },
             });
             setModalEmail(null);
-        } catch (e) {
+        } catch (_e) { /* ignored */
         } finally {
             setEnviandoEmail(false);
         }
@@ -223,7 +223,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setDeleting(true);
         try {
             await deleteDoc(solRef);
-        } catch (e) {
+        } catch (_e) { /* ignored */
             setDeleting(false);
             setConfirmDelete(false);
         }
@@ -233,7 +233,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setSaving(true);
         try {
             await updateDoc(solRef, { notaAdmin: nota, updatedAt: serverTimestamp() });
-        } catch (e) {
+        } catch (_e) { /* ignored */
         } finally {
             setSaving(false);
         }
@@ -412,15 +412,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
                     )}
                     {/* Eliminar solicitud */}
                     <div className="pt-1 border-t border-sand">
-                        {!confirmDelete ? (
-                            <button
-                                type="button"
-                                onClick={() => setConfirmDelete(true)}
-                                className="w-full text-[12px] text-red-400 hover:text-red-600 transition py-1"
-                            >
-                                Eliminar solicitud
-                            </button>
-                        ) : (
+                        {confirmDelete ? (
                             <div className="space-y-2">
                                 <p className="text-[12px] text-red-600 text-center font-medium">
                                     ¿Confirmar eliminación? Esta acción no se puede deshacer.
@@ -445,6 +437,14 @@ function TarjetaSolicitud({ solicitud, nav }) {
                                     </button>
                                 </div>
                             </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setConfirmDelete(true)}
+                                className="w-full text-[12px] text-red-400 hover:text-red-600 transition py-1"
+                            >
+                                Eliminar solicitud
+                            </button>
                         )}
                     </div>
                 </div>

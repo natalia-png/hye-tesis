@@ -70,7 +70,7 @@ export default function DashboardAdmin() {
       <p className="text-[11px] text-ink/50">
         Rol: <span className="font-mono font-medium">{role}</span> · Email: <span className="font-mono font-medium">{user?.email}</span>
       </p>
-      <button className="btn-outline text-[12px] mt-1" onClick={() => window.location.reload()}>Recargar</button>
+      <button className="btn-outline text-[12px] mt-1" onClick={() => globalThis.location.reload()}>Recargar</button>
     </div>
   );
 
@@ -130,7 +130,7 @@ export default function DashboardAdmin() {
             type="button"
             onClick={async () => {
               try {
-                const ok = await requestPermission();
+                await requestPermission();
                 if (Notification.permission === "granted") alert("¡Notificaciones activadas!");
                 else alert("Permiso denegado o cancelado.");
               } catch (e) {

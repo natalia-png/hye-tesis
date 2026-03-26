@@ -171,7 +171,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
         setChangingEstado(true);
         try {
             await updateDoc(solRef, { estado: nuevoEstado });
-        } catch (e) {
+        } catch (_e) { /* ignored */
         } finally {
             setChangingEstado(false);
         }
@@ -215,7 +215,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
             setRespuesta("");
             setArchivoRespuesta(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
-        } catch (e) {
+        } catch (_e) { /* ignored */
         } finally {
             setSaving(false);
         }

@@ -40,8 +40,7 @@ export function useNotifications(uid) {
       const batch = writeBatch(db);
       snap.docs.forEach(d => batch.update(doc(db, "notifications", uid, "items", d.id), { read: true }));
       await batch.commit();
-    } catch (e) {
-    }
+    } catch (_e) { /* ignored */ }
   }, [uid, unread]);
 
   // Marca una como leída
@@ -51,8 +50,7 @@ export function useNotifications(uid) {
       const batch = writeBatch(db);
       batch.update(doc(db, "notifications", uid, "items", notifId), { read: true });
       await batch.commit();
-    } catch (e) {
-    }
+    } catch (_e) { /* ignored */ }
   }, [uid]);
 
   // Elimina una notificación
@@ -60,8 +58,7 @@ export function useNotifications(uid) {
     if (!uid || !notifId) return;
     try {
       await deleteDoc(doc(db, "notifications", uid, "items", notifId));
-    } catch (e) {
-    }
+    } catch (_e) { /* ignored */ }
   }, [uid]);
 
   // Elimina todas las notificaciones
@@ -71,8 +68,7 @@ export function useNotifications(uid) {
       const batch = writeBatch(db);
       items.forEach(n => batch.delete(doc(db, "notifications", uid, "items", n.id)));
       await batch.commit();
-    } catch (e) {
-    }
+    } catch (_e) { /* ignored */ }
   }, [uid, items]);
 
   return { items, unread, ready, markAllRead, markRead, deleteNotif, deleteAll };

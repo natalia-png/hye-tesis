@@ -36,7 +36,7 @@ export function useChats(uid) {
       setReady(true);
     });
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* Firebase 12.9 race on unmount */ } };
   }, [uid]);
 
   return { chats, archivedChats, unreadTotal, ready };

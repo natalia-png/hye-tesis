@@ -16,9 +16,10 @@ export function useChatMessages(chatId, currentUid) {
   // Escuchar el documento del chat
   useEffect(() => {
     if (!chatId) return;
-    return onSnapshot(doc(db, "chats", chatId), snap => {
+    const unsub = onSnapshot(doc(db, "chats", chatId), snap => {
       setChat(snap.exists() ? { id: snap.id, ...snap.data() } : null);
     });
+    return () => { try { unsub(); } catch (_e) { /* Firebase 12.9 race on unmount */ } };
   }, [chatId]);
 
   // Escuchar los mensajes
@@ -29,10 +30,11 @@ export function useChatMessages(chatId, currentUid) {
       orderBy("createdAt", "asc"),
       limit(150)
     );
-    return onSnapshot(q, snap => {
+    const unsub = onSnapshot(q, snap => {
       setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setReady(true);
     }, () => setReady(true));
+    return () => { try { unsub(); } catch (_e) { /* Firebase 12.9 race on unmount */ } };
   }, [chatId]);
 
   // Marcar como leído al entrar

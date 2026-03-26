@@ -1,4 +1,4 @@
-package com.hye.arquitectos;
+package com.hye.app;
 
 import com.getcapacitor.BridgeActivity;
 

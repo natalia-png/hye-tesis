@@ -50,7 +50,7 @@ export default function GestionColaboradores() {
             },
             () => setLoading(false)
         );
-        return () => unsub();
+        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
     }, []);
 
     const handleCrear = async () => {

@@ -25,7 +25,7 @@ export default function DashboardColaborador() {
             setProyectos(todos);
             setLoading(false);
         }, () => setLoading(false));
-        return () => unsub();
+        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
     }, [user?.uid]);
 
     // Filtrar fases donde responsableUid == user.uid

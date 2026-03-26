@@ -75,7 +75,7 @@ export default function ProyectosCliente() {
       }
     );
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [ready, user?.email]); // ✅ depende de email, consistente con DashboardCliente
 
   const filtered = useMemo(() => {

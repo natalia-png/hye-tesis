@@ -51,7 +51,7 @@ export default function GarantiasAdmin() {
             setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
             setLoading(false);
         }, () => setLoading(false));
-        return () => unsub();
+        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
     }, [projectId]);
 
     const filtradas = filtro === "todas"

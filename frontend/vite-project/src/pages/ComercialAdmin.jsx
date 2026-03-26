@@ -40,7 +40,7 @@ export default function ComercialAdmin() {
             setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
             setLoading(false);
         }, () => setLoading(false));
-        return () => unsub();
+        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
     }, []);
 
     const filtradas = filtro === "todas"

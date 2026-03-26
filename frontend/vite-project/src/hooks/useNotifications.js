@@ -27,7 +27,7 @@ export function useNotifications(uid) {
       setReady(true);
     });
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [uid]);
 
   // Marca todas como leídas

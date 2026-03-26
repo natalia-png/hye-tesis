@@ -318,7 +318,7 @@ function NotasPanel({ projectId, phaseId }) {
       setNotas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setReady(true);
     }, () => setReady(true));
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [projectId, phaseId]);
 
   if (!ready) return null;
@@ -384,7 +384,7 @@ function ArchivosPanel({ projectId, phaseId }) {
       setArchivos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setReady(true);
     }, () => setReady(true));
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [projectId, phaseId]);
 
   const download = async (a) => {

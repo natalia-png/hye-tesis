@@ -72,7 +72,10 @@ export default function HistorialProyectos() {
       merge();
     }, () => { loadedF = true; merge(); });
 
-    return () => { unsubA(); unsubF(); };
+    return () => {
+      try { unsubA(); } catch (_e) { /* ignore */ }
+      try { unsubF(); } catch (_e) { /* ignore */ }
+    };
   }, []);
 
   const filtrados = busqueda.trim()

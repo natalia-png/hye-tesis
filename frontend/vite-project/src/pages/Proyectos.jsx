@@ -53,7 +53,7 @@ export default function Proyectos() {
       setLoading(false);
     });
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, []);
 
   const filtered = useMemo(() => {

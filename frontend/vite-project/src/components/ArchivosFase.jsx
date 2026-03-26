@@ -93,7 +93,7 @@ export default function ArchivosFase({
       }
     );
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [colRef, clientView]);
 
   const pickFile = () => {

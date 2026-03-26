@@ -60,7 +60,7 @@ export default function NotasFase({
       }
     );
 
-    return () => unsub();
+    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
   }, [notasRef]);
 
   const lastUpdate = items?.[0]?.createdAt || null;

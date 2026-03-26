@@ -118,7 +118,7 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => { unsub(); if (profileUnsub) profileUnsub(); };
+    return () => { try { unsub(); } catch (_e) {} try { if (profileUnsub) profileUnsub(); } catch (_e) {} };
   }, []);
 
   // ── Activar push notifications cuando hay usuario logueado ──

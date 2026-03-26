@@ -15,6 +15,9 @@ import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
 import { ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import ChevronIcon from "../components/ui/ChevronIcon";
+import FotoGallery from "../components/garantias/FotoGallery";
 
 const PRIORIDAD = { urgente: "Urgente", normal: "Normal" };
 
@@ -95,10 +98,7 @@ export default function GarantiasCliente() {
 
             {/* Lista de solicitudes */}
             {loading ? (
-                <div className="flex items-center gap-2 py-6">
-                    <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
-                    <p className="text-[13px] text-ink/50">Cargando solicitudes…</p>
-                </div>
+                <LoadingSpinner text="Cargando solicitudes…" />
             ) : solicitudes.length === 0 ? (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">🛡️</p>
@@ -408,12 +408,7 @@ function TarjetaSolicitudCliente({ solicitud }) {
 
                 {/* Flecha expand */}
                 <div className="flex justify-end">
-                    <svg
-                        className={`w-4 h-4 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <polyline points="6 9 12 15 18 9" strokeWidth="2" />
-                    </svg>
+                    <ChevronIcon expanded={expanded} />
                 </div>
             </button>
 
@@ -437,17 +432,7 @@ function TarjetaSolicitudCliente({ solicitud }) {
                     {solicitud.fotos?.length > 0 && (
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold mb-2">Fotos</p>
-                            <div className="flex gap-2 flex-wrap">
-                                {solicitud.fotos.map((f, i) => (
-                                    <a key={i} href={f.url} target="_blank" rel="noopener noreferrer">
-                                        <img
-                                            src={f.url}
-                                            alt={f.name}
-                                            className="w-20 h-20 rounded-xl object-cover border border-ink/10 hover:opacity-80 transition-opacity"
-                                        />
-                                    </a>
-                                ))}
-                            </div>
+                            <FotoGallery fotos={solicitud.fotos} size="w-20 h-20" />
                         </div>
                     )}
 

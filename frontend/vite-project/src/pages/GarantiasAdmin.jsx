@@ -12,6 +12,10 @@ import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import PropTypes from "prop-types";
 import { ESTADOS, ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
+import ChevronIcon from "../components/ui/ChevronIcon";
+import FiltroTabs from "../components/ui/FiltroTabs";
+import FotoGallery from "../components/garantias/FotoGallery";
 
 export default function GarantiasAdmin() {
     const { id: projectId } = useParams();
@@ -79,38 +83,21 @@ export default function GarantiasAdmin() {
             </div>
 
             {/* Filtros */}
-            <div className="flex gap-2 overflow-x-auto pb-1">
-                {[
+            <FiltroTabs
+                tabs={[
                     { key: "todas", label: "Todas" },
                     { key: "pendiente", label: "Pendientes" },
                     { key: "en_revision", label: "En revisión" },
                     { key: "resuelto", label: "Resueltas" },
-                ].map(({ key, label }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        onClick={() => setFiltro(key)}
-                        className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium border transition-all ${filtro === key
-                                ? "bg-ink text-ivory border-ink"
-                                : "bg-white text-ink/60 border-ink/15 hover:border-ink/30"
-                            }`}
-                    >
-                        {label}
-                        {conteo[key] > 0 && (
-                            <span className={`ml-1.5 text-[10px] ${filtro === key ? "opacity-70" : "text-ink/40"}`}>
-                                {conteo[key]}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
+                ]}
+                filtro={filtro}
+                conteo={conteo}
+                onChange={setFiltro}
+            />
 
             {/* Lista */}
             {loading ? (
-                <div className="flex items-center gap-2 py-6">
-                    <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
-                    <p className="text-[13px] text-ink/50">Cargando…</p>
-                </div>
+                <LoadingSpinner />
             ) : filtradas.length === 0 ? (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">✅</p>
@@ -250,12 +237,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                     </div>
                 </div>
                 <div className="flex justify-end mt-1">
-                    <svg
-                        className={`w-4 h-4 text-ink/30 transition-transform ${expanded ? "rotate-180" : ""}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <polyline points="6 9 12 15 18 9" strokeWidth="2" />
-                    </svg>
+                    <ChevronIcon expanded={expanded} />
                 </div>
             </button>
 
@@ -279,17 +261,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                             <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold mb-2">
                                 Fotos adjuntas
                             </p>
-                            <div className="flex gap-2 flex-wrap">
-                                {solicitud.fotos.map((f, i) => (
-                                    <a key={i} href={f.url} target="_blank" rel="noopener noreferrer">
-                                        <img
-                                            src={f.url}
-                                            alt={f.name}
-                                            className="w-24 h-24 rounded-xl object-cover border border-ink/10 hover:opacity-80 transition-opacity"
-                                        />
-                                    </a>
-                                ))}
-                            </div>
+                            <FotoGallery fotos={solicitud.fotos} />
                         </div>
                     )}
 

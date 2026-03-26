@@ -58,10 +58,7 @@ exports.onNotaCreated = onDocumentCreated(
       phaseName,
     };
 
-    return Promise.all([
-      sendPushToUser(clientUid, payload),
-      createInAppNotification(clientUid, payload),
-    ]);
+    return notifyUser(clientUid, payload);
   }
 );
 
@@ -93,10 +90,7 @@ exports.onArchivoPublicado = onDocumentWritten(
       phaseName,
     };
 
-    return Promise.all([
-      sendPushToUser(clientUid, payload),
-      createInAppNotification(clientUid, payload),
-    ]);
+    return notifyUser(clientUid, payload);
   }
 );
 
@@ -138,10 +132,7 @@ exports.onFaseAvance = onDocumentUpdated(
       phaseName: faseAvanzada.nombre,
     };
 
-    return Promise.all([
-      sendPushToUser(clientUid, payload),
-      createInAppNotification(clientUid, payload),
-    ]);
+    return notifyUser(clientUid, payload);
   }
 );
 
@@ -183,10 +174,7 @@ exports.onMessageCreated = onDocumentCreated(
         phaseId: "",
         phaseName: "",
       };
-      return Promise.all([
-        sendPushToUser(uid, payload),
-        createInAppNotification(uid, payload),
-      ]);
+      return notifyUser(uid, payload);
     }));
   }
 );
@@ -232,10 +220,7 @@ exports.onGarantiaCreada = onDocumentCreated(
       phaseName: "",
     };
 
-    return Promise.all([
-      sendPushToUser(adminUid, payload),
-      createInAppNotification(adminUid, payload),
-    ]);
+    return notifyUser(adminUid, payload);
   }
 );
 
@@ -283,10 +268,7 @@ exports.onGarantiaRespondida = onDocumentUpdated(
       phaseName: "",
     };
 
-    return Promise.all([
-      sendPushToUser(clientUid, payload),
-      createInAppNotification(clientUid, payload),
-    ]);
+    return notifyUser(clientUid, payload);
   }
 );
 
@@ -358,8 +340,7 @@ exports.onSolicitudComercialCreada = onDocumentCreated(
 
     // Enviar notificación al admin y correo de confirmación al prospecto
     return Promise.all([
-      sendPushToUser(adminUid, payload),
-      createInAppNotification(adminUid, payload),
+      notifyUser(adminUid, payload),
       sendEmailConfirmacionSolicitud(solicitud),
     ]);
   }
@@ -689,6 +670,13 @@ exports.eliminarProyecto = onRequest(
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════════════════════ */
+
+async function notifyUser(uid, payload) {
+  return Promise.all([
+    sendPushToUser(uid, payload),
+    createInAppNotification(uid, payload),
+  ]);
+}
 
 async function getProjectContext(projectId, phaseId) {
   try {

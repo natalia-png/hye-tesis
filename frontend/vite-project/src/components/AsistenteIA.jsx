@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { collection, getDocs, query, where, limit, orderBy } from "firebase/firestore";
 import { db, geminiModel } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import PropTypes from "prop-types";
 
 const EMPRESA_INFO = `
 ## Sobre H&E Arquitectos
@@ -279,6 +280,8 @@ export default function AsistenteIA() {
     );
 }
 
+AsistenteIA.propTypes = {};
+
 function Chip({ texto, onClick }) {
     return (
         <button type="button" onClick={() => onClick(texto)}
@@ -288,3 +291,8 @@ function Chip({ texto, onClick }) {
         </button>
     );
 }
+
+Chip.propTypes = {
+  texto: PropTypes.string.isRequired,
+  onClick: PropTypes.func.isRequired,
+};

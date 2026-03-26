@@ -1,5 +1,6 @@
 // src/components/NotasFase.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import {
   addDoc,
   collection,
@@ -280,6 +281,13 @@ export default function NotasFase({
     </div>
   );
 }
+
+NotasFase.propTypes = {
+  projectId: PropTypes.string.isRequired,
+  phaseId: PropTypes.string.isRequired,
+  canEdit: PropTypes.bool,
+  clientView: PropTypes.bool,
+};
 
 function timeAgoSmart(value) {
   if (!value) return "—";

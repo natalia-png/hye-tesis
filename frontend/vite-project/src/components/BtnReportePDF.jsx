@@ -3,6 +3,7 @@
 // Uso cliente (fondo oscuro): <BtnReportePDF proyecto={project} isAdmin={false} dark />
 
 import { useReportePDF } from "../hooks/useReportePDF";
+import PropTypes from "prop-types";
 
 export default function BtnReportePDF({ proyecto, isAdmin = false, dark = false }) {
     const { generar, loading } = useReportePDF();
@@ -44,3 +45,9 @@ export default function BtnReportePDF({ proyecto, isAdmin = false, dark = false 
         </button>
     );
 }
+
+BtnReportePDF.propTypes = {
+    proyecto: PropTypes.object,
+    isAdmin: PropTypes.bool,
+    dark: PropTypes.bool,
+};

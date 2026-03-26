@@ -2,6 +2,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../app/useAuth";
 import { useChats } from "../hooks/useChats";
+import PropTypes from "prop-types";
 
 export default function BottomNav() {
   const nav = useNavigate();
@@ -93,3 +94,12 @@ export default function BottomNav() {
     </nav>
   );
 }
+
+BottomNav.propTypes = {};
+
+// NavBtn es un componente interno — se define dentro del scope de BottomNav
+// PropTypes se documentan aquí como referencia:
+// onClick: PropTypes.func.isRequired
+// active: PropTypes.bool
+// children: PropTypes.node
+// label: PropTypes.string

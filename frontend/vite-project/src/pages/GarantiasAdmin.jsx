@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import PropTypes from "prop-types";
 
 const ESTADOS = ["pendiente", "en_revision", "resuelto"];
 const ESTADO_LABEL = {
@@ -144,6 +145,8 @@ export default function GarantiasAdmin() {
         </section>
     );
 }
+
+GarantiasAdmin.propTypes = {};
 
 /* ── TARJETA SOLICITUD (vista admin) ── */
 function TarjetaSolicitudAdmin({ solicitud, projectId }) {
@@ -426,3 +429,8 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
         </div>
     );
 }
+
+TarjetaSolicitudAdmin.propTypes = {
+    solicitud: PropTypes.object.isRequired,
+    projectId: PropTypes.string.isRequired,
+};

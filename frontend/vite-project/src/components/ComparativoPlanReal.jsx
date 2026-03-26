@@ -1,6 +1,7 @@
 // src/components/ComparativoPlanReal.jsx
 // Comparativo Plan vs Avance Real por fase
 // Visible para admin y cliente. Las fechas planeadas las ingresa Luisa en FasesProyecto.
+import PropTypes from "prop-types";
 
 /**
  * Calcula cuánto % del tiempo planeado de una fase ya transcurrió (hoy).
@@ -14,7 +15,7 @@ function pctEsperado(inicioStr, finStr) {
   const fin = new Date(finStr);
   const hoy = new Date();
 
-  if (isNaN(inicio) || isNaN(fin) || fin <= inicio) return null;
+  if (Number.isNaN(inicio) || isNaN(fin) || fin <= inicio) return null;
 
   const total = fin - inicio;
   const transcurrido = hoy - inicio;
@@ -290,6 +291,12 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
   );
 }
 
+ComparativoPlanReal.propTypes = {
+  fases: PropTypes.array,
+  startDate: PropTypes.string,
+  endDate: PropTypes.string,
+};
+
 function KpiCard({ label, value, sub, highlight = "neutral" }) {
   const colors = {
     neutral: "text-ink",
@@ -308,3 +315,10 @@ function KpiCard({ label, value, sub, highlight = "neutral" }) {
     </div>
   );
 }
+
+KpiCard.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+  sub: PropTypes.string,
+  highlight: PropTypes.string,
+};

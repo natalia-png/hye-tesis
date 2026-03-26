@@ -1,4 +1,6 @@
 // src/components/dash/RingChart.jsx
+import PropTypes from "prop-types";
+
 export default function RingChart({
   value = 0, // 0-100
   size = 92,
@@ -62,6 +64,14 @@ export default function RingChart({
     </div>
   );
 }
+
+RingChart.propTypes = {
+  value: PropTypes.number,
+  size: PropTypes.number,
+  stroke: PropTypes.number,
+  label: PropTypes.string,
+  sublabel: PropTypes.string,
+};
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));

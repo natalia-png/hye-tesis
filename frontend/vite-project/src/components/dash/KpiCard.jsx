@@ -1,3 +1,5 @@
+import PropTypes from "prop-types";
+
 export default function KpiCard({ label, value, hint, right }) {
   return (
     <div className="rounded-2xl border border-taupe/30 bg-ivory/90 px-3 py-3 shadow-card">
@@ -14,3 +16,10 @@ export default function KpiCard({ label, value, hint, right }) {
     </div>
   );
 }
+
+KpiCard.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+  hint: PropTypes.string,
+  right: PropTypes.node,
+};

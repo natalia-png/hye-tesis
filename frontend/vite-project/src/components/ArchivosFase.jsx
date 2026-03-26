@@ -21,6 +21,7 @@ import {
 } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import PropTypes from "prop-types";
 
 export default function ArchivosFase({
   projectId,
@@ -379,6 +380,13 @@ export default function ArchivosFase({
     </div>
   );
 }
+
+ArchivosFase.propTypes = {
+  projectId: PropTypes.string.isRequired,
+  phaseId: PropTypes.string.isRequired,
+  canEdit: PropTypes.bool,
+  clientView: PropTypes.bool,
+};
 
 function formatSize(bytes) {
   const n = Number(bytes);

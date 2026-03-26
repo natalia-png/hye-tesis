@@ -13,6 +13,7 @@ import {
 } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+import PropTypes from "prop-types";
 
 const PRIORIDAD = { urgente: "Urgente", normal: "Normal" };
 const ESTADO_LABEL = {
@@ -127,6 +128,8 @@ export default function GarantiasCliente() {
         </section>
     );
 }
+
+GarantiasCliente.propTypes = {};
 
 /* ── FORMULARIO NUEVA SOLICITUD ── */
 function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
@@ -494,3 +497,14 @@ function TarjetaSolicitudCliente({ solicitud }) {
         </div>
     );
 }
+
+FormNuevaSolicitud.propTypes = {
+    projectId: PropTypes.string.isRequired,
+    userId: PropTypes.string,
+    userName: PropTypes.string,
+    onClose: PropTypes.func.isRequired,
+};
+
+TarjetaSolicitudCliente.propTypes = {
+    solicitud: PropTypes.object.isRequired,
+};

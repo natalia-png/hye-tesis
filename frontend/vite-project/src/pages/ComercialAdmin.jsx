@@ -9,6 +9,7 @@ import {
     doc, updateDoc, serverTimestamp, deleteDoc,
 } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import PropTypes from "prop-types";
 
 const ESTADOS = ["nueva", "en_analisis", "aprobada", "rechazada"];
 const ESTADO_LABEL = {
@@ -143,6 +144,8 @@ export default function ComercialAdmin() {
         </section>
     );
 }
+
+ComercialAdmin.propTypes = {};
 
 /* ── TARJETA SOLICITUD ── */
 function TarjetaSolicitud({ solicitud, nav }) {
@@ -518,3 +521,13 @@ function MiniDato({ label, value }) {
         </div>
     );
 }
+
+TarjetaSolicitud.propTypes = {
+    solicitud: PropTypes.object.isRequired,
+    nav: PropTypes.func.isRequired,
+};
+
+MiniDato.propTypes = {
+    label: PropTypes.string,
+    value: PropTypes.any,
+};

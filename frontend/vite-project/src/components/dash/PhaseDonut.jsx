@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import PropTypes from "prop-types";
 
 export default function PhaseDonut({ phases = [], size = 120 }) {
   const { progress, breakdown } = useMemo(() => {
@@ -88,6 +89,13 @@ export default function PhaseDonut({ phases = [], size = 120 }) {
   );
 }
 
+PhaseDonut.propTypes = {
+  phases: PropTypes.array,
+  size: PropTypes.number,
+  label: PropTypes.string,
+  tone: PropTypes.string,
+};
+
 function Chip({ label, tone = "muted" }) {
   const cls =
     tone === "ok"
@@ -102,6 +110,11 @@ function Chip({ label, tone = "muted" }) {
     </span>
   );
 }
+
+Chip.propTypes = {
+  label: PropTypes.string,
+  tone: PropTypes.string,
+};
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));

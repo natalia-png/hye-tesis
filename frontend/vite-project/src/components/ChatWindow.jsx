@@ -1,6 +1,7 @@
 // src/components/ChatWindow.jsx
 // UI reutilizable de mensajería
 import { useEffect, useRef, useState } from "react";
+import PropTypes from "prop-types";
 
 const ROLE_COLOR = {
   admin: "bg-ink text-ivory",
@@ -137,6 +138,15 @@ export default function ChatWindow({ messages, onSend, ready, currentUid, chatNa
     </div>
   );
 }
+
+ChatWindow.propTypes = {
+  messages: PropTypes.array.isRequired,
+  onSend: PropTypes.func.isRequired,
+  ready: PropTypes.bool,
+  currentUid: PropTypes.string,
+  chatName: PropTypes.string,
+  subtitle: PropTypes.string,
+};
 
 function timeAgo(date) {
   if (!date) return "";

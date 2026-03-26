@@ -6,6 +6,7 @@ import { auth, db } from "../lib/firebase";
 import { fetchUserProfile } from "../lib/firestore";
 import { Ctx } from "./auth-ctx";
 import { usePushNotifications } from "../hooks/usePushNotifications.js";
+import PropTypes from "prop-types";
 
 // ── Toast de notificación en primer plano ──
 function ForegroundToast({ notif, onClose }) {
@@ -142,3 +143,12 @@ export function AuthProvider({ children }) {
     </Ctx.Provider>
   );
 }
+
+ForegroundToast.propTypes = {
+  notif: PropTypes.object,
+  onClose: PropTypes.func.isRequired,
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

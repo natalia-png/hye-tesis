@@ -1,3 +1,5 @@
+import PropTypes from "prop-types";
+
 export default function InsightCard({ title, text, tag }) {
   return (
     <div className="rounded-2xl border border-taupe/30 bg-white/80 p-3 shadow-card">
@@ -15,3 +17,9 @@ export default function InsightCard({ title, text, tag }) {
     </div>
   );
 }
+
+InsightCard.propTypes = {
+  title: PropTypes.string,
+  text: PropTypes.string,
+  tag: PropTypes.string,
+};

@@ -5,6 +5,7 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 
 export default function DashboardAdmin() {
   const { user, ready } = useAuth();
@@ -374,12 +375,12 @@ function computeKPIs(p) {
   return { progress, progressHint, daysLeftLabel, deadlineHint, completed, total, phaseHint: total ? "Balance por etapas." : "Sin fases.", riskLabel, riskHint, fases: fases.map(f => ({ id: f.id, nombre: f.nombre, porcentaje: clampInt(f.porcentaje, 0, 100), estado: f.estado })) };
 }
 
-function clampInt(v, a, b) { const n = Number(v); return isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
-function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000); }
+function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
+function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return Number.isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000); }
 function calcPctEsperado(ini, fin) {
   if (!ini || !fin) return null;
   const a = new Date(ini), b = new Date(fin), h = new Date();
-  if (isNaN(a) || isNaN(b) || b <= a) return null;
+  if (Number.isNaN(a) || isNaN(b) || b <= a) return null;
   return Math.max(0, Math.min(100, Math.round(((h - a) / (b - a)) * 100)));
 }
 function getSemaforo(esp, real, estado) {
@@ -390,3 +391,38 @@ function getSemaforo(esp, real, estado) {
   if (d >= -15) return { color: "text-amber-700", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-400", label: `${d}%` };
   return { color: "text-red-700", bg: "bg-red-50 border-red-200", dot: "bg-red-500", label: `${d}%` };
 }
+
+DashboardAdmin.propTypes = {};
+
+PlanVsRealCard.propTypes = {
+  proyecto: PropTypes.object,
+};
+
+KpiCard.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+  hint: PropTypes.string,
+  highlight: PropTypes.string,
+};
+
+MiniKpi.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+  sub: PropTypes.string,
+  color: PropTypes.string,
+};
+
+BarraDoble.propTypes = {
+  label: PropTypes.string,
+  pct: PropTypes.number,
+  dim: PropTypes.bool,
+  small: PropTypes.bool,
+};
+
+RingChart.propTypes = {
+  value: PropTypes.number,
+};
+
+PhaseBars.propTypes = {
+  fases: PropTypes.array,
+};

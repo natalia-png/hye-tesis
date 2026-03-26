@@ -1,5 +1,6 @@
 // src/components/FasesProyecto.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import PropTypes from "prop-types";
 import { doc, getDoc, getDocs, collection, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
@@ -332,6 +333,16 @@ export default function FasesProyecto({
   );
 }
 
+FasesProyecto.propTypes = {
+  projectId: PropTypes.string.isRequired,
+  fases: PropTypes.array,
+  clientView: PropTypes.bool,
+  canEdit: PropTypes.bool,
+  updatedAt: PropTypes.any,
+  createdAt: PropTypes.any,
+  estado: PropTypes.string,
+};
+
 function EstadoChip({ estado }) {
   const label = labelEstado(estado);
   const cls = estado === "completada" ? "bg-ivory border-taupe/30 text-ink"
@@ -343,6 +354,10 @@ function EstadoChip({ estado }) {
     </span>
   );
 }
+
+EstadoChip.propTypes = {
+  estado: PropTypes.string,
+};
 
 function pickComparable(f) {
   return {
@@ -357,7 +372,7 @@ function pickComparable(f) {
 function timeAgoSmart(value) {
   if (!value) return "—";
   const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
-  if (isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "—";
   const s = Math.floor((Date.now() - d.getTime()) / 1000);
   if (s < 10) return "hace unos segundos";
   if (s < 60) return `hace ${s}s`;

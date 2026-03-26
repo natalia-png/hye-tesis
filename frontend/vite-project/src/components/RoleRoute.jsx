@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../app/useAuth";
 import { isOneOf } from "../data/roles";  // ✅ Debe coincidir exactamente
+import PropTypes from "prop-types";
 
 
 export default function RoleRoute({ children, allow = [] }) {
@@ -16,3 +17,8 @@ export default function RoleRoute({ children, allow = [] }) {
 
   return children;
 }
+
+RoleRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+  allow: PropTypes.arrayOf(PropTypes.string),
+};

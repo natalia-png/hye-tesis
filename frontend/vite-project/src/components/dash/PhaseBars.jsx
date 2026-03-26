@@ -1,4 +1,6 @@
 // src/components/dash/PhaseBars.jsx
+import PropTypes from "prop-types";
+
 export default function PhaseBars({ fases = [], compact = false }) {
   const list = Array.isArray(fases) ? fases : [];
 
@@ -39,6 +41,11 @@ export default function PhaseBars({ fases = [], compact = false }) {
     </div>
   );
 }
+
+PhaseBars.propTypes = {
+  fases: PropTypes.array,
+  compact: PropTypes.bool,
+};
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));

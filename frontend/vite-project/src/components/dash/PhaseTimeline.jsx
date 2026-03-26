@@ -1,4 +1,5 @@
 import { clampInt } from "../../data/fases";
+import PropTypes from "prop-types";
 
 export default function PhaseTimeline({ fases = [] }) {
   const safe = Array.isArray(fases) ? fases : [];
@@ -63,3 +64,7 @@ export default function PhaseTimeline({ fases = [] }) {
     </div>
   );
 }
+
+PhaseTimeline.propTypes = {
+  fases: PropTypes.array,
+};

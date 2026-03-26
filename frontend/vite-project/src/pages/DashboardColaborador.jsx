@@ -8,6 +8,7 @@ import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
+import PropTypes from "prop-types";
 
 export default function DashboardColaborador() {
     const nav = useNavigate();
@@ -207,3 +208,17 @@ function KpiMini({ label, value, color }) {
         </div>
     );
 }
+
+DashboardColaborador.propTypes = {};
+
+TarjetaFase.propTypes = {
+    fase: PropTypes.object.isRequired,
+    nav: PropTypes.func.isRequired,
+    completada: PropTypes.bool,
+};
+
+KpiMini.propTypes = {
+    label: PropTypes.string,
+    value: PropTypes.number,
+    color: PropTypes.string,
+};

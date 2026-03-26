@@ -317,8 +317,8 @@ export function useReportePDF() {
             // DESCARGAR
             // ═══════════════════════════════════════════════════════
             const nombreArchivo = `Reporte-${(proyecto.name || proyecto.nombre || "Proyecto")
-                .replace(/\s+/g, "-")
-                .replace(/[^a-zA-Z0-9-]/g, "")}-${new Date().toISOString().slice(0, 10)}.pdf`;
+                .replaceAll(/\s+/g, "-")
+                .replaceAll(/[^a-zA-Z0-9-]/g, "")}-${new Date().toISOString().slice(0, 10)}.pdf`;
 
             doc.save(nombreArchivo);
         } catch (err) {

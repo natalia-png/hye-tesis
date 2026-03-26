@@ -191,7 +191,7 @@ export default function NotificationBell() {
 function timeAgo(value) {
   if (!value) return "—";
   const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
-  if (isNaN(d)) return "—";
+  if (Number.isNaN(d)) return "—";
   const s = Math.floor((Date.now() - d) / 1000);
   if (s < 60) return "ahora";
   const m = Math.floor(s / 60);

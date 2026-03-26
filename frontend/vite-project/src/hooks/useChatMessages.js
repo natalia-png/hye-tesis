@@ -127,7 +127,7 @@ export async function ensureProjectChat(projectId, projectName, clientId, client
 
 // ── Utilidad: crear/obtener chat directo entre dos usuarios ───────────
 export async function ensureDirectChat(uid1, name1, role1, uid2, name2, role2) {
-  const chatId = `direct_${[uid1, uid2].sort().join("_")}`;
+  const chatId = `direct_${[uid1, uid2].sort((a, b) => a.localeCompare(b)).join("_")}`;
   const chatRef = doc(db, "chats", chatId);
   const snap = await getDoc(chatRef);
 

@@ -508,7 +508,7 @@ function BtnPDF({ project }) {
 function getDaysLeft(d) {
   if (!d) return null;
   const t = new Date(d);
-  return isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000);
+  return Number.isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000);
 }
 
 function formatFecha(str, modo = "corta") {
@@ -522,14 +522,14 @@ function formatFecha(str, modo = "corta") {
 
 function formatSize(bytes) {
   const n = Number(bytes);
-  if (!isFinite(n) || n <= 0) return "";
+  if (!Number.isFinite(n) || n <= 0) return "";
   return n < 1048576 ? `${Math.round(n / 1024)} KB` : `${(n / 1048576).toFixed(1)} MB`;
 }
 
 function timeAgo(value) {
   if (!value) return "—";
   const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
-  if (isNaN(d)) return "—";
+  if (Number.isNaN(d)) return "—";
   const s = Math.floor((Date.now() - d) / 1000);
   if (s < 60) return "ahora";
   const m = Math.floor(s / 60);

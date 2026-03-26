@@ -5,6 +5,7 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import { useNavigate } from "react-router-dom";
 import { usePushNotifications } from "../hooks/usePushNotifications.js";
+import PropTypes from "prop-types";
 
 export default function DashboardCliente() {
   const { user, ready } = useAuth();
@@ -484,5 +485,34 @@ function computeProjectKPIs(p) {
     fases: fases.map(f => ({ id: f.id, nombre: f.nombre, porcentaje: clampInt(f.porcentaje, 0, 100), estado: f.estado, fechaInicioPlaneada: f.fechaInicioPlaneada || null, fechaFinPlaneada: f.fechaFinPlaneada || null })),
   };
 }
-function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
-function calcDaysLeft(endDate) { if (!endDate) return null; const d = new Date(endDate); return isNaN(d.getTime()) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000); }
+function clampInt(v, a, b) { const n = Number(v); return Number.Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
+function calcDaysLeft(endDate) { if (!endDate) return null; const d = new Date(endDate); return Number.isNaN(d.getTime()) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000); }
+
+DashboardCliente.propTypes = {};
+
+ProjectSelector.propTypes = {
+  selected: PropTypes.object,
+  projects: PropTypes.array.isRequired,
+  onChange: PropTypes.func.isRequired,
+};
+
+MensajeContexto.propTypes = {
+  progress: PropTypes.number,
+  daysLeft: PropTypes.number,
+  completed: PropTypes.number,
+  total: PropTypes.number,
+};
+
+TimelineFases.propTypes = {
+  fases: PropTypes.array,
+};
+
+KpiCard.propTypes = {
+  label: PropTypes.string,
+  value: PropTypes.any,
+  hint: PropTypes.string,
+};
+
+RingChart.propTypes = {
+  value: PropTypes.number,
+};

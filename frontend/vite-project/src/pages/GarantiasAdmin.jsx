@@ -17,6 +17,8 @@ import LoadingSpinner from "../components/ui/LoadingSpinner";
 import FiltroTabs from "../components/ui/FiltroTabs";
 import FotoGallery from "../components/garantias/FotoGallery";
 import RespuestasGarantia from "../components/garantias/RespuestasGarantia";
+import UploadProgress from "../components/ui/UploadProgress";
+import AttachIcon from "../components/ui/AttachIcon";
 
 export default function GarantiasAdmin() {
     const { id: projectId } = useParams();
@@ -306,9 +308,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                                     onClick={() => fileInputRef.current?.click()}
                                     className="w-full border-2 border-dashed border-ink/20 rounded-xl py-2.5 text-[12px] text-ink/50 hover:border-ink/40 hover:text-ink/70 transition-all flex items-center justify-center gap-2"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                    </svg>
+                                    <AttachIcon />
                                     {archivoRespuesta ? archivoRespuesta.name : "Adjuntar documento (opcional)"}
                                 </button>
                                 {archivoRespuesta && (
@@ -323,13 +323,8 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                             </div>
 
                             {/* Progreso subida */}
-                            {saving && archivoRespuesta && uploadProgress > 0 && (
-                                <div className="space-y-1">
-                                    <div className="h-1.5 bg-sand rounded-full overflow-hidden">
-                                        <div className="h-full bg-ink rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
-                                    </div>
-                                    <p className="text-[11px] text-ink/50">Subiendo archivo… {uploadProgress}%</p>
-                                </div>
+                            {saving && archivoRespuesta && (
+                                <UploadProgress progress={uploadProgress} label="Subiendo archivo…" />
                             )}
 
                             <button

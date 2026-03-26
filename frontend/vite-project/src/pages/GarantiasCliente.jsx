@@ -19,6 +19,7 @@ import SolicitudCardHeader from "../components/garantias/SolicitudCardHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import FotoGallery from "../components/garantias/FotoGallery";
 import RespuestasGarantia from "../components/garantias/RespuestasGarantia";
+import UploadProgress from "../components/ui/UploadProgress";
 
 const PRIORIDAD = { urgente: "Urgente", normal: "Normal" };
 
@@ -335,15 +336,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 
                 {/* Progreso de subida */}
                 {uploading && (
-                    <div className="space-y-1">
-                        <div className="h-1.5 bg-sand rounded-full overflow-hidden">
-                            <div
-                                className="h-full bg-ink rounded-full transition-all"
-                                style={{ width: `${progreso}%` }}
-                            />
-                        </div>
-                        <p className="text-[11px] text-ink/50">Subiendo fotos… {progreso}%</p>
-                    </div>
+                    <UploadProgress progress={progreso} label="Subiendo fotos…" />
                 )}
             </div>
 

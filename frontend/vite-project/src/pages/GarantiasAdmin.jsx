@@ -11,18 +11,7 @@ import {
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import PropTypes from "prop-types";
-
-const ESTADOS = ["pendiente", "en_revision", "resuelto"];
-const ESTADO_LABEL = {
-    pendiente: "Pendiente",
-    en_revision: "En revisión",
-    resuelto: "Resuelto",
-};
-const ESTADO_STYLE = {
-    pendiente: "bg-amber-50  text-amber-700  border-amber-200",
-    en_revision: "bg-blue-50   text-blue-700   border-blue-200",
-    resuelto: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
+import { ESTADOS, ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
 
 export default function GarantiasAdmin() {
     const { id: projectId } = useParams();

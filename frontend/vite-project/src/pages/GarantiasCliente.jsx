@@ -14,18 +14,9 @@ import {
 import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
+import { ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
 
 const PRIORIDAD = { urgente: "Urgente", normal: "Normal" };
-const ESTADO_LABEL = {
-    pendiente: "Pendiente",
-    en_revision: "En revisión",
-    resuelto: "Resuelto",
-};
-const ESTADO_STYLE = {
-    pendiente: "bg-amber-50  text-amber-700  border-amber-200",
-    en_revision: "bg-blue-50   text-blue-700   border-blue-200",
-    resuelto: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
 
 export default function GarantiasCliente() {
     const { id: projectId } = useParams();

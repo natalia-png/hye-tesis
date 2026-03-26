@@ -131,7 +131,7 @@ describe("formatCOP", () => {
   test("retorna '—' para valores nulos o indefinidos", () => {
     expect(formatCOP(null)).toBe("—");
     expect(formatCOP(undefined)).toBe("—");
-    expect(formatCOP(NaN)).toBe("—");
+    expect(formatCOP(Number.NaN)).toBe("—");
   });
 
   test("formatea números con símbolo de peso colombiano", () => {

@@ -8,7 +8,8 @@ import { sendNotificationToUser } from "./services/notificationService.js"; // I
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.disable("x-powered-by");
+app.use(cors({ origin: ["https://hye-tesis.web.app", "http://localhost:5173"] }));
 app.use(express.json());
 
 app.get("/", (req, res) => {

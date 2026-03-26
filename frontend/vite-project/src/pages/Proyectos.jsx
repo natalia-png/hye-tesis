@@ -229,14 +229,11 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
             Archivar proyecto →
           </button>
         ) : (
-          <div
-            className="flex items-center gap-2"
-            onClick={e => e.stopPropagation()}
-          >
+          <div className="flex items-center gap-2">
             <p className="text-[11px] text-amber-700 font-medium">¿Mover al historial?</p>
             <button
               type="button"
-              onClick={handleArchivar}
+              onClick={e => { e.stopPropagation(); handleArchivar(e); }}
               disabled={archiving}
               className="px-3 py-1 rounded-lg bg-amber-500 text-white text-[11px] font-medium disabled:opacity-50"
             >

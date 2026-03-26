@@ -2,6 +2,7 @@
 // UI reutilizable de mensajería
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
+import { timeAgo } from "../utils/timeAgo";
 
 const ROLE_COLOR = {
   admin: "bg-ink text-ivory",
@@ -72,9 +73,7 @@ export default function ChatWindow({ messages, onSend, ready, currentUid, chatNa
           const isOwn = msg.senderId === currentUid;
           const prevMsg = messages[idx - 1];
           const showSender = !prevMsg || prevMsg.senderId !== msg.senderId;
-          const time = msg.createdAt?.seconds
-            ? timeAgo(new Date(msg.createdAt.seconds * 1000))
-            : "";
+          const time = timeAgo(msg.createdAt) || "";
 
           return (
             <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
@@ -148,13 +147,3 @@ ChatWindow.propTypes = {
   subtitle: PropTypes.string,
 };
 
-function timeAgo(date) {
-  if (!date) return "";
-  const s = Math.floor((Date.now() - date) / 1000);
-  if (s < 60) return "ahora";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return date.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
-}

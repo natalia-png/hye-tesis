@@ -360,29 +360,7 @@ exports.crearColaborador = onRequest(
       return;
     }
 
-    // Verificar que quien llama es admin (token de Firebase Auth)
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!idToken) {
-      res.status(401).json({ error: "No autorizado" });
-      return;
-    }
-
-    let callerUid;
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      callerUid = decoded.uid;
-    } catch {
-      res.status(401).json({ error: "Token inválido" });
-      return;
-    }
-
-    // Verificar rol admin en Firestore
-    const callerDoc = await db.collection("users").doc(callerUid).get();
-    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
-      res.status(403).json({ error: "Solo el admin puede crear colaboradores" });
-      return;
-    }
+    if (!await verifyAdmin(req, res)) return;
 
     const { name, email, password, subRole } = req.body;
     if (!name || !email || !password || !subRole) {
@@ -431,20 +409,7 @@ exports.eliminarColaborador = onRequest(
       return;
     }
 
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
-
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      const callerDoc = await db.collection("users").doc(decoded.uid).get();
-      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
-        res.status(403).json({ error: "Solo el admin puede eliminar colaboradores" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Token inválido" }); return;
-    }
+    if (!await verifyAdmin(req, res)) return;
 
     const { uid } = req.body;
     if (!uid) { res.status(400).json({ error: "uid es obligatorio" }); return; }
@@ -506,21 +471,7 @@ exports.crearCliente = onRequest(
       return;
     }
 
-    // Verificar token admin
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
-
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      const callerDoc = await db.collection("users").doc(decoded.uid).get();
-      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
-        res.status(403).json({ error: "Solo el admin puede crear clientes" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Token inválido" }); return;
-    }
+    if (!await verifyAdmin(req, res)) return;
 
     const { name, email } = req.body;
     if (!name || !email) {
@@ -607,21 +558,7 @@ exports.eliminarProyecto = onRequest(
     if (req.method === "OPTIONS") { res.status(204).send(""); return; }
     if (req.method !== "DELETE") { res.status(405).json({ error: "Method not allowed" }); return; }
 
-    // Verificar token admin
-    const authHeader = req.headers.authorization || "";
-    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    if (!idToken) { res.status(401).json({ error: "No autorizado" }); return; }
-
-    try {
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      const callerDoc = await db.collection("users").doc(decoded.uid).get();
-      if (!callerDoc.exists || callerDoc.data().role !== "admin") {
-        res.status(403).json({ error: "Solo el admin puede eliminar proyectos" });
-        return;
-      }
-    } catch {
-      res.status(401).json({ error: "Token inválido" }); return;
-    }
+    if (!await verifyAdmin(req, res)) return;
 
     const { projectId } = req.body;
     if (!projectId) { res.status(400).json({ error: "projectId es obligatorio" }); return; }
@@ -670,6 +607,24 @@ exports.eliminarProyecto = onRequest(
 /* ═══════════════════════════════════════════════════════════════
    HELPERS
 ═══════════════════════════════════════════════════════════════ */
+
+async function verifyAdmin(req, res) {
+  const authHeader = req.headers.authorization || "";
+  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!idToken) { res.status(401).json({ error: "No autorizado" }); return false; }
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const callerDoc = await db.collection("users").doc(decoded.uid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      res.status(403).json({ error: "Acción reservada para el administrador" });
+      return false;
+    }
+    return true;
+  } catch {
+    res.status(401).json({ error: "Token inválido" });
+    return false;
+  }
+}
 
 async function notifyUser(uid, payload) {
   return Promise.all([

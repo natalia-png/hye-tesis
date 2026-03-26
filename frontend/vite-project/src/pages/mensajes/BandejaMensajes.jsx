@@ -7,6 +7,8 @@ import { useAuth } from "../../app/useAuth";
 import { useChats } from "../../hooks/useChats";
 import { ensureDirectChat, archiveChat, leaveChat } from "../../hooks/useChatMessages";
 import PropTypes from "prop-types";
+import { timeAgo as timeAgoUtil } from "../../utils/timeAgo";
+import LoadingSpinner from "../../components/ui/LoadingSpinner";
 
 export default function BandejaMensajes() {
   const { user } = useAuth();
@@ -79,10 +81,7 @@ function ChatList({ chats, ready, user, nav, isArchived = false }) {
       )}
 
       {!ready ? (
-        <div className="flex items-center gap-2 py-6">
-          <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
-          <p className="text-[13px] text-ink/50">Cargando mensajes…</p>
-        </div>
+        <LoadingSpinner text="Cargando mensajes…" />
       ) : chats.length === 0 ? (
         <div className="card text-center py-10 space-y-2">
           <p className="text-3xl">{isArchived ? "🗄️" : "💬"}</p>
@@ -143,7 +142,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   }
 
   const lastTime = chat.lastAt?.seconds
-    ? timeAgo(new Date(chat.lastAt.seconds * 1000)) : "";
+    ? timeAgoUtil(new Date(chat.lastAt.seconds * 1000)) : "";
 
   const handleArchive = async (e) => {
     e.stopPropagation();
@@ -469,12 +468,7 @@ function PermisosPanel() {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center gap-2 py-6">
-      <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
-      <p className="text-[13px] text-ink/50">Cargando…</p>
-    </div>
-  );
+  if (loading) return <LoadingSpinner text="Cargando…" />;
 
   if (proyectos.length === 0) return (
     <div className="card text-center py-10">
@@ -529,16 +523,6 @@ function PermisosPanel() {
 
 const ROLE_LABEL = { admin: "Admin · H&E", colaborador: "Colaborador", cliente: "Cliente" };
 
-function timeAgo(date) {
-  if (!date) return "";
-  const s = Math.floor((Date.now() - date) / 1000);
-  if (s < 60) return "ahora";
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return date.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
-}
 
 ChatList.propTypes = {
   chats: PropTypes.array,

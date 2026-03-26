@@ -23,8 +23,7 @@ const getUserTokens = async (userId) => {
         });
 
         return tokens;
-    } catch (error) {
-        console.error(`Error al obtener tokens para el usuario ${userId}:`, error);
+    } catch (_e) {
         return [];
     }
 };
@@ -40,7 +39,6 @@ export const sendNotificationToUser = async (userId, title, body, data = {}) => 
     const tokens = await getUserTokens(userId);
 
     if (tokens.length === 0) {
-        console.log(`No se encontraron tokens para el usuario ${userId}`);
         return;
     }
 
@@ -54,13 +52,9 @@ export const sendNotificationToUser = async (userId, title, body, data = {}) => 
     };
 
     try {
-        const response = await messaging.sendEachForMulticast(payload);
-        console.log(`Notificación enviada a ${userId}: ${response.successCount} exitosas, ${response.failureCount} fallidas.`);
-
-        // Opcional: Podríamos limpiar tokens que ya expiraron si failureCount > 0
-        // (response.responses arroja el detalle de cada intento)
-    } catch (error) {
-        console.error("Error al enviar notificación multicast:", error);
+        await messaging.sendEachForMulticast(payload);
+    } catch (_e) {
+        // silent — non-critical push failure
     }
 };
 

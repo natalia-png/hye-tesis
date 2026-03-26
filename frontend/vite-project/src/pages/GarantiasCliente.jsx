@@ -14,9 +14,9 @@ import {
 import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
-import { ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
+import { calcFechaSolicitud } from "../data/garantias";
+import SolicitudCardHeader from "../components/garantias/SolicitudCardHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
-import ChevronIcon from "../components/ui/ChevronIcon";
 import FotoGallery from "../components/garantias/FotoGallery";
 import RespuestasGarantia from "../components/garantias/RespuestasGarantia";
 
@@ -374,11 +374,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
 function TarjetaSolicitudCliente({ solicitud }) {
     const [expanded, setExpanded] = useState(false);
 
-    const fecha = solicitud.createdAt?.toDate
-        ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
-            day: "2-digit", month: "short", year: "numeric",
-        })
-        : "—";
+    const fecha = calcFechaSolicitud(solicitud);
 
     return (
         <div className="card space-y-3">
@@ -388,29 +384,14 @@ function TarjetaSolicitudCliente({ solicitud }) {
                 onClick={() => setExpanded(e => !e)}
                 className="w-full text-left space-y-2"
             >
-                <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium text-ink line-clamp-2">
-                            {solicitud.descripcion}
-                        </p>
-                        <p className="text-[11px] text-ink/40 mt-0.5">{fecha}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        {/* Estado */}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${ESTADO_STYLE[solicitud.estado] || ESTADO_STYLE.pendiente}`}>
-                            {ESTADO_LABEL[solicitud.estado] || solicitud.estado}
-                        </span>
-                        {/* Prioridad */}
-                        {solicitud.prioridad === "urgente" && (
-                            <span className="text-[10px] text-red-500 font-semibold">🚨 Urgente</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Flecha expand */}
-                <div className="flex justify-end">
-                    <ChevronIcon expanded={expanded} />
-                </div>
+                <SolicitudCardHeader
+                    solicitud={solicitud}
+                    expanded={expanded}
+                    subText={fecha}
+                    rightExtra={solicitud.prioridad === "urgente" && (
+                        <span className="text-[10px] text-red-500 font-semibold">🚨 Urgente</span>
+                    )}
+                />
             </button>
 
             {/* Detalle expandido */}

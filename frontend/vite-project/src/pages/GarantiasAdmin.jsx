@@ -11,9 +11,9 @@ import {
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import PropTypes from "prop-types";
-import { ESTADOS, ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
+import { ESTADOS, ESTADO_LABEL, calcFechaSolicitud } from "../data/garantias";
+import SolicitudCardHeader from "../components/garantias/SolicitudCardHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
-import ChevronIcon from "../components/ui/ChevronIcon";
 import FiltroTabs from "../components/ui/FiltroTabs";
 import FotoGallery from "../components/garantias/FotoGallery";
 import RespuestasGarantia from "../components/garantias/RespuestasGarantia";
@@ -135,11 +135,7 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
     const [changingEstado, setChangingEstado] = useState(false);
     const fileInputRef = useRef(null);
 
-    const fecha = solicitud.createdAt?.toDate
-        ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
-            day: "2-digit", month: "short", year: "numeric",
-        })
-        : "—";
+    const fecha = calcFechaSolicitud(solicitud);
 
     const solRef = doc(db, "garantias", projectId, "solicitudes", solicitud.id);
 
@@ -207,39 +203,26 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                 onClick={() => setExpanded(e => !e)}
                 className="w-full text-left"
             >
-                <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                        {solicitud.prioridad === "urgente" && (
-                            <span className="inline-block text-[10px] font-bold text-red-500 mb-1">
-                                🚨 URGENTE
-                            </span>
-                        )}
-                        <p className="text-[13px] font-medium text-ink line-clamp-2">
-                            {solicitud.descripcion}
+                {solicitud.prioridad === "urgente" && (
+                    <span className="inline-block text-[10px] font-bold text-red-500 mb-1">
+                        🚨 URGENTE
+                    </span>
+                )}
+                <SolicitudCardHeader
+                    solicitud={solicitud}
+                    expanded={expanded}
+                    subText={`${solicitud.nombreCliente || "Cliente"} · ${fecha}`}
+                    leftExtra={solicitud.fechaLimite && (
+                        <p className="text-[11px] text-amber-600 mt-0.5">
+                            ⏱ Límite: {new Date(solicitud.fechaLimite).toLocaleDateString("es-CO")}
                         </p>
-                        <p className="text-[11px] text-ink/40 mt-0.5">
-                            {solicitud.nombreCliente || "Cliente"} · {fecha}
-                        </p>
-                        {solicitud.fechaLimite && (
-                            <p className="text-[11px] text-amber-600 mt-0.5">
-                                ⏱ Límite: {new Date(solicitud.fechaLimite).toLocaleDateString("es-CO")}
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${ESTADO_STYLE[solicitud.estado] || ESTADO_STYLE.pendiente}`}>
-                            {ESTADO_LABEL[solicitud.estado] || solicitud.estado}
+                    )}
+                    rightExtra={solicitud.fotos?.length > 0 && (
+                        <span className="text-[10px] text-ink/40">
+                            📎 {solicitud.fotos.length} foto{solicitud.fotos.length > 1 ? "s" : ""}
                         </span>
-                        {solicitud.fotos?.length > 0 && (
-                            <span className="text-[10px] text-ink/40">
-                                📎 {solicitud.fotos.length} foto{solicitud.fotos.length > 1 ? "s" : ""}
-                            </span>
-                        )}
-                    </div>
-                </div>
-                <div className="flex justify-end mt-1">
-                    <ChevronIcon expanded={expanded} />
-                </div>
+                    )}
+                />
             </button>
 
             {/* Detalle expandido */}

@@ -14,3 +14,11 @@ export const ESTADO_STYLE = {
 };
 
 export const ESTADOS = ["pendiente", "en_revision", "resuelto"];
+
+export function calcFechaSolicitud(solicitud) {
+  return solicitud.createdAt?.toDate
+    ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
+        day: "2-digit", month: "short", year: "numeric",
+      })
+    : "—";
+}

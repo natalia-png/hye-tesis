@@ -45,6 +45,9 @@ firebase-debug.log
 # artefactos
 *.local
 
+# Jest coverage (generado automáticamente)
+coverage/
+
 **/hosting-*.cache
 **/ .firebase/
 

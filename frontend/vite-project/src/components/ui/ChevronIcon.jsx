@@ -1,4 +1,6 @@
 // src/components/ui/ChevronIcon.jsx
+import PropTypes from "prop-types";
+
 export default function ChevronIcon({ expanded }) {
   return (
     <svg
@@ -11,3 +13,7 @@ export default function ChevronIcon({ expanded }) {
     </svg>
   );
 }
+
+ChevronIcon.propTypes = {
+  expanded: PropTypes.bool,
+};

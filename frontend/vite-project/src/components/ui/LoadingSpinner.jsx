@@ -1,4 +1,6 @@
 // src/components/ui/LoadingSpinner.jsx
+import PropTypes from "prop-types";
+
 export default function LoadingSpinner({ text = "Cargando…" }) {
   return (
     <div className="flex items-center gap-2 py-6">
@@ -7,3 +9,7 @@ export default function LoadingSpinner({ text = "Cargando…" }) {
     </div>
   );
 }
+
+LoadingSpinner.propTypes = {
+  text: PropTypes.string,
+};

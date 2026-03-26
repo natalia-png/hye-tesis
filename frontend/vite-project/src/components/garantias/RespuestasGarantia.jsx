@@ -10,7 +10,7 @@ export default function RespuestasGarantia({ respuestas, titulo = "Respuestas" }
         {titulo}
       </p>
       {respuestas.map((r, i) => (
-        <div key={i} className="bg-sand/50 rounded-xl px-3 py-2.5 space-y-2">
+        <div key={r.fecha?.seconds ?? i} className="bg-sand/50 rounded-xl px-3 py-2.5 space-y-2">
           {r.texto && (
             <p className="text-[12px] text-ink/80 leading-relaxed">{r.texto}</p>
           )}

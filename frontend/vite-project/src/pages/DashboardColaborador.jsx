@@ -121,8 +121,8 @@ export default function DashboardColaborador() {
                             <p className="text-[11px] uppercase tracking-[0.18em] text-ink/40 font-semibold">
                                 Pendientes y en curso
                             </p>
-                            {pendientes.map((f, i) => (
-                                <TarjetaFase key={i} fase={f} nav={nav} />
+                            {pendientes.map((f) => (
+                                <TarjetaFase key={`${f.proyectoId}-${f.nombre}`} fase={f} nav={nav} />
                             ))}
                         </div>
                     )}
@@ -133,8 +133,8 @@ export default function DashboardColaborador() {
                             <p className="text-[11px] uppercase tracking-[0.18em] text-ink/40 font-semibold">
                                 Completadas
                             </p>
-                            {completadas.map((f, i) => (
-                                <TarjetaFase key={i} fase={f} nav={nav} completada />
+                            {completadas.map((f) => (
+                                <TarjetaFase key={`${f.proyectoId}-${f.nombre}`} fase={f} nav={nav} completada />
                             ))}
                         </div>
                     )}

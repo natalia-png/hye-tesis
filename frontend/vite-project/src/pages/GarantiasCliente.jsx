@@ -2,11 +2,10 @@
 // Módulo de Garantías y Posventa — Vista del Cliente
 // El cliente puede crear solicitudes y ver el estado de cada una
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-    collection, addDoc, onSnapshot, orderBy,
-    query, serverTimestamp, doc, getDoc, getDocs,
+    collection, addDoc, serverTimestamp, getDocs,
 } from "firebase/firestore";
 import {
     ref as storageRef, uploadBytesResumable, getDownloadURL,
@@ -15,6 +14,7 @@ import { db, storage } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
 import { calcFechaSolicitud } from "../data/garantias";
+import { useGarantiasSolicitudes } from "../hooks/useGarantiasSolicitudes";
 import SolicitudCardHeader from "../components/garantias/SolicitudCardHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import FotoGallery from "../components/garantias/FotoGallery";
@@ -27,34 +27,9 @@ export default function GarantiasCliente() {
     const { id: projectId } = useParams();
     const nav = useNavigate();
     const { user } = useAuth();
-
-    const [projectName, setProjectName] = useState("");
-    const [solicitudes, setSolicitudes] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
 
-    // Cargar nombre del proyecto
-    useEffect(() => {
-        getDoc(doc(db, "projects", projectId)).then(snap => {
-            if (snap.exists()) {
-                const d = snap.data();
-                setProjectName(d.name || d.nombre || "Proyecto");
-            }
-        }).catch(() => {});
-    }, [projectId]);
-
-    // Escuchar solicitudes en tiempo real
-    useEffect(() => {
-        const q = query(
-            collection(db, "garantias", projectId, "solicitudes"),
-            orderBy("createdAt", "desc")
-        );
-        const unsub = onSnapshot(q, snap => {
-            setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, () => setLoading(false));
-        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
-    }, [projectId]);
+    const { projectName, solicitudes, loading } = useGarantiasSolicitudes(projectId);
 
     return (
         <section className="space-y-4">
@@ -322,8 +297,8 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                 {/* Preview fotos */}
                 {fotos.length > 0 && (
                     <div className="flex gap-2 flex-wrap">
-                        {fotos.map((f, i) => (
-                            <div key={i} className="relative">
+                        {fotos.map((f) => (
+                            <div key={f.name} className="relative">
                                 <img
                                     src={URL.createObjectURL(f)}
                                     alt={f.name}

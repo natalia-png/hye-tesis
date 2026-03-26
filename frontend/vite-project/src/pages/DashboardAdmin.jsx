@@ -376,11 +376,11 @@ function computeKPIs(p) {
 }
 
 function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
-function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return Number.isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000); }
+function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return Number.isNaN(t.getTime()) ? null : Math.ceil((t - Date.now()) / 86400000); }
 function calcPctEsperado(ini, fin) {
   if (!ini || !fin) return null;
   const a = new Date(ini), b = new Date(fin), h = new Date();
-  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return null;
+  if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b <= a) return null;
   return Math.max(0, Math.min(100, Math.round(((h - a) / (b - a)) * 100)));
 }
 function getSemaforo(esp, real, estado) {

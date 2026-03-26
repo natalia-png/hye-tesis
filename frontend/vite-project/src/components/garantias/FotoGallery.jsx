@@ -5,8 +5,8 @@ export default function FotoGallery({ fotos, size = "w-24 h-24" }) {
   if (!fotos?.length) return null;
   return (
     <div className="flex gap-2 flex-wrap">
-      {fotos.map((f, i) => (
-        <a key={i} href={f.url} target="_blank" rel="noopener noreferrer">
+      {fotos.map((f) => (
+        <a key={f.url} href={f.url} target="_blank" rel="noopener noreferrer">
           <img
             src={f.url}
             alt={f.name}

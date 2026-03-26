@@ -2,16 +2,14 @@
 // Módulo de Garantías y Posventa — Vista Admin (Luisa)
 // Luisa puede ver todas las solicitudes, responder y cambiar el estado
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-    collection, onSnapshot, orderBy, query,
-    doc, getDoc, updateDoc, arrayUnion,
-} from "firebase/firestore";
+import { doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import PropTypes from "prop-types";
 import { ESTADOS, ESTADO_LABEL, calcFechaSolicitud } from "../data/garantias";
+import { useGarantiasSolicitudes } from "../hooks/useGarantiasSolicitudes";
 import SolicitudCardHeader from "../components/garantias/SolicitudCardHeader";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import FiltroTabs from "../components/ui/FiltroTabs";
@@ -23,32 +21,9 @@ import AttachIcon from "../components/ui/AttachIcon";
 export default function GarantiasAdmin() {
     const { id: projectId } = useParams();
     const nav = useNavigate();
-
-    const [projectName, setProjectName] = useState("");
-    const [solicitudes, setSolicitudes] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [filtro, setFiltro] = useState("todas");
 
-    useEffect(() => {
-        getDoc(doc(db, "projects", projectId)).then(snap => {
-            if (snap.exists()) {
-                const d = snap.data();
-                setProjectName(d.name || d.nombre || "Proyecto");
-            }
-        }).catch(() => {});
-    }, [projectId]);
-
-    useEffect(() => {
-        const q = query(
-            collection(db, "garantias", projectId, "solicitudes"),
-            orderBy("createdAt", "desc")
-        );
-        const unsub = onSnapshot(q, snap => {
-            setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            setLoading(false);
-        }, () => setLoading(false));
-        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
-    }, [projectId]);
+    const { projectName, solicitudes, loading } = useGarantiasSolicitudes(projectId);
 
     const filtradas = filtro === "todas"
         ? solicitudes

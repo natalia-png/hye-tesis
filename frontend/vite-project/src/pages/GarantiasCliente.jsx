@@ -18,6 +18,7 @@ import { ESTADO_LABEL, ESTADO_STYLE } from "../data/garantias";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import ChevronIcon from "../components/ui/ChevronIcon";
 import FotoGallery from "../components/garantias/FotoGallery";
+import RespuestasGarantia from "../components/garantias/RespuestasGarantia";
 
 const PRIORIDAD = { urgente: "Urgente", normal: "Normal" };
 
@@ -437,30 +438,7 @@ function TarjetaSolicitudCliente({ solicitud }) {
                     )}
 
                     {/* Respuestas de Luisa */}
-                    {solicitud.respuestas?.length > 0 && (
-                        <div className="space-y-2">
-                            <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
-                                Respuestas del equipo
-                            </p>
-                            {solicitud.respuestas.map((r, i) => (
-                                <div key={i} className="bg-sand/60 rounded-xl px-3 py-2.5 space-y-2">
-                                    {r.texto && <p className="text-[12px] text-ink/80 leading-relaxed">{r.texto}</p>}
-                                    {r.archivo && (
-                                        <a href={r.archivo.url} target="_blank" rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 bg-blue-50 rounded-lg px-2.5 py-1.5">
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                            </svg>
-                                            {r.archivo.name}
-                                        </a>
-                                    )}
-                                    <p className="text-[10px] text-ink/35">
-                                        H&E Arquitectos · {r.fecha ? new Date(r.fecha.seconds * 1000).toLocaleDateString("es-CO") : "—"}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <RespuestasGarantia respuestas={solicitud.respuestas} titulo="Respuestas del equipo" />
 
                     {solicitud.estado === "resuelto" && (
                         <div className="flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2">

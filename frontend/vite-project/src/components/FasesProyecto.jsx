@@ -9,6 +9,7 @@ import NotasFase from "./NotasFase.jsx";
 import ArchivosFase from "./ArchivosFase.jsx";
 import { calcAvanceGlobal, clampInt, labelEstado, normalizeFases } from "../data/fases";
 import { createNotification, detectChanges, getClientUid } from "../lib/notifications.js";
+import { timeAgoSmart } from "../utils/timeAgo";
 
 export default function FasesProyecto({
   projectId,
@@ -367,16 +368,3 @@ function pickComparable(f) {
   };
 }
 
-function timeAgoSmart(value) {
-  if (!value) return "—";
-  const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
-  if (Number.isNaN(d.getTime())) return "—";
-  const s = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (s < 10) return "hace unos segundos";
-  if (s < 60) return `hace ${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `hace ${m} min`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `hace ${h} h`;
-  return `hace ${Math.floor(h / 24)} d`;
-}

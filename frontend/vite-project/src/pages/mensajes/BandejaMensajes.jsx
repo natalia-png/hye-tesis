@@ -42,12 +42,11 @@ export default function BandejaMensajes() {
         </div>
       </div>
 
-      {tab === "permisos" && isAdmin
-        ? <PermisosPanel />
-        : tab === "archivados"
-          ? <ChatList chats={archivedChats} ready={ready} user={user} nav={nav} isArchived />
-          : <ChatList chats={chats} ready={ready} user={user} nav={nav} />
-      }
+      {(() => {
+        if (tab === "permisos" && isAdmin) return <PermisosPanel />;
+        if (tab === "archivados") return <ChatList chats={archivedChats} ready={ready} user={user} nav={nav} isArchived />;
+        return <ChatList chats={chats} ready={ready} user={user} nav={nav} />;
+      })()}
     </section>
   );
 }
@@ -80,29 +79,32 @@ function ChatList({ chats, ready, user, nav, isArchived = false }) {
         </>
       )}
 
-      {!ready ? (
-        <LoadingSpinner text="Cargando mensajes…" />
-      ) : chats.length === 0 ? (
-        <div className="card text-center py-10 space-y-2">
-          <p className="text-3xl">{isArchived ? "🗄️" : "💬"}</p>
-          <p className="text-[14px] font-semibold text-ink">
-            {isArchived ? "Sin chats archivados" : "Sin conversaciones aún"}
-          </p>
-          {!isArchived && (
-            <p className="text-[12px] text-ink/50 max-w-[220px] mx-auto leading-relaxed">
-              {isCliente
-                ? "Pulsa \"Contactar a H&E\" para hablar con el equipo."
-                : "Inicia un chat directo o espera mensajes de proyecto."}
-            </p>
-          )}
-        </div>
-      ) : (
-        chats.map(chat => (
+      {(() => {
+        if (!ready) return <LoadingSpinner text="Cargando mensajes…" />;
+        if (chats.length === 0) {
+          const emptyIcon = isArchived ? "🗄️" : "💬";
+          const emptyTitle = isArchived ? "Sin chats archivados" : "Sin conversaciones aún";
+          const emptyHint = isCliente
+            ? "Pulsa \"Contactar a H&E\" para hablar con el equipo."
+            : "Inicia un chat directo o espera mensajes de proyecto.";
+          return (
+            <div className="card text-center py-10 space-y-2">
+              <p className="text-3xl">{emptyIcon}</p>
+              <p className="text-[14px] font-semibold text-ink">{emptyTitle}</p>
+              {!isArchived && (
+                <p className="text-[12px] text-ink/50 max-w-[220px] mx-auto leading-relaxed">
+                  {emptyHint}
+                </p>
+              )}
+            </div>
+          );
+        }
+        return chats.map(chat => (
           <TarjetaChat key={chat.id} chat={chat} currentUid={user?.uid}
             isArchived={isArchived}
             onClick={() => nav(`/mensajes/${chat.id}`)} />
-        ))
-      )}
+        ));
+      })()}
     </div>
   );
 }
@@ -147,7 +149,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   const handleArchive = async (e) => {
     e.stopPropagation();
     setLoading(true);
-    try { await archiveChat(chat.id, currentUid); } catch (_e) { /* ignored */ }
+    try { await archiveChat(chat.id, currentUid); } catch (e) { console.error(e); }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -161,7 +163,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
       } else {
         await archiveChat(chat.id, currentUid);
       }
-    } catch (_e) { /* ignored */ }
+    } catch (e) { console.error(e); }
     setMenuOpen(false);
     setLoading(false);
   };
@@ -171,7 +173,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     setLoading(true);
     try {
       await updateDoc(doc(db, "chats", chat.id), { hiddenFor: arrayRemove(currentUid) });
-    } catch (_e) { /* ignored */ }
+    } catch (e) { console.error(e); }
     setLoading(false);
   };
 
@@ -362,7 +364,7 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
         otherUser.uid, otherUser.name || otherUser.email, otherUser.role,
       );
       onCreated(chatId);
-    } catch (_e) { /* ignored */
+    } catch (e) { console.error(e);
       setCreating(null);
     }
   };
@@ -462,7 +464,7 @@ function PermisosPanel() {
         ? { ...p, chatPermisos: { ...p.chatPermisos, [colaborador.uid]: nuevoValor } }
         : p
       ));
-    } catch (_e) { /* ignored */
+    } catch (e) { console.error(e);
     } finally {
       setSaving(s => ({ ...s, [key]: false }));
     }

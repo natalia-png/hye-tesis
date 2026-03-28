@@ -21,7 +21,10 @@
       "Bash(sed -n '375,385p' \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardAdmin.jsx\")",
       "Bash(sed -n '485,495p' \"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/DashboardCliente.jsx\")",
       "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/ComercialAdmin.jsx\")",
-      "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/HistorialProyectos.jsx\")"
+      "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/HistorialProyectos.jsx\")",
+      "Bash(grep '\"\"firebase\"\"' package.json)",
+      "Bash(node_modules/.bin/jest --config jest.config.cjs --no-coverage)",
+      "Bash(node_modules/.bin/jest --config jest.config.cjs)"
     ]
   }
 }

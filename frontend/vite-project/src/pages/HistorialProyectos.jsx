@@ -73,8 +73,8 @@ export default function HistorialProyectos() {
     }, () => { loadedF = true; merge(); });
 
     return () => {
-      try { unsubA(); } catch (_e) { /* ignore */ }
-      try { unsubF(); } catch (_e) { /* ignore */ }
+      try { unsubA(); } catch (e) { console.error(e); }
+      try { unsubF(); } catch (e) { console.error(e); }
     };
   }, []);
 
@@ -171,11 +171,12 @@ function TarjetaHistorial({ proyecto, nav }) {
     ? new Date(proyecto.startDate).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
     : "—";
 
-  const fechaCierre = proyecto.fechaCierre?.toDate
-    ? proyecto.fechaCierre.toDate().toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
-    : proyecto.fechaCierre
-      ? new Date(proyecto.fechaCierre).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
-      : "—";
+  let fechaCierre = "—";
+  if (proyecto.fechaCierre?.toDate) {
+    fechaCierre = proyecto.fechaCierre.toDate().toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  } else if (proyecto.fechaCierre) {
+    fechaCierre = new Date(proyecto.fechaCierre).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  }
 
   const fechaArchivo = proyecto.archivedAt?.toDate
     ? proyecto.archivedAt.toDate().toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })

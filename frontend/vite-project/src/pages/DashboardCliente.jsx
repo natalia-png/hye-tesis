@@ -310,11 +310,13 @@ function ProjectSelector({ projects, selected, onChange }) {
                 }`}
               >
                 {/* Indicador activo */}
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  status.toLowerCase() === "archivado" ? "bg-amber-400" :
-                  progress >= 100 ? "bg-emerald-400" :
-                  progress > 0 ? "bg-blue-400" : "bg-white/20"
-                }`} />
+                {(() => {
+                  let dotCls = "bg-white/20";
+                  if (status.toLowerCase() === "archivado") { dotCls = "bg-amber-400"; }
+                  else if (progress >= 100) { dotCls = "bg-emerald-400"; }
+                  else if (progress > 0) { dotCls = "bg-blue-400"; }
+                  return <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotCls}`} />;
+                })()}
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
@@ -475,10 +477,20 @@ function computeProjectKPIs(p) {
   const completed = fases.filter(f => f?.estado === "completada" || Number(f?.porcentaje) >= 100).length;
   const progress = clampInt(p.progress ?? p.avance ?? 0, 0, 100);
   const daysLeft = calcDaysLeft(p.endDate || p.fechaEntrega || null);
-  const daysLeftLabel = daysLeft == null ? "—" : daysLeft < 0 ? "Vencido" : String(daysLeft);
+  let daysLeftLabel = "—";
+  if (daysLeft != null) { daysLeftLabel = daysLeft < 0 ? "Vencido" : String(daysLeft); }
   const next = fases.find(f => f?.estado !== "completada" && clampInt(f?.porcentaje, 0, 100) < 100);
-  const deadlineHint = daysLeft == null ? "Sin fecha registrada." : daysLeft < 0 ? "La fecha estimada ya pasó." : daysLeft <= 14 ? "Entrando en la recta final." : daysLeft <= 30 ? "Avanzando hacia la entrega." : "Dentro de lo esperado.";
-  const progressHint = progress >= 80 ? "Muy avanzado." : progress >= 50 ? "Buen ritmo." : progress > 0 ? "En progreso." : "Por iniciar.";
+  let deadlineHint = "Sin fecha registrada.";
+  if (daysLeft != null) {
+    if (daysLeft < 0) { deadlineHint = "La fecha estimada ya pasó."; }
+    else if (daysLeft <= 14) { deadlineHint = "Entrando en la recta final."; }
+    else if (daysLeft <= 30) { deadlineHint = "Avanzando hacia la entrega."; }
+    else { deadlineHint = "Dentro de lo esperado."; }
+  }
+  let progressHint = "Por iniciar.";
+  if (progress >= 80) { progressHint = "Muy avanzado."; }
+  else if (progress >= 50) { progressHint = "Buen ritmo."; }
+  else if (progress > 0) { progressHint = "En progreso."; }
   return {
     progress, progressHint, daysLeft, daysLeftLabel, deadlineHint, completed, total,
     nextPhaseLabel: next?.nombre || "—",

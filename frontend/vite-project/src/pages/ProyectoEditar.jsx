@@ -146,7 +146,8 @@ export default function ProyectoEditar() {
       });
 
       nav(`/proyectos/${id}`);
-    } catch (e2) {
+    } catch (e) {
+      console.error(e);
       setError("No se pudo actualizar el proyecto. Intenta de nuevo.");
     } finally {
       setSaving(false);

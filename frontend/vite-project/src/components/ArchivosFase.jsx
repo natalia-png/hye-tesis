@@ -93,7 +93,7 @@ export default function ArchivosFase({
       }
     );
 
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [colRef, clientView]);
 
   const pickFile = () => {
@@ -164,7 +164,8 @@ export default function ArchivosFase({
 
       setOk("✅ Archivo subido. Marca 'Mostrar' para que el cliente lo vea.");
       setTimeout(() => setOk(""), 4000);
-    } catch (_e2) {
+    } catch (e) {
+      console.error(e);
       setError("No se pudo subir el archivo. Revisa permisos o conexión.");
     } finally {
       setBusy(false);

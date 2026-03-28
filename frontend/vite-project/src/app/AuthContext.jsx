@@ -105,7 +105,8 @@ export function AuthProvider({ children }) {
           } : prev);
         });
 
-      } catch (_e) { /* ignored */
+      } catch (e) {
+        console.error(e);
         setUser({
           uid: fbUser.uid,
           email: (fbUser.email || "").trim().toLowerCase(),
@@ -118,7 +119,10 @@ export function AuthProvider({ children }) {
       }
     });
 
-    return () => { try { unsub(); } catch (_e) {} try { if (profileUnsub) profileUnsub(); } catch (_e) {} };
+    return () => {
+      try { unsub(); } catch (e) { console.error(e); }
+      try { if (profileUnsub) { profileUnsub(); } } catch (e) { console.error(e); }
+    };
   }, []);
 
   // ── Activar push notifications cuando hay usuario logueado ──

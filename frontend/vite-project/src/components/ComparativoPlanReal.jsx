@@ -136,32 +136,26 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
           value={`${realGlobal}%`}
           sub="% avance por fases"
         />
-        <KpiCard
-          label="Variación"
-          value={
-            variacionGlobal == null
-              ? "—"
-              : variacionGlobal >= 0
-              ? `+${variacionGlobal}%`
-              : `${variacionGlobal}%`
+        {(() => {
+          let varValue = "—";
+          let varSub = "Sin fechas plan";
+          let varHighlight = "neutral";
+          if (variacionGlobal != null) {
+            varValue = variacionGlobal >= 0 ? `+${variacionGlobal}%` : `${variacionGlobal}%`;
+            varSub = variacionGlobal >= 0 ? "Adelantado" : "Atrasado";
+            if (variacionGlobal >= 0) { varHighlight = "green"; }
+            else if (variacionGlobal >= -15) { varHighlight = "amber"; }
+            else { varHighlight = "red"; }
           }
-          sub={
-            variacionGlobal == null
-              ? "Sin fechas plan"
-              : variacionGlobal >= 0
-              ? "Adelantado"
-              : "Atrasado"
-          }
-          highlight={
-            variacionGlobal == null
-              ? "neutral"
-              : variacionGlobal >= 0
-              ? "green"
-              : variacionGlobal >= -15
-              ? "amber"
-              : "red"
-          }
-        />
+          return (
+            <KpiCard
+              label="Variación"
+              value={varValue}
+              sub={varSub}
+              highlight={varHighlight}
+            />
+          );
+        })()}
       </div>
 
       {/* Barra doble global */}
@@ -187,18 +181,22 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
           </div>
 
           {/* Días restantes */}
-          <p className={`text-[11px] font-medium mt-1 ${
-            estadoGlobal === "vencido" ? "text-red-600" :
-            estadoGlobal === "proximo" ? "text-amber-600" : "text-ink/60"
-          }`}>
-            {diasRestantes == null
-              ? "Sin fecha de entrega definida"
-              : diasRestantes < 0
-              ? `⚠ Plazo vencido hace ${Math.abs(diasRestantes)} días`
-              : diasRestantes === 0
-              ? "⚡ La entrega es hoy"
-              : `Quedan ${diasRestantes} días para la entrega estimada`}
-          </p>
+          {(() => {
+            let colorClass = "text-ink/60";
+            if (estadoGlobal === "vencido") { colorClass = "text-red-600"; }
+            else if (estadoGlobal === "proximo") { colorClass = "text-amber-600"; }
+            let diasText = "Sin fecha de entrega definida";
+            if (diasRestantes != null) {
+              if (diasRestantes < 0) { diasText = `⚠ Plazo vencido hace ${Math.abs(diasRestantes)} días`; }
+              else if (diasRestantes === 0) { diasText = "⚡ La entrega es hoy"; }
+              else { diasText = `Quedan ${diasRestantes} días para la entrega estimada`; }
+            }
+            return (
+              <p className={`text-[11px] font-medium mt-1 ${colorClass}`}>
+                {diasText}
+              </p>
+            );
+          })()}
         </div>
       )}
 

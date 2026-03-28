@@ -148,7 +148,7 @@ export default function NotificationBell() {
               items.map(n => (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-3 px-4 py-3 ${!n.read ? "bg-amber-50/50" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-3 ${n.read ? "" : "bg-amber-50/50"}`}
                 >
                   {/* Contenido clickeable */}
                   <button
@@ -160,7 +160,7 @@ export default function NotificationBell() {
                       {ICONS[n.type] || "·"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[12px] leading-snug ${!n.read ? "font-semibold text-ink" : "font-medium text-ink/80"}`}>
+                      <p className={`text-[12px] leading-snug ${n.read ? "font-medium text-ink/80" : "font-semibold text-ink"}`}>
                         {n.title}
                       </p>
                       <p className="text-[11px] text-ink/55 mt-0.5 leading-snug">{n.body}</p>

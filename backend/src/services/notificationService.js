@@ -23,7 +23,8 @@ const getUserTokens = async (userId) => {
         });
 
         return tokens;
-    } catch (_e) {
+    } catch (e) {
+        console.error(e);
         return [];
     }
 };
@@ -53,8 +54,8 @@ export const sendNotificationToUser = async (userId, title, body, data = {}) => 
 
     try {
         await messaging.sendEachForMulticast(payload);
-    } catch (_e) {
-        // silent — non-critical push failure
+    } catch (e) {
+        console.error(e);
     }
 };
 

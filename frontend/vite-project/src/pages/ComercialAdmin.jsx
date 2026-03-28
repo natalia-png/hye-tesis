@@ -43,7 +43,7 @@ export default function ComercialAdmin() {
             setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
             setLoading(false);
         }, () => setLoading(false));
-        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+        return () => { try { unsub(); } catch (e) { console.error(e); } };
     }, []);
 
     const filtradas = filtro === "todas"
@@ -160,9 +160,13 @@ function TarjetaSolicitud({ solicitud, nav }) {
             asunto: aprobada
                 ? "¡Tu solicitud fue aprobada! — H&E Arquitectos"
                 : "Actualización sobre tu solicitud — H&E Arquitectos",
-            cuerpo: aprobada
-                ? `Hola ${nombre},\n\nNos complace informarte que tu solicitud de servicio para ${solicitud.tipoObra} ha sido aprobada por nuestro equipo.\n\nNos pondremos en contacto contigo muy pronto para coordinar una reunión inicial y comenzar con el proceso.\n${nota ? `\nNota adicional:\n${nota}\n` : ""}\nGracias por confiar en H&E Arquitectos.\n\nLuisa — H&E Arquitectos\nBogotá, Colombia`
-                : `Hola ${nombre},\n\nHemos revisado tu solicitud de servicio para ${solicitud.tipoObra}.\n\nLamentablemente, en este momento no podemos continuar con tu solicitud.\n${nota ? `\nNota adicional:\n${nota}\n` : ""}\nSi tienes preguntas o deseas explorar otras opciones, no dudes en contactarnos.\n\nLuisa — H&E Arquitectos\nBogotá, Colombia`,
+            cuerpo: (() => {
+                const notaExtra = nota ? "\nNota adicional:\n" + nota + "\n" : "";
+                if (aprobada) {
+                    return "Hola " + nombre + ",\n\nNos complace informarte que tu solicitud de servicio para " + solicitud.tipoObra + " ha sido aprobada por nuestro equipo.\n\nNos pondremos en contacto contigo muy pronto para coordinar una reunión inicial y comenzar con el proceso.\n" + notaExtra + "\nGracias por confiar en H&E Arquitectos.\n\nLuisa — H&E Arquitectos\nBogotá, Colombia";
+                }
+                return "Hola " + nombre + ",\n\nHemos revisado tu solicitud de servicio para " + solicitud.tipoObra + ".\n\nLamentablemente, en este momento no podemos continuar con tu solicitud.\n" + notaExtra + "\nSi tienes preguntas o deseas explorar otras opciones, no dudes en contactarnos.\n\nLuisa — H&E Arquitectos\nBogotá, Colombia";
+            })(),
         };
     };
 
@@ -177,7 +181,8 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setCambiandoEstado(true);
         try {
             await updateDoc(solRef, { estado: nuevoEstado, updatedAt: serverTimestamp() });
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
         } finally {
             setCambiandoEstado(false);
         }
@@ -199,7 +204,8 @@ function TarjetaSolicitud({ solicitud, nav }) {
                 },
             });
             setModalEmail(null);
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
         } finally {
             setEnviandoEmail(false);
         }
@@ -209,7 +215,8 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setDeleting(true);
         try {
             await deleteDoc(solRef);
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
             setDeleting(false);
             setConfirmDelete(false);
         }
@@ -219,7 +226,8 @@ function TarjetaSolicitud({ solicitud, nav }) {
         setSaving(true);
         try {
             await updateDoc(solRef, { notaAdmin: nota, updatedAt: serverTimestamp() });
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
         } finally {
             setSaving(false);
         }
@@ -298,23 +306,24 @@ function TarjetaSolicitud({ solicitud, nav }) {
                             Estado de la solicitud
                         </p>
                         <div className="grid grid-cols-2 gap-2">
-                            {ESTADOS.map(estado => (
+                            {ESTADOS.map(estado => {
+                                let activeCls = "bg-blue-500 text-white border-blue-500";
+                                if (estado === "aprobada") { activeCls = "bg-emerald-500 text-white border-emerald-500"; }
+                                else if (estado === "rechazada") { activeCls = "bg-red-500 text-white border-red-500"; }
+                                else if (estado === "en_analisis") { activeCls = "bg-amber-400 text-white border-amber-400"; }
+                                const btnCls = solicitud.estado === estado ? activeCls : "bg-white text-ink/50 border-ink/15 hover:border-ink/30";
+                                return (
                                 <button
                                     key={estado}
                                     type="button"
                                     onClick={() => cambiarEstado(estado)}
                                     disabled={cambiandoEstado}
-                                    className={`py-2 rounded-xl text-[11px] font-medium border transition-all disabled:opacity-50 ${solicitud.estado === estado
-                                            ? estado === "aprobada" ? "bg-emerald-500 text-white border-emerald-500"
-                                                : estado === "rechazada" ? "bg-red-500 text-white border-red-500"
-                                                    : estado === "en_analisis" ? "bg-amber-400 text-white border-amber-400"
-                                                        : "bg-blue-500 text-white border-blue-500"
-                                            : "bg-white text-ink/50 border-ink/15 hover:border-ink/30"
-                                        }`}
+                                    className={`py-2 rounded-xl text-[11px] font-medium border transition-all disabled:opacity-50 ${btnCls}`}
                                 >
                                     {ESTADO_LABEL[estado]}
                                 </button>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 

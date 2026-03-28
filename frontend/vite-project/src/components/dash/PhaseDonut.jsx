@@ -95,12 +95,9 @@ PhaseDonut.propTypes = {
 };
 
 function Chip({ label, tone = "muted" }) {
-  const cls =
-    tone === "ok"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-      : tone === "warn"
-      ? "bg-amber-50 text-amber-800 border-amber-200"
-      : "bg-sand text-ink/70 border-taupe/20";
+  let cls = "bg-sand text-ink/70 border-taupe/20";
+  if (tone === "ok") { cls = "bg-emerald-50 text-emerald-700 border-emerald-200"; }
+  else if (tone === "warn") { cls = "bg-amber-50 text-amber-800 border-amber-200"; }
 
   return (
     <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] ${cls}`}>

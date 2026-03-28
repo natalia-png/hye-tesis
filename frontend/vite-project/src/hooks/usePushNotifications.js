@@ -36,7 +36,8 @@ async function initNativePush(uid) {
     }
     // "prompt" = aún no se ha pedido, tratarlo como "default" para mostrar el banner
     return receive === "prompt" ? "default" : receive;
-  } catch (_e) { /* ignored */
+  } catch (e) {
+    console.error(e);
     return "default";
   }
 }
@@ -73,7 +74,8 @@ export function usePushNotifications(uid, onForegroundMessage) {
       if (IS_NATIVE) {
         // Nativo: verificar permiso actual y registrar token si ya está concedido
         const status = await initNativePush(uid);
-        if (!cancelled) setPermissionStatus(status);
+        if (cancelled) { return; }
+        setPermissionStatus(status);
 
         // Escuchar mensajes en foreground
         const { FirebaseMessaging } = await import("@capacitor-firebase/messaging");
@@ -103,7 +105,7 @@ export function usePushNotifications(uid, onForegroundMessage) {
               });
             }
           }
-        } catch (_e) { /* ignored */ }
+        } catch (e) { console.error("Push init error:", e.message || e); }
       }
     })();
 
@@ -147,7 +149,8 @@ export function usePushNotifications(uid, onForegroundMessage) {
       }
 
       return true;
-    } catch (_e) { /* ignored */
+    } catch (e) {
+      console.error("requestPermission error:", e.message || e);
       return false;
     }
   }, [uid]);

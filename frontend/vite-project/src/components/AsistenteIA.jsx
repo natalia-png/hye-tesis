@@ -74,9 +74,10 @@ Ayúdalo con sus fases, preguntas técnicas y uso de la plataforma. Responde en 
         const p = proyectos[0];
         let info = "Sin proyecto activo.";
         if (p) {
-            const fases = (p.fases || []).map(f =>
-                `  · ${f.nombre}: ${f.porcentaje || 0}% — ${f.estado === "completada" ? "Completada" : f.estado === "en_curso" ? "En curso" : "Pendiente"}`
-            ).join("\n");
+            const fases = (p.fases || []).map(f => {
+                const estadoLabel = f.estado === "completada" ? "Completada" : f.estado === "en_curso" ? "En curso" : "Pendiente";
+                return `  · ${f.nombre}: ${f.porcentaje || 0}% — ${estadoLabel}`;
+            }).join("\n");
             info = `Proyecto: "${p.name || p.nombre}" — ${p.progress || 0}% avance\nFases:\n${fases}`;
         }
         return `Eres el asistente de H&E Arquitectos. Estás hablando con ${nombre}, cliente de la firma.
@@ -118,7 +119,7 @@ export default function AsistenteIA() {
                     if (snap.empty) snap = await getDocs(query(col, where("clientEmail", "==", user.email), limit(5)));
                 }
                 setProyectos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-            } catch (_e) { /* ignored */ }
+            } catch (e) { console.error(e); }
         };
         cargar();
     }, [user?.uid, user?.role, user?.email]);
@@ -150,7 +151,8 @@ export default function AsistenteIA() {
             const result = await chatSessionRef.current.sendMessage(texto);
             const respuesta = result.response.text();
             setMensajes(prev => [...prev, { role: "assistant", content: respuesta }]);
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
             setError("No pude conectar con el asistente. Intenta de nuevo.");
         } finally {
             setCargando(false);

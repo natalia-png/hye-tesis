@@ -115,7 +115,8 @@ export default function ProyectoNuevo() {
 
       const docRef = await addDoc(collection(db, "projects"), payload);
       nav(`/proyectos/${docRef.id}`);
-    } catch (_e) { /* ignored */
+    } catch (e) {
+      console.error(e);
       setError("No se pudo crear el proyecto. Intenta de nuevo.");
     } finally {
       setSaving(false);

@@ -157,8 +157,12 @@ export default function DashboardAdmin() {
             <KpiCard label="Avance global" value={`${computed.progress}%`} hint={computed.progressHint} />
             <KpiCard label="Días a entrega" value={computed.daysLeftLabel} hint={computed.deadlineHint} />
             <KpiCard label="Fases completadas" value={`${computed.completed}/${computed.total}`} hint={computed.phaseHint} />
-            <KpiCard label="Riesgo" value={computed.riskLabel} hint={computed.riskHint}
-              highlight={computed.riskLabel === "Alto" ? "red" : computed.riskLabel === "Medio" ? "amber" : "green"} />
+            {(() => {
+              let riskHighlight = "green";
+              if (computed.riskLabel === "Alto") { riskHighlight = "red"; }
+              else if (computed.riskLabel === "Medio") { riskHighlight = "amber"; }
+              return <KpiCard label="Riesgo" value={computed.riskLabel} hint={computed.riskHint} highlight={riskHighlight} />;
+            })()}
           </div>
 
           {/* Gráficos */}
@@ -237,20 +241,34 @@ function PlanVsRealCard({ proyecto }) {
           <p className="text-[13px] font-semibold text-ink">Plan vs avance real</p>
           <p className="text-[11px] text-ink/45 mt-0.5">Cronograma vs avance registrado.</p>
         </div>
-        {diasRestantes != null && (
-          <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${estadoGlobal === "vencido" ? "bg-red-50 text-red-600 border-red-200"
-              : estadoGlobal === "proximo" ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-[#F2EEE7] text-ink/60 border-black/[0.06]"}`}>
-            {diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`}
-          </span>
-        )}
+        {diasRestantes != null && (() => {
+          let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
+          if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
+          else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
+          const diasText = diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`;
+          return (
+            <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${diasCls}`}>
+              {diasText}
+            </span>
+          );
+        })()}
       </div>
       <div className="grid grid-cols-3 gap-2">
         <MiniKpi label="Plan" value={planGlobal != null ? `${planGlobal}%` : "—"} sub="tiempo" />
         <MiniKpi label="Real" value={`${realGlobal}%`} sub="avance" />
-        <MiniKpi label="Δ" value={variacion == null ? "—" : variacion >= 0 ? `+${variacion}%` : `${variacion}%`}
-          sub={variacion == null ? "sin plan" : variacion >= 0 ? "adelantado" : "atrasado"}
-          color={variacion == null ? "neutral" : variacion >= 0 ? "green" : variacion >= -15 ? "amber" : "red"} />
+        {(() => {
+          let varValue = "—";
+          let varSub = "sin plan";
+          let varColor = "neutral";
+          if (variacion != null) {
+            varValue = variacion >= 0 ? `+${variacion}%` : `${variacion}%`;
+            varSub = variacion >= 0 ? "adelantado" : "atrasado";
+            if (variacion >= 0) { varColor = "green"; }
+            else if (variacion >= -15) { varColor = "amber"; }
+            else { varColor = "red"; }
+          }
+          return <MiniKpi label="Δ" value={varValue} sub={varSub} color={varColor} />;
+        })()}
       </div>
       {planGlobal != null && (
         <div className="space-y-1.5">
@@ -290,7 +308,10 @@ function PlanVsRealCard({ proyecto }) {
 }
 
 function KpiCard({ label, value, hint, highlight = "neutral" }) {
-  const vc = highlight === "red" ? "text-red-600" : highlight === "amber" ? "text-amber-600" : highlight === "green" ? "text-green-700" : "text-ink";
+  let vc = "text-ink";
+  if (highlight === "red") { vc = "text-red-600"; }
+  else if (highlight === "amber") { vc = "text-amber-600"; }
+  else if (highlight === "green") { vc = "text-green-700"; }
   return (
     <div className="rounded-2xl border border-black/[0.06] bg-white px-3 py-3">
       <p className="text-[10px] text-ink/45 uppercase tracking-[0.12em]">{label}</p>
@@ -364,9 +385,18 @@ function computeKPIs(p) {
   const completed = fases.filter(f => f?.estado === "completada" || Number(f?.porcentaje) >= 100).length;
   const progress = clampInt(p.progress ?? p.avance ?? 0, 0, 100);
   const daysLeft = getDaysLeft(p.endDate || p.fechaEntrega);
-  const daysLeftLabel = daysLeft == null ? "—" : daysLeft < 0 ? "Vencido" : String(daysLeft);
-  const deadlineHint = daysLeft == null ? "Sin fecha." : daysLeft < 0 ? "Plazo vencido." : daysLeft <= 14 ? "Ventana crítica." : daysLeft <= 30 ? "Monitoreo semanal." : "En rango.";
-  const progressHint = progress >= 80 ? "Buen desempeño." : progress >= 50 ? "Normal." : "Requiere impulso.";
+  let daysLeftLabel = "—";
+  if (daysLeft != null) { daysLeftLabel = daysLeft < 0 ? "Vencido" : String(daysLeft); }
+  let deadlineHint = "Sin fecha.";
+  if (daysLeft != null) {
+    if (daysLeft < 0) { deadlineHint = "Plazo vencido."; }
+    else if (daysLeft <= 14) { deadlineHint = "Ventana crítica."; }
+    else if (daysLeft <= 30) { deadlineHint = "Monitoreo semanal."; }
+    else { deadlineHint = "En rango."; }
+  }
+  let progressHint = "Requiere impulso.";
+  if (progress >= 80) { progressHint = "Buen desempeño."; }
+  else if (progress >= 50) { progressHint = "Normal."; }
   let riskLabel = "Bajo", riskHint = "Estable.";
   if (daysLeft != null) {
     if (daysLeft < 0 || (daysLeft <= 14 && progress < 80)) { riskLabel = "Alto"; riskHint = "Acción inmediata."; }

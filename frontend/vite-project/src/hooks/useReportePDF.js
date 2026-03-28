@@ -217,8 +217,9 @@ export function useReportePDF() {
                             : "";
 
                         const textoCompleto = nota.text || "";
+                        const prefixNota = fechaNota ? "[" + fechaNota + "] " : "";
                         const lineas = doc.splitTextToSize(
-                            `• ${fechaNota ? `[${fechaNota}] ` : ""}${textoCompleto}`,
+                            "• " + prefixNota + textoCompleto,
                             CONTENT_W - 4
                         );
 

@@ -40,7 +40,11 @@ export default function PhaseTimeline({ fases = [] }) {
                     {f?.nombre || "Fase"}
                   </p>
                   <p className="text-[11px] text-ink/55 mt-0.5">
-                    {isDone ? "Completada" : isActive ? "En curso" : "Pendiente"}
+                    {(() => {
+                      if (isDone) { return "Completada"; }
+                      if (isActive) { return "En curso"; }
+                      return "Pendiente";
+                    })()}
                   </p>
                 </div>
 

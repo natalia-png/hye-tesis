@@ -35,9 +35,11 @@ export default function Proyectos() {
           name: data.name || data.nombre || "Proyecto sin nombre",
           client: data.client || data.cliente || "Cliente sin nombre",
           status: data.status || data.estado || "Sin estado",
-          progress:
-            typeof data.progress === "number" ? data.progress :
-            typeof data.avance === "number" ? data.avance : 0,
+          progress: (() => {
+            if (typeof data.progress === "number") { return data.progress; }
+            if (typeof data.avance === "number") { return data.avance; }
+            return 0;
+          })(),
           createdAt: data.createdAt || null,
         };
       // Excluir archivados y finalizados de la lista activa
@@ -53,7 +55,7 @@ export default function Proyectos() {
       setLoading(false);
     });
 
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, []);
 
   const filtered = useMemo(() => {
@@ -88,7 +90,7 @@ export default function Proyectos() {
         archivedAt: serverTimestamp(),
       });
       // onSnapshot lo elimina automáticamente de la lista
-    } catch (_e) { /* ignored */ }
+    } catch (e) { console.error(e); }
   };
 
   const firstName = user?.name?.split(" ")[0] || "Arquitecta";

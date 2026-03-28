@@ -124,7 +124,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                     if (f) ocupadas.add(f); // formato "YYYY-MM-DD"
                 });
                 setFechasOcupadas(ocupadas);
-            } catch (_e) { /* ignored */ }
+            } catch (e) { console.error(e); }
         };
         cargarFechas();
     }, [projectId]);
@@ -185,7 +185,8 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
             });
 
             onClose();
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
             alert("Ocurrió un error. Intenta de nuevo.");
         } finally {
             setSaving(false);
@@ -220,21 +221,23 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                     Prioridad
                 </label>
                 <div className="flex gap-2">
-                    {Object.entries(PRIORIDAD).map(([val, label]) => (
+                    {Object.entries(PRIORIDAD).map(([val, label]) => {
+                        let btnCls = "bg-white text-ink/60 border-ink/15 hover:border-ink/30";
+                        if (prioridad === val) {
+                            btnCls = val === "urgente" ? "bg-red-500 text-white border-red-500" : "bg-ink text-ivory border-ink";
+                        }
+                        const iconPrefix = val === "urgente" ? "🚨 " : "📋 ";
+                        return (
                         <button
                             key={val}
                             type="button"
                             onClick={() => setPrioridad(val)}
-                            className={`flex-1 py-2 rounded-xl text-[13px] font-medium border transition-all ${prioridad === val
-                                ? val === "urgente"
-                                    ? "bg-red-500 text-white border-red-500"
-                                    : "bg-ink text-ivory border-ink"
-                                : "bg-white text-ink/60 border-ink/15 hover:border-ink/30"
-                                }`}
+                            className={`flex-1 py-2 rounded-xl text-[13px] font-medium border transition-all ${btnCls}`}
                         >
-                            {val === "urgente" ? "🚨 " : "📋 "}{label}
+                            {iconPrefix}{label}
                         </button>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -290,7 +293,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                     className="w-full border-2 border-dashed border-ink/20 rounded-xl py-3 text-[12px] text-ink/50 hover:border-ink/40 hover:text-ink/70 transition-all"
                 >
                     {fotos.length > 0
-                        ? `${fotos.length} foto${fotos.length > 1 ? "s" : ""} seleccionada${fotos.length > 1 ? "s" : ""}`
+                        ? fotos.length + " foto" + (fotos.length > 1 ? "s" : "") + " seleccionada" + (fotos.length > 1 ? "s" : "")
                         : "Toca para adjuntar fotos"}
                 </button>
 

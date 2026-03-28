@@ -9,6 +9,39 @@ import NotasFase from "./NotasFase.jsx";
 import ArchivosFase from "./ArchivosFase.jsx";
 import { calcAvanceGlobal, clampInt, labelEstado, normalizeFases } from "../data/fases";
 import { createNotification, detectChanges, getClientUid } from "../lib/notifications.js";
+
+async function sendSaveNotifications({ projectId, isAdmin, user, nextFases, prevFases, progress, prevProgress }) {
+  const projectSnap = await getDoc(doc(db, "projects", projectId));
+  const projectData = projectSnap.data() || {};
+  const projectName = projectData.name || projectData.nombre || "Proyecto";
+  const clientUid = await getClientUid(projectData);
+
+  if (isAdmin) {
+    for (const f of nextFases) {
+      const prev = prevFases.find(p => p.id === f.id);
+      if (f.responsableUid && f.responsableUid !== prev?.responsableUid) {
+        await createNotification(f.responsableUid, {
+          type: "fase_asignada",
+          title: "📋 Nueva fase asignada",
+          body: `Se te asignó "${f.nombre}" en el proyecto ${projectName}`,
+          projectId,
+          projectName,
+        });
+      }
+    }
+  }
+
+  if (clientUid) {
+    const changes = detectChanges(prevFases, nextFases, progress, prevProgress);
+    for (const change of changes) {
+      await createNotification(clientUid, {
+        ...change,
+        projectId,
+        projectName,
+      });
+    }
+  }
+}
 import { timeAgoSmart } from "../utils/timeAgo";
 
 export default function FasesProyecto({
@@ -41,7 +74,7 @@ export default function FasesProyecto({
       .then(snap => {
         setColaboradores(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
       })
-      .catch(() => {});
+      .catch(e => { console.error(e); });
   }, [isAdmin]);
 
   useEffect(() => {
@@ -52,6 +85,19 @@ export default function FasesProyecto({
   }, [safeFases]);
 
   // Admin edita todo. Colaborador solo edita sus fases asignadas.
+  const handleResponsableChange = (faseId, uid) => {
+    const col = colaboradores.find(c => c.uid === uid);
+    setLocalFases(prev => prev.map(fase => {
+      if (fase.id !== faseId) { return fase; }
+      return {
+        ...fase,
+        responsableUid: uid || null,
+        responsableNombre: col?.name || null,
+        responsableSubRole: col?.subRole || null,
+      };
+    }));
+  };
+
   const canEditFaseActual = (fase) => {
     if (clientView) return false;
     if (!canEdit) return false;
@@ -83,7 +129,9 @@ export default function FasesProyecto({
     const pct = clampInt(value, 0, 100);
     setLocalFases(prev => prev.map(f => {
       if (f.id !== phaseId) return f;
-      const estado = pct >= 100 ? "completada" : pct > 0 ? "en_curso" : "pendiente";
+      let estado = "pendiente";
+      if (pct >= 100) { estado = "completada"; }
+      else if (pct > 0) { estado = "en_curso"; }
       return { ...f, porcentaje: pct, estado };
     }));
   };
@@ -131,45 +179,13 @@ export default function FasesProyecto({
       initialRef.current = nextFases;
 
       // 2 ── Enviar notificaciones al cliente y a colaboradores asignados
-      try {
-        const projectSnap = await getDoc(doc(db, "projects", projectId));
-        const projectData = projectSnap.data() || {};
-        const projectName = projectData.name || projectData.nombre || "Proyecto";
-        const clientUid = await getClientUid(projectData);
-
-        // Notificar a colaboradores recién asignados (admin asignó una fase)
-        if (isAdmin) {
-          const prevFasesRef = initialRef.current;
-          for (const f of nextFases) {
-            const prev = prevFasesRef.find(p => p.id === f.id);
-            // Si cambió el responsableUid y ahora tiene uno
-            if (f.responsableUid && f.responsableUid !== prev?.responsableUid) {
-              await createNotification(f.responsableUid, {
-                type: "fase_asignada",
-                title: "📋 Nueva fase asignada",
-                body: `Se te asignó "${f.nombre}" en el proyecto ${projectName}`,
-                projectId,
-                projectName,
-              });
-            }
-          }
-        }
-
-        if (clientUid) {
-          const changes = detectChanges(prevFases, nextFases, progress, prevProgress);
-          for (const change of changes) {
-            await createNotification(clientUid, {
-              ...change,
-              projectId,
-              projectName: projectData.name || projectData.nombre || "Proyecto",
-            });
-          }
-        }
-      } catch (_e) { /* ignored */ }
+      sendSaveNotifications({ projectId, isAdmin, user, nextFases, prevFases, progress, prevProgress })
+        .catch(e => console.error(e));
 
       setToast("✅ Cambios guardados.");
       setTimeout(() => setToast(""), 2500);
     } catch (e) {
+      console.error(e);
       setError("No se pudieron guardar los cambios. Revisa permisos o conexión.");
     } finally {
       setSaving(false);
@@ -266,21 +282,7 @@ export default function FasesProyecto({
                       </p>
                       <select
                         value={localFases.find(lf => lf.id === f.id)?.responsableUid || ""}
-                        onChange={e => {
-                          const uid = e.target.value;
-                          const col = colaboradores.find(c => c.uid === uid);
-                          setLocalFases(prev => prev.map(fase =>
-                            fase.id === f.id
-                              ? {
-                                ...fase,
-                                responsableUid: uid || null,
-                                responsableNombre: col?.name || null,
-                                responsableSubRole: col?.subRole || null,
-                              }
-                              : fase
-                          ));
-                          // dirty se detecta automáticamente via useMemo
-                        }}
+                        onChange={e => handleResponsableChange(f.id, e.target.value)}
                         className="input w-full text-[12px]"
                       >
                         <option value="">Sin responsable</option>
@@ -344,9 +346,9 @@ FasesProyecto.propTypes = {
 
 function EstadoChip({ estado }) {
   const label = labelEstado(estado);
-  const cls = estado === "completada" ? "bg-ivory border-taupe/30 text-ink"
-    : estado === "en_curso" ? "bg-sand border-taupe/30 text-ink"
-      : "bg-white border-sand text-ink/80";
+  let cls = "bg-white border-sand text-ink/80";
+  if (estado === "completada") { cls = "bg-ivory border-taupe/30 text-ink"; }
+  else if (estado === "en_curso") { cls = "bg-sand border-taupe/30 text-ink"; }
   return (
     <span className={`inline-flex items-center rounded-full border px-2 py-[2px] text-[10px] ${cls}`}>
       {label}

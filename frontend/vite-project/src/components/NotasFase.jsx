@@ -60,7 +60,7 @@ export default function NotasFase({
       }
     );
 
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [notasRef]);
 
   const lastUpdate = items?.[0]?.createdAt || null;
@@ -92,7 +92,8 @@ export default function NotasFase({
       });
       setText("");
       flash("Nota guardada.");
-    } catch (_e) { /* ignored */
+    } catch (e) {
+      console.error(e);
       setError("No se pudo guardar la nota.");
     } finally {
       setSaving(false);
@@ -111,7 +112,8 @@ export default function NotasFase({
     try {
       await deleteDoc(doc(notasRef, nota.id));
       flash("Nota eliminada.");
-    } catch (_e) { /* ignored */
+    } catch (e) {
+      console.error(e);
       setError("No se pudo eliminar la nota.");
     } finally {
       setDeleting(null);
@@ -140,7 +142,8 @@ export default function NotasFase({
       });
       setEditing(null);
       flash("Nota actualizada.");
-    } catch (_e) { /* ignored */
+    } catch (e) {
+      console.error(e);
       setError("No se pudo actualizar la nota.");
     } finally {
       setSaving(false);

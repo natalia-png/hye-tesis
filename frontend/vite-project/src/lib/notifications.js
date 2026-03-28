@@ -20,7 +20,7 @@ export async function createNotification(toUid, payload) {
       read: false,
       createdAt: serverTimestamp(),
     });
-  } catch (_e) { /* ignored */ }
+  } catch (e) { console.error("createNotification in-app error:", e.message || e); }
 
   // 2 ── Push FCM (si el usuario tiene tokens guardados)
   try {
@@ -53,7 +53,7 @@ export async function createNotification(toUid, payload) {
         },
       }),
     });
-  } catch (_e) { /* Push falla silenciosamente — la notif in-app ya se guardó */ }
+  } catch (e) { console.error("Push FCM error:", e.message || e); }
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export async function getClientUid(projectData) {
       query(collection(db, "users"), where("email", "==", email.toLowerCase()), limit(1))
     );
     if (!snap.empty) return snap.docs[0].id;
-  } catch (_e) { /* ignored */ }
+  } catch (e) { console.error("getClientUid error:", e.message || e); }
 
   return null;
 }

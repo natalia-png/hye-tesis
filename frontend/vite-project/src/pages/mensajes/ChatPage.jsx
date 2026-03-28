@@ -76,7 +76,7 @@ export default function ChatPage() {
         }
 
         setResolvedChatId(cId);
-      } catch (_e) { /* ignored */
+      } catch (e) { console.error(e);
         setAccessDenied(true);
       } finally {
         setInitializing(false);
@@ -160,13 +160,14 @@ function ChatInner({ chatId, user, onBack }) {
             const name = chat.participantNames?.[uid] || "Usuario";
             const role = chat.participantRoles?.[uid] || "";
             const isMe = uid === user?.uid;
+            let dotCls = "bg-emerald-600";
+            if (role === "admin") { dotCls = "bg-ink"; }
+            else if (role === "colaborador") { dotCls = "bg-[#5C5852]"; }
             return (
               <span key={uid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 isMe ? "bg-ink/10 border-ink/20 text-ink" : "bg-sand border-taupe/30 text-ink/70"
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  role === "admin" ? "bg-ink" : role === "colaborador" ? "bg-[#5C5852]" : "bg-emerald-600"
-                }`} />
+                <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
                 {name.split(" ")[0]}{isMe ? " (tú)" : ""}
               </span>
             );

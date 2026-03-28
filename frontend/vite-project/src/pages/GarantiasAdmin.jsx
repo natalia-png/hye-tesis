@@ -121,7 +121,8 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
         setChangingEstado(true);
         try {
             await updateDoc(solRef, { estado: nuevoEstado });
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
         } finally {
             setChangingEstado(false);
         }
@@ -165,7 +166,8 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
             setRespuesta("");
             setArchivoRespuesta(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
-        } catch (_e) { /* ignored */
+        } catch (e) {
+            console.error(e);
         } finally {
             setSaving(false);
         }
@@ -238,14 +240,12 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
                                     type="button"
                                     onClick={() => cambiarEstado(estado)}
                                     disabled={changingEstado}
-                                    className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-all disabled:opacity-50 ${solicitud.estado === estado
-                                            ? estado === "resuelto"
-                                                ? "bg-emerald-500 text-white border-emerald-500"
-                                                : estado === "en_revision"
-                                                    ? "bg-blue-500 text-white border-blue-500"
-                                                    : "bg-amber-400 text-white border-amber-400"
-                                            : "bg-white text-ink/50 border-ink/15 hover:border-ink/30"
-                                        }`}
+                                    className={`flex-1 py-1.5 rounded-xl text-[11px] font-medium border transition-all disabled:opacity-50 ${(() => {
+                                            if (solicitud.estado !== estado) { return "bg-white text-ink/50 border-ink/15 hover:border-ink/30"; }
+                                            if (estado === "resuelto") { return "bg-emerald-500 text-white border-emerald-500"; }
+                                            if (estado === "en_revision") { return "bg-blue-500 text-white border-blue-500"; }
+                                            return "bg-amber-400 text-white border-amber-400";
+                                        })()}`}
                                 >
                                     {ESTADO_LABEL[estado]}
                                 </button>

@@ -25,8 +25,9 @@ export default function ProyectoDetalleCliente() {
         const snap = await getDoc(doc(db, "projects", id));
         if (!snap.exists()) { setError("Proyecto no encontrado."); return; }
         const data = snap.data() || {};
-        const fasesRaw = Array.isArray(data.fases) ? data.fases
-          : Array.isArray(data.phases) ? data.phases : null;
+        let fasesRaw = null;
+        if (Array.isArray(data.fases)) { fasesRaw = data.fases; }
+        else if (Array.isArray(data.phases)) { fasesRaw = data.phases; }
         const fases = fasesRaw?.length ? fasesRaw : cloneFases(DEFAULT_FASES);
         setProject({
           id: snap.id,
@@ -44,7 +45,8 @@ export default function ProyectoDetalleCliente() {
         });
         const activa = fases.find(f => f.estado === "en_curso" || (f.porcentaje > 0 && f.porcentaje < 100));
         setOpenFaseId(activa?.id || null);
-      } catch (_e) { /* ignored */
+      } catch (e) {
+        console.error(e);
         setError("No se pudo cargar el proyecto.");
       } finally {
         setLoading(false);
@@ -111,18 +113,19 @@ export default function ProyectoDetalleCliente() {
             <span className="inline-flex items-center rounded-full border border-ivory/20 bg-ivory/10 px-2.5 py-1 text-[10px] text-ivory/75">
               {project.status}
             </span>
-            {diasRestantes !== null && (
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border ${diasRestantes < 0 ? "bg-red-500/20 text-red-300 border-red-500/30"
-                : diasRestantes <= 14 ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                  : "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
-                }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${diasRestantes < 0 ? "bg-red-400"
-                  : diasRestantes <= 14 ? "bg-amber-400"
-                    : "bg-emerald-400"
-                  }`} />
-                {diasRestantes < 0 ? `Vencido` : `${diasRestantes}d`}
-              </span>
-            )}
+            {diasRestantes !== null && (() => {
+              let spanCls = "bg-emerald-500/15 text-emerald-300 border-emerald-500/25";
+              let dotCls = "bg-emerald-400";
+              if (diasRestantes < 0) { spanCls = "bg-red-500/20 text-red-300 border-red-500/30"; dotCls = "bg-red-400"; }
+              else if (diasRestantes <= 14) { spanCls = "bg-amber-500/20 text-amber-300 border-amber-500/30"; dotCls = "bg-amber-400"; }
+              const diasText = diasRestantes < 0 ? "Vencido" : diasRestantes + "d";
+              return (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium border ${spanCls}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
+                  {diasText}
+                </span>
+              );
+            })()}
           </div>
         </div>
 
@@ -220,11 +223,12 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
   const isDone = fase.estado === "completada" || pct >= 100;
   const isActive = !isDone && (fase.estado === "en_curso" || pct > 0);
 
+  let cardBg = "bg-white border-black/[0.06]";
+  if (isDone) { cardBg = "bg-[#5C5852] border-[#5C5852]"; }
+  else if (isActive) { cardBg = "bg-white border-black/20"; }
+
   return (
-    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${isDone ? "bg-[#5C5852] border-[#5C5852]"
-      : isActive ? "bg-white border-black/20"
-        : "bg-white border-black/[0.06]"
-      } ${isOpen ? "shadow-md" : "shadow-sm"}`}>
+    <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${cardBg} ${isOpen ? "shadow-md" : "shadow-sm"}`}>
 
       {/* Header */}
       <button
@@ -233,27 +237,41 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
         className="w-full px-4 py-3.5 flex items-center gap-3 text-left"
       >
         {/* Número / check */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${isDone ? "bg-ivory/15 text-ivory"
-          : isActive ? "bg-[#5C5852] text-ivory"
-            : "bg-black/[0.05] text-ink/30"
-          }`}>
-          {isDone ? (
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          ) : index + 1}
-        </div>
+        {(() => {
+          let circleCls = "bg-black/[0.05] text-ink/30";
+          if (isDone) { circleCls = "bg-ivory/15 text-ivory"; }
+          else if (isActive) { circleCls = "bg-[#5C5852] text-ivory"; }
+          return (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${circleCls}`}>
+              {isDone ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              ) : index + 1}
+            </div>
+          );
+        })()}
 
         <div className="flex-1 min-w-0">
           <p className={`text-[13px] font-semibold leading-tight ${isDone ? "text-ivory" : "text-ink"}`}>
             {fase.nombre}
           </p>
           <div className="flex items-center gap-1.5 mt-[3px]">
-            <span className={`w-[5px] h-[5px] rounded-full ${isDone ? "bg-emerald-400" : isActive ? "bg-amber-400" : "bg-ink/20"
-              }`} />
-            <span className={`text-[11px] ${isDone ? "text-ivory/45" : isActive ? "text-ink/55" : "text-ink/30"}`}>
-              {isDone ? "Completada" : isActive ? `En curso · ${pct}%` : "Pendiente"}
-            </span>
+            {(() => {
+              let dotCls2 = "bg-ink/20";
+              if (isDone) { dotCls2 = "bg-emerald-400"; }
+              else if (isActive) { dotCls2 = "bg-amber-400"; }
+              return <span className={`w-[5px] h-[5px] rounded-full ${dotCls2}`} />;
+            })()}
+            {(() => {
+              let textCls = "text-ink/30";
+              if (isDone) { textCls = "text-ivory/45"; }
+              else if (isActive) { textCls = "text-ink/55"; }
+              let statusText = "Pendiente";
+              if (isDone) { statusText = "Completada"; }
+              else if (isActive) { statusText = `En curso · ${pct}%`; }
+              return <span className={`text-[11px] ${textCls}`}>{statusText}</span>;
+            })()}
             {!isDone && fase.fechaFinPlaneada && (
               <>
                 <span className="text-ink/15">·</span>
@@ -318,7 +336,7 @@ function NotasPanel({ projectId, phaseId }) {
       setNotas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setReady(true);
     }, () => setReady(true));
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [projectId, phaseId]);
 
   if (!ready) return null;
@@ -384,7 +402,7 @@ function ArchivosPanel({ projectId, phaseId }) {
       setArchivos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setReady(true);
     }, () => setReady(true));
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [projectId, phaseId]);
 
   const download = async (a) => {
@@ -393,7 +411,7 @@ function ArchivosPanel({ projectId, phaseId }) {
     try {
       const url = a.downloadURL || await getDownloadURL(storageRef(storage, a.storagePath));
       window.open(url, "_blank", "noopener,noreferrer");
-    } catch (_e) { /* ignored */ }
+    } catch (e) { console.error(e); }
     finally { setDownloading(null); }
   };
 
@@ -439,7 +457,7 @@ function ArchivosPanel({ projectId, phaseId }) {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${busy ? "border-2 border-ink/15 border-t-ink/60 animate-spin"
                 : "bg-[#F2EEE7] group-hover:bg-[#5C5852]"
                 }`}>
-                {!busy && (
+                {busy ? null : (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                     className="text-ink/40 group-hover:text-ivory transition-colors">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

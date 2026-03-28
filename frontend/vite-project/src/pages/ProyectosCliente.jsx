@@ -46,12 +46,11 @@ export default function ProyectosCliente() {
             code: data.code || d.id,
             name: data.name || data.nombre || "Proyecto sin nombre",
             status: data.status || data.estado || "Sin estado",
-            progress:
-              typeof data.progress === "number"
-                ? data.progress
-                : typeof data.avance === "number"
-                ? data.avance
-                : 0,
+            progress: (() => {
+              if (typeof data.progress === "number") { return data.progress; }
+              if (typeof data.avance === "number") { return data.avance; }
+              return 0;
+            })(),
             location: data.location || data.ubicacion || "",
             createdAt: data.createdAt || null,
           };
@@ -75,7 +74,7 @@ export default function ProyectosCliente() {
       }
     );
 
-    return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [ready, user?.email]); // ✅ depende de email, consistente con DashboardCliente
 
   const filtered = useMemo(() => {

@@ -42,11 +42,9 @@ export default function ProyectoDetalle({
 
         const data = snap.data() || {};
 
-        const fasesFromDb = Array.isArray(data.fases)
-          ? data.fases
-          : Array.isArray(data.phases)
-            ? data.phases
-            : null;
+        let fasesFromDb = null;
+        if (Array.isArray(data.fases)) { fasesFromDb = data.fases; }
+        else if (Array.isArray(data.phases)) { fasesFromDb = data.phases; }
 
         const fasesSafe =
           fasesFromDb && fasesFromDb.length > 0
@@ -82,7 +80,8 @@ export default function ProyectoDetalle({
           createdAt: data.createdAt || null,
           updatedAt: data.updatedAt || null,
         });
-      } catch (_e) { /* ignored */
+      } catch (e) {
+        console.error(e);
         setError("No se pudo cargar la información del proyecto.");
       } finally {
         setLoading(false);
@@ -102,8 +101,8 @@ export default function ProyectoDetalle({
       await updateDoc(doc(db, "projects", id), { adminNotes: notesValue });
       setProject(p => ({ ...p, adminNotes: notesValue }));
       setEditingNotes(false);
-    } catch {
-      // silently ignore
+    } catch (e) {
+      console.error("saveNotes error:", e.message || e);
     } finally {
       setNotesSaving(false);
     }

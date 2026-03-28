@@ -14,7 +14,7 @@ export function useGarantiasSolicitudes(projectId) {
                 const d = snap.data();
                 setProjectName(d.name || d.nombre || "Proyecto");
             }
-        }).catch(() => {});
+        }).catch(e => { console.error(e); });
     }, [projectId]);
 
     useEffect(() => {
@@ -26,7 +26,7 @@ export function useGarantiasSolicitudes(projectId) {
             setSolicitudes(snap.docs.map(d => ({ id: d.id, ...d.data() })));
             setLoading(false);
         }, () => setLoading(false));
-        return () => { try { unsub(); } catch (_e) { /* ignore */ } };
+        return () => { try { unsub(); } catch (e) { console.error(e); } };
     }, [projectId]);
 
     return { projectName, solicitudes, loading };

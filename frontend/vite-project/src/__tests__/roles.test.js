@@ -82,6 +82,10 @@ describe("isOneOf", () => {
   test("retorna false con lista vacía", () => {
     expect(isOneOf("admin", [])).toBe(false);
   });
+
+  test("usa lista vacía por defecto si no se pasa segundo argumento", () => {
+    expect(isOneOf("admin")).toBe(false);
+  });
 });
 
 describe("canEditFase", () => {

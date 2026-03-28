@@ -141,6 +141,32 @@ describe("normalizeFases", () => {
     const result = normalizeFases([{ id: "anteproyecto", responsableUid: "uid-123" }]);
     expect(result[0].responsableUid).toBe("uid-123");
   });
+
+  test("usa f.key como id cuando no hay f.id", () => {
+    const result = normalizeFases([{ key: "anteproyecto", porcentaje: 40, estado: "en_curso" }]);
+    expect(result[0].id).toBe("anteproyecto");
+    expect(result[0].porcentaje).toBe(40);
+  });
+
+  test("usa f.nombre cuando se provee explícitamente", () => {
+    const result = normalizeFases([{ id: "anteproyecto", nombre: "Mi fase", estado: "en_curso", porcentaje: 20 }]);
+    expect(result[0].nombre).toBe("Mi fase");
+  });
+
+  test("usa 'Fase' como nombre cuando el id no tiene base", () => {
+    const result = normalizeFases([{ id: "fase_custom_99", estado: "en_curso", porcentaje: 10 }]);
+    expect(result[0].nombre).toBe("Fase");
+  });
+
+  test("usa base.porcentaje cuando porcentaje y progreso son inválidos", () => {
+    const result = normalizeFases([{ id: "anteproyecto", porcentaje: "abc", progreso: "xyz", estado: "en_curso" }]);
+    expect(typeof result[0].porcentaje).toBe("number");
+  });
+
+  test("garantiza peso mínimo de 1 cuando se da un peso fraccionario pequeño", () => {
+    const result = normalizeFases([{ id: "anteproyecto", peso: 0.3, estado: "en_curso", porcentaje: 50 }]);
+    expect(result[0].peso).toBe(1);
+  });
 });
 
 // ── calcAvanceGlobal ──────────────────────────────────────────

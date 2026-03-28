@@ -58,6 +58,10 @@ export default function ComercialAdmin() {
         rechazada: solicitudes.filter(s => s.estado === "rechazada").length,
     };
 
+    const conteoNuevaLabel = conteo.nueva === 0
+        ? "Todo al día"
+        : `${conteo.nueva} solicitud${conteo.nueva === 1 ? "" : "es"} nueva${conteo.nueva === 1 ? "" : "s"} sin revisar`;
+
     return (
         <section className="space-y-4">
 
@@ -71,9 +75,7 @@ export default function ComercialAdmin() {
                         Solicitudes de servicio
                     </h1>
                     <p className="text-[12px] text-ink/50 mt-0.5">
-                        {conteo.nueva > 0
-                            ? `${conteo.nueva} solicitud${conteo.nueva === 1 ? "" : "es"} nueva${conteo.nueva === 1 ? "" : "s"} sin revisar`
-                            : "Todo al día"}
+                        {conteoNuevaLabel}
                     </p>
                 </div>
                 {/* Link público para compartir */}

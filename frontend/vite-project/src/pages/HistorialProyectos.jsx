@@ -95,7 +95,8 @@ export default function HistorialProyectos() {
           Historial de proyectos
         </h1>
         <p className="text-[12px] text-ink/50 mt-0.5">
-          {loading ? "Cargando…" : `${proyectos.length} proyecto${proyectos.length === 1 ? "" : "s"}`}
+          {loading && "Cargando…"}
+          {!loading && `${proyectos.length} proyecto${proyectos.length === 1 ? "" : "s"}`}
         </p>
       </div>
 

@@ -145,13 +145,14 @@ export default function DashboardAdmin() {
         </div>
       )}
 
-      {projects.length === 0 ? (
+      {projects.length === 0 && (
         <div className="rounded-2xl bg-white border border-black/[0.06] p-6 text-center space-y-2">
           <p className="text-[14px] font-semibold text-ink">Sin proyectos aún</p>
           <p className="text-[12px] text-ink/50">Crea el primer proyecto para comenzar.</p>
           <button className="btn-primary text-[13px] mt-2" onClick={() => nav("/proyectos/nuevo")}>Crear proyecto</button>
         </div>
-      ) : selected ? (
+      )}
+      {projects.length > 0 && selected && (
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3">
@@ -212,9 +213,44 @@ export default function DashboardAdmin() {
             <span className="text-ink/40 text-[13px]">→</span>
           </button>
         </>
-      ) : null}
+      )}
     </section>
   );
+}
+
+function calcProyectoTimeline(proyecto) {
+  if (!proyecto?.startDate || !proyecto?.endDate) {
+    return { planGlobal: null, diasRestantes: null, estadoGlobal: "sin_plan" };
+  }
+  const ini = new Date(proyecto.startDate), fin = new Date(proyecto.endDate), hoy = new Date();
+  if (fin <= ini) { return { planGlobal: null, diasRestantes: null, estadoGlobal: "sin_plan" }; }
+  const planGlobal = Math.max(0, Math.min(100, Math.round(((hoy - ini) / (fin - ini)) * 100)));
+  const diasRestantes = Math.ceil((fin - hoy) / 86400000);
+  const estadoGlobal = diasRestantes < 0 ? "vencido" : diasRestantes <= 14 ? "proximo" : "en_curso";
+  return { planGlobal, diasRestantes, estadoGlobal };
+}
+
+function calcDiasDisplay(estadoGlobal, diasRestantes) {
+  let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
+  if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
+  else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
+  let diasText = "";
+  if (diasRestantes != null) {
+    diasText = diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`;
+  }
+  return { diasCls, diasText };
+}
+
+function calcVariacionDisplay(variacion) {
+  let varValue = "—", varSub = "sin plan", varColor = "neutral";
+  if (variacion != null) {
+    varValue = variacion >= 0 ? `+${variacion}%` : `${variacion}%`;
+    varSub = variacion >= 0 ? "adelantado" : "atrasado";
+    if (variacion >= 0) { varColor = "green"; }
+    else if (variacion >= -15) { varColor = "amber"; }
+    else { varColor = "red"; }
+  }
+  return { varValue, varSub, varColor };
 }
 
 function PlanVsRealCard({ proyecto }) {
@@ -223,36 +259,11 @@ function PlanVsRealCard({ proyecto }) {
   const realGlobal = totalPeso > 0
     ? Math.round(fases.reduce((s, f) => s + (f.porcentaje || 0) * (f.peso || 1), 0) / totalPeso) : 0;
 
-  let planGlobal = null, diasRestantes = null, estadoGlobal = "sin_plan";
-  if (proyecto?.startDate && proyecto?.endDate) {
-    const ini = new Date(proyecto.startDate), fin = new Date(proyecto.endDate), hoy = new Date();
-    if (fin > ini) {
-      planGlobal = Math.max(0, Math.min(100, Math.round(((hoy - ini) / (fin - ini)) * 100)));
-      diasRestantes = Math.ceil((fin - hoy) / 86400000);
-      const estadoProximo = diasRestantes <= 14 ? "proximo" : "en_curso";
-      estadoGlobal = diasRestantes < 0 ? "vencido" : estadoProximo;
-    }
-  }
+  const { planGlobal, diasRestantes, estadoGlobal } = calcProyectoTimeline(proyecto);
   const variacion = planGlobal == null ? null : realGlobal - planGlobal;
   const fasesConPlan = fases.filter(f => f.fechaInicioPlaneada && f.fechaFinPlaneada);
-
-  let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
-  if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
-  else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
-  const diasText = diasRestantes != null
-    ? (diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`)
-    : "";
-
-  let varValue = "—";
-  let varSub = "sin plan";
-  let varColor = "neutral";
-  if (variacion != null) {
-    varValue = variacion >= 0 ? `+${variacion}%` : `${variacion}%`;
-    varSub = variacion >= 0 ? "adelantado" : "atrasado";
-    if (variacion >= 0) { varColor = "green"; }
-    else if (variacion >= -15) { varColor = "amber"; }
-    else { varColor = "red"; }
-  }
+  const { diasCls, diasText } = calcDiasDisplay(estadoGlobal, diasRestantes);
+  const { varValue, varSub, varColor } = calcVariacionDisplay(variacion);
 
   return (
     <div className="rounded-2xl bg-white border border-black/[0.06] p-4 space-y-3">
@@ -381,7 +392,8 @@ function PhaseBars({ fases = [] }) {
 }
 
 function getDeadlineInfo(daysLeft) {
-  const daysLeftLabel = daysLeft == null ? "—" : daysLeft < 0 ? "Vencido" : String(daysLeft);
+  let daysLeftLabel = "—";
+  if (daysLeft != null) { daysLeftLabel = daysLeft < 0 ? "Vencido" : String(daysLeft); }
   let deadlineHint = "Sin fecha.";
   if (daysLeft != null) {
     if (daysLeft < 0) { deadlineHint = "Plazo vencido."; }

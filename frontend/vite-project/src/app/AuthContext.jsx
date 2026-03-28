@@ -9,6 +9,10 @@ import { usePushNotifications } from "../hooks/usePushNotifications.js";
 import PropTypes from "prop-types";
 
 // ── Helper para mezclar datos de perfil actualizados ──
+function makeProfileUpdater(data) {
+  return function(prev) { return mergeProfileData(prev, data); };
+}
+
 function mergeProfileData(prev, data) {
   if (!prev) return prev;
   return {
@@ -108,7 +112,7 @@ export function AuthProvider({ children }) {
         profileUnsub = onSnapshot(doc(db, "users", fbUser.uid), snap => {
           if (!snap.exists()) return;
           const data = snap.data();
-          setUser(prev => mergeProfileData(prev, data));
+          setUser(makeProfileUpdater(data));
         });
 
       } catch (e) {

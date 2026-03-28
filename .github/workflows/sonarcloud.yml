@@ -28,7 +28,9 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Run tests and generate coverage
-        run: npm test -- --passWithNoTests
+        run: npm test -- --passWithNoTests --forceExit
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master

@@ -45,7 +45,7 @@ describe("clampInt", () => {
 
   test("retorna min si el valor no es finito", () => {
     expect(clampInt(NaN, 0, 100)).toBe(0);
-    expect(clampInt(Infinity, 0, 100)).toBe(100);
+    expect(clampInt(Infinity, 0, 100)).toBe(0);
   });
 
   test("redondea al entero más cercano", () => {
@@ -112,7 +112,7 @@ describe("normalizeFases", () => {
   });
 
   test("normaliza porcentaje a entero entre 0 y 100", () => {
-    const result = normalizeFases([{ id: "anteproyecto", porcentaje: 150 }]);
+    const result = normalizeFases([{ id: "anteproyecto", porcentaje: 150, estado: "en_curso" }]);
     expect(result[0].porcentaje).toBe(100);
   });
 

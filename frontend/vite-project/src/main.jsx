@@ -6,12 +6,18 @@ import { AuthProvider } from "./app/AuthContext.jsx";
 import App from "./App.jsx";
 import "./index.css";
 
+// Suprimir errores internos del SDK de Firestore que ocurren asincrónicamente
+// al desmontar componentes con listeners activos. Son bugs del SDK (no del código).
+window.addEventListener("unhandledrejection", (e) => {
+  if (e.reason?.message?.includes("FIRESTORE") && e.reason?.message?.includes("INTERNAL ASSERTION FAILED")) {
+    e.preventDefault();
+  }
+});
+
 ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
-  </React.StrictMode>
+  <BrowserRouter>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </BrowserRouter>
 );

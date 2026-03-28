@@ -24,7 +24,17 @@
       "Bash(grep -n \"^[[:space:]]*//\" \"C:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/src/pages/HistorialProyectos.jsx\")",
       "Bash(grep '\"\"firebase\"\"' package.json)",
       "Bash(node_modules/.bin/jest --config jest.config.cjs --no-coverage)",
-      "Bash(node_modules/.bin/jest --config jest.config.cjs)"
+      "Bash(node_modules/.bin/jest --config jest.config.cjs)",
+      "Bash(gh run:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(node node_modules/.bin/jest --passWithNoTests --no-coverage --forceExit)",
+      "Bash(node node_modules/jest-cli/bin/jest.js --passWithNoTests --no-coverage --forceExit)",
+      "Bash(cmd /c \"node node_modules/jest-cli/bin/jest.js --passWithNoTests --no-coverage --forceExit\")",
+      "Bash(npm.cmd test:*)",
+      "Bash(node node_modules/jest-cli/bin/jest.js --config jest.ci.cjs --coverage --coverageReporters=text)",
+      "Bash(node -e \"const f = require\\(''./node_modules/firebase/package.json''\\); console.log\\(f.version\\)\")",
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project -name capacitor.config*)"
     ]
   }
 }

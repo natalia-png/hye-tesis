@@ -28,7 +28,9 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Run tests and generate coverage
-        run: node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern="(timeAgo|roles|garantias|projectUtils)" --passWithNoTests --forceExit --runInBand
+        run: npx jest --testPathPattern="(timeAgo|roles|garantias|projectUtils)" --passWithNoTests --forceExit --runInBand
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master

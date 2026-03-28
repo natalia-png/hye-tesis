@@ -9,6 +9,7 @@ module.exports = {
     "**/src/__tests__/roles.test.js",
     "**/src/__tests__/garantias.test.js",
     "**/src/__tests__/projectUtils.test.js",
+    "**/src/__tests__/fases.test.js",
   ],
   collectCoverage: true,
   coverageReporters: ["lcov", "text-summary"],
@@ -18,6 +19,7 @@ module.exports = {
     "src/utils/projectUtils.js",
     "src/data/roles.js",
     "src/data/garantias.js",
+    "src/data/fases.js",
   ],
   moduleNameMapper: {
     "\\.(css|less|scss|png|jpg|jpeg|gif|svg|webp)$": "<rootDir>/src/__mocks__/fileMock.cjs",

@@ -69,7 +69,7 @@ export default function DashboardColaborador() {
                             {rolLabel}
                         </span>
                         <p className="text-[12px] text-ink/50">
-                            {misFases.length} fase{misFases.length !== 1 ? "s" : ""} asignada{misFases.length !== 1 ? "s" : ""}
+                            {misFases.length} fase{misFases.length === 1 ? "" : "s"} asignada{misFases.length === 1 ? "" : "s"}
                         </p>
                     </div>
                 </div>
@@ -100,12 +100,13 @@ export default function DashboardColaborador() {
                 <KpiMini label="Completadas" value={completadas.length} color="text-emerald-600" />
             </div>
 
-            {loading ? (
+            {loading && (
                 <div className="flex items-center gap-2 py-6">
                     <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
                     <p className="text-[13px] text-ink/50">Cargando fases…</p>
                 </div>
-            ) : misFases.length === 0 ? (
+            )}
+            {!loading && misFases.length === 0 && (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">📋</p>
                     <p className="text-[14px] font-semibold text-ink">Sin fases asignadas</p>
@@ -113,7 +114,8 @@ export default function DashboardColaborador() {
                         Luisa te asignará fases cuando inicien los proyectos.
                     </p>
                 </div>
-            ) : (
+            )}
+            {!loading && misFases.length > 0 && (
                 <>
                     {/* Fases pendientes / en curso */}
                     {pendientes.length > 0 && (

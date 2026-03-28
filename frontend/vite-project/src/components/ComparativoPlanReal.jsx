@@ -112,7 +112,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
     ? Math.round(fases.reduce((s, f) => s + (f.porcentaje || 0) * (f.peso || 1), 0) / totalPeso)
     : 0;
 
-  const variacionGlobal = planGlobal != null ? realGlobal - planGlobal : null;
+  const variacionGlobal = planGlobal == null ? null : realGlobal - planGlobal;
 
   return (
     <div className="card space-y-4">
@@ -128,7 +128,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
       <div className="grid grid-cols-3 gap-2">
         <KpiCard
           label="Plan hoy"
-          value={planGlobal != null ? `${planGlobal}%` : "—"}
+          value={planGlobal == null ? "—" : `${planGlobal}%`}
           sub="% tiempo transcurrido"
         />
         <KpiCard

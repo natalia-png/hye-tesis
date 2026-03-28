@@ -72,7 +72,7 @@ export default function ComercialAdmin() {
                     </h1>
                     <p className="text-[12px] text-ink/50 mt-0.5">
                         {conteo.nueva > 0
-                            ? `${conteo.nueva} solicitud${conteo.nueva > 1 ? "es" : ""} nueva${conteo.nueva > 1 ? "s" : ""} sin revisar`
+                            ? `${conteo.nueva} solicitud${conteo.nueva === 1 ? "" : "es"} nueva${conteo.nueva === 1 ? "" : "s"} sin revisar`
                             : "Todo al día"}
                     </p>
                 </div>
@@ -108,9 +108,8 @@ export default function ComercialAdmin() {
             />
 
             {/* Lista */}
-            {loading ? (
-                <LoadingSpinner text="Cargando solicitudes…" />
-            ) : filtradas.length === 0 ? (
+            {loading && <LoadingSpinner text="Cargando solicitudes…" />}
+            {!loading && filtradas.length === 0 && (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">📋</p>
                     <p className="text-[13px] text-ink/60">
@@ -120,7 +119,8 @@ export default function ComercialAdmin() {
                         Comparte el link público para que los prospectos puedan cotizar.
                     </p>
                 </div>
-            ) : (
+            )}
+            {!loading && filtradas.length > 0 && (
                 <div className="space-y-3">
                     {filtradas.map(s => (
                         <TarjetaSolicitud key={s.id} solicitud={s} nav={nav} />
@@ -139,7 +139,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
     const [nota, setNota] = useState(solicitud.notaAdmin || "");
     const [saving, setSaving] = useState(false);
     const [cambiandoEstado, setCambiandoEstado] = useState(false);
-    const [modalEmail, setModalEmail] = useState(null); // { estado, asunto, cuerpo }
+    const [modalEmail, setModalEmail] = useState(null);
     const [enviandoEmail, setEnviandoEmail] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);

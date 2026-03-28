@@ -109,6 +109,20 @@ function ChatList({ chats, ready, user, nav, isArchived = false }) {
   );
 }
 
+function getChatDisplay(chat, currentUid) {
+  if (chat.type === "project") {
+    const others = (chat.participants || [])
+      .filter(uid => uid !== currentUid)
+      .map(uid => chat.participantNames?.[uid]?.split(" ")[0])
+      .filter(Boolean).join(", ");
+    return { displayName: chat.projectName || "Proyecto", subtitle: others || "Chat de proyecto" };
+  }
+  const otherUid = (chat.participants || []).find(uid => uid !== currentUid);
+  const displayName = otherUid ? (chat.participantNames?.[otherUid] || "Usuario") : "Chat";
+  const otherRole = otherUid ? chat.participantRoles?.[otherUid] : "";
+  return { displayName, subtitle: ROLE_LABEL[otherRole] || "Usuario" };
+}
+
 /* ── Tarjeta chat en bandeja ── */
 function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   const unread = chat.unread?.[currentUid] || 0;
@@ -126,22 +140,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  let displayName = "";
-  let subtitle = "";
-
-  if (chat.type === "project") {
-    displayName = chat.projectName || "Proyecto";
-    const others = (chat.participants || [])
-      .filter(uid => uid !== currentUid)
-      .map(uid => chat.participantNames?.[uid]?.split(" ")[0])
-      .filter(Boolean).join(", ");
-    subtitle = others || "Chat de proyecto";
-  } else {
-    const otherUid = (chat.participants || []).find(uid => uid !== currentUid);
-    displayName = otherUid ? (chat.participantNames?.[otherUid] || "Usuario") : "Chat";
-    const otherRole = otherUid ? chat.participantRoles?.[otherUid] : "";
-    subtitle = ROLE_LABEL[otherRole] || "Usuario";
-  }
+  const { displayName, subtitle } = getChatDisplay(chat, currentUid);
 
   const lastTime = chat.lastAt?.seconds
     ? timeAgoUtil(new Date(chat.lastAt.seconds * 1000)) : "";
@@ -276,6 +275,69 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   );
 }
 
+async function loadUsersForChat(currentUser) {
+  let list = [];
+  if (currentUser.role === "admin") {
+    const snaps = await Promise.all([
+      getDocs(query(collection(db, "users"), where("role", "==", "colaborador"), limit(30))),
+      getDocs(query(collection(db, "users"), where("role", "==", "cliente"), limit(30))),
+    ]);
+    list = snaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
+  } else if (currentUser.role === "colaborador") {
+    list = await loadColaboradorUsers(currentUser);
+  } else if (currentUser.role === "cliente") {
+    list = await loadClienteUsers(currentUser);
+  }
+  return list.filter(u => u.uid !== currentUser.uid);
+}
+
+async function loadColaboradorUsers(currentUser) {
+  const [adminSnap, colabSnap, proySnap] = await Promise.all([
+    getDocs(query(collection(db, "users"), where("role", "==", "admin"), limit(10))),
+    getDocs(query(collection(db, "users"), where("role", "==", "colaborador"), limit(30))),
+    getDocs(query(collection(db, "projects"), where(`chatPermisos.${currentUser.uid}`, "==", true), limit(20))),
+  ]);
+  const base = [
+    ...adminSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
+    ...colabSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
+  ];
+  const clientIds = [...new Set(proySnap.docs.map(d => d.data().clientId).filter(Boolean))];
+  let clientUsers = [];
+  if (clientIds.length > 0) {
+    const chunks = [];
+    for (let i = 0; i < clientIds.length; i += 30) chunks.push(clientIds.slice(i, i + 30));
+    const clientSnaps = await Promise.all(
+      chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
+    );
+    clientUsers = clientSnaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
+  }
+  return [...base, ...clientUsers];
+}
+
+async function loadClienteUsers(currentUser) {
+  const [adminSnap, proySnap] = await Promise.all([
+    getDocs(query(collection(db, "users"), where("role", "==", "admin"), limit(10))),
+    getDocs(query(collection(db, "projects"), where("clientId", "==", currentUser.uid), limit(20))),
+  ]);
+  const base = adminSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  const colabIds = [...new Set(
+    proySnap.docs.flatMap(d => {
+      const permisos = d.data().chatPermisos || {};
+      return Object.entries(permisos).filter(([, v]) => v).map(([uid]) => uid);
+    })
+  )];
+  let colabUsers = [];
+  if (colabIds.length > 0) {
+    const chunks = [];
+    for (let i = 0; i < colabIds.length; i += 30) chunks.push(colabIds.slice(i, i + 30));
+    const colabSnaps = await Promise.all(
+      chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
+    );
+    colabUsers = colabSnaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
+  }
+  return [...base, ...colabUsers];
+}
+
 /* ── Selector de persona para nuevo chat ── */
 function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
   const [users, setUsers] = useState([]);
@@ -283,77 +345,9 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
   const [creating, setCreating] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        let list = [];
-
-        if (currentUser.role === "admin") {
-          // Admin ve a todos
-          const snaps = await Promise.all([
-            getDocs(query(collection(db, "users"), where("role", "==", "colaborador"), limit(30))),
-            getDocs(query(collection(db, "users"), where("role", "==", "cliente"), limit(30))),
-          ]);
-          list = snaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
-
-        } else if (currentUser.role === "colaborador") {
-          // Colaborador: admin + otros colaboradores + clientes de proyectos con permiso
-          const [adminSnap, colabSnap, proySnap] = await Promise.all([
-            getDocs(query(collection(db, "users"), where("role", "==", "admin"), limit(10))),
-            getDocs(query(collection(db, "users"), where("role", "==", "colaborador"), limit(30))),
-            getDocs(query(collection(db, "projects"), where(`chatPermisos.${currentUser.uid}`, "==", true), limit(20))),
-          ]);
-          const base = [
-            ...adminSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
-            ...colabSnap.docs.map(d => ({ uid: d.id, ...d.data() })),
-          ];
-          // Obtener clientIds únicos de los proyectos con permiso
-          const clientIds = [...new Set(
-            proySnap.docs.map(d => d.data().clientId).filter(Boolean)
-          )];
-          let clientUsers = [];
-          if (clientIds.length > 0) {
-            // Firestore "in" soporta hasta 30 valores
-            const chunks = [];
-            for (let i = 0; i < clientIds.length; i += 30) chunks.push(clientIds.slice(i, i + 30));
-            const clientSnaps = await Promise.all(
-              chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
-            );
-            clientUsers = clientSnaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
-          }
-          list = [...base, ...clientUsers];
-
-        } else if (currentUser.role === "cliente") {
-          // Cliente: admin + colaboradores con permiso en sus proyectos
-          const [adminSnap, proySnap] = await Promise.all([
-            getDocs(query(collection(db, "users"), where("role", "==", "admin"), limit(10))),
-            getDocs(query(collection(db, "projects"), where("clientId", "==", currentUser.uid), limit(20))),
-          ]);
-          const base = adminSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
-          // Recolectar UIDs de colaboradores con permiso
-          const colabIds = [...new Set(
-            proySnap.docs.flatMap(d => {
-              const permisos = d.data().chatPermisos || {};
-              return Object.entries(permisos).filter(([, v]) => v).map(([uid]) => uid);
-            })
-          )];
-          let colabUsers = [];
-          if (colabIds.length > 0) {
-            const chunks = [];
-            for (let i = 0; i < colabIds.length; i += 30) chunks.push(colabIds.slice(i, i + 30));
-            const colabSnaps = await Promise.all(
-              chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
-            );
-            colabUsers = colabSnaps.flatMap(s => s.docs.map(d => ({ uid: d.id, ...d.data() })));
-          }
-          list = [...base, ...colabUsers];
-        }
-
-        setUsers(list.filter(u => u.uid !== currentUser.uid));
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadUsersForChat(currentUser)
+      .then(list => setUsers(list))
+      .finally(() => setLoading(false));
   }, [currentUser]);
 
   const handleSelect = async (otherUser) => {
@@ -378,11 +372,9 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
         <button type="button" onClick={onClose} className="text-ink/40 hover:text-ink text-lg leading-none">×</button>
       </div>
 
-      {loading ? (
-        <p className="text-[12px] text-ink/50 py-2">Cargando…</p>
-      ) : users.length === 0 ? (
-        <p className="text-[12px] text-ink/50 py-2">Sin usuarios disponibles.</p>
-      ) : (
+      {loading && <p className="text-[12px] text-ink/50 py-2">Cargando…</p>}
+      {!loading && users.length === 0 && <p className="text-[12px] text-ink/50 py-2">Sin usuarios disponibles.</p>}
+      {!loading && users.length > 0 && (
         <div className="space-y-1.5">
           {users.map(u => (
             <button key={u.uid} type="button" disabled={!!creating}

@@ -75,7 +75,8 @@ Ayúdalo con sus fases, preguntas técnicas y uso de la plataforma. Responde en 
         let info = "Sin proyecto activo.";
         if (p) {
             const fases = (p.fases || []).map(f => {
-                const estadoLabel = f.estado === "completada" ? "Completada" : f.estado === "en_curso" ? "En curso" : "Pendiente";
+                const estadoEnCursoLabel = f.estado === "en_curso" ? "En curso" : "Pendiente";
+                const estadoLabel = f.estado === "completada" ? "Completada" : estadoEnCursoLabel;
                 return `  · ${f.nombre}: ${f.porcentaje || 0}% — ${estadoLabel}`;
             }).join("\n");
             info = `Proyecto: "${p.name || p.nombre}" — ${p.progress || 0}% avance\nFases:\n${fases}`;

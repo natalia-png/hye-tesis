@@ -132,7 +132,7 @@ export default function GestionColaboradores() {
                     </p>
                     <h1 className="text-[20px] font-bold text-ink leading-tight">Colaboradores</h1>
                     <p className="text-[12px] text-ink/50 mt-0.5">
-                        {colaboradores.length} miembro{colaboradores.length !== 1 ? "s" : ""} del equipo
+                        {colaboradores.length} miembro{colaboradores.length === 1 ? "" : "s"} del equipo
                     </p>
                 </div>
                 <button type="button" onClick={() => { setModal(true); setError(""); }}
@@ -144,12 +144,13 @@ export default function GestionColaboradores() {
                 </button>
             </div>
 
-            {loading ? (
+            {loading && (
                 <div className="flex items-center gap-2 py-6">
                     <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
                     <p className="text-[13px] text-ink/50">Cargando equipo…</p>
                 </div>
-            ) : colaboradores.length === 0 ? (
+            )}
+            {!loading && colaboradores.length === 0 && (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">👥</p>
                     <p className="text-[14px] font-semibold text-ink">Sin colaboradores aún</p>
@@ -157,7 +158,8 @@ export default function GestionColaboradores() {
                         Agrega a los miembros del equipo para asignarles fases en los proyectos.
                     </p>
                 </div>
-            ) : (
+            )}
+            {!loading && colaboradores.length > 0 && (
                 <div className="space-y-2">
                     {colaboradores.map(c => (
                         <TarjetaColaborador key={c.uid} colaborador={c} onEliminar={handleEliminar} />

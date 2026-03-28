@@ -17,6 +17,32 @@ async function saveToken(userId, token, platform = "web") {
   );
 }
 
+// ── WEB: inicializar push si ya hay permiso ───────────────────
+async function initWebPush(uid, cancelled, swRef, unsubRef, cbRef) {
+  try {
+    const messaging = await getMessagingInstance();
+    if (!messaging || cancelled) return;
+
+    const reg = await registerSW();
+    if (cancelled) return;
+    swRef.current = reg;
+
+    if (Notification.permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: reg,
+      });
+      if (token && !cancelled) await saveToken(uid, token);
+
+      if (!unsubRef.current) {
+        unsubRef.current = onMessage(messaging, p => {
+          if (!cancelled) cbRef.current?.(p);
+        });
+      }
+    }
+  } catch (e) { console.error("Push init error:", e.message || e); }
+}
+
 // ── Registrar service worker (solo web) ───────────────────────
 async function registerSW() {
   const reg = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
@@ -62,7 +88,7 @@ export function usePushNotifications(uid, onForegroundMessage) {
 
   const [permissionStatus, setPermissionStatus] = useState(() => {
     if (IS_NATIVE) return "default"; // se actualiza en el effect
-    return typeof Notification !== "undefined" ? Notification.permission : "default";
+    return typeof Notification === "undefined" ? "default" : Notification.permission;
   });
 
   // ── Init silenciosa ──────────────────────────────────────────
@@ -83,29 +109,7 @@ export function usePushNotifications(uid, onForegroundMessage) {
           if (!cancelled) cbRef.current?.({ data: notification.data });
         });
       } else {
-        // Web: registrar SW y obtener token si ya hay permiso
-        try {
-          const messaging = await getMessagingInstance();
-          if (!messaging || cancelled) return;
-
-          const reg = await registerSW();
-          if (cancelled) return;
-          swRef.current = reg;
-
-          if (Notification.permission === "granted") {
-            const token = await getToken(messaging, {
-              vapidKey: VAPID_KEY,
-              serviceWorkerRegistration: reg,
-            });
-            if (token && !cancelled) await saveToken(uid, token);
-
-            if (!unsubRef.current) {
-              unsubRef.current = onMessage(messaging, p => {
-                if (!cancelled) cbRef.current?.(p);
-              });
-            }
-          }
-        } catch (e) { console.error("Push init error:", e.message || e); }
+        await initWebPush(uid, cancelled, swRef, unsubRef, cbRef);
       }
     })();
 

@@ -64,6 +64,7 @@ export default function ProyectoEditar() {
         const fasesRaw = Array.isArray(data.fases) ? data.fases : [];
         setFases(normalizeFases(fasesRaw));
       } catch (e) {
+        console.error(e);
         setError("No se pudieron cargar los datos del proyecto.");
       } finally {
         setLoading(false);

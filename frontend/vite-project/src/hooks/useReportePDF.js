@@ -37,282 +37,21 @@ export function useReportePDF() {
 
             // 2 ── Construir el PDF
             const doc = new jsPDF({ unit: "mm", format: "a4" });
-            let y = 0;
+            const checkPage = (y, needed = 15) => checkPageInDoc(doc, y, needed);
 
-            // ── Función helper para nueva página ──────────────────
-            const checkPage = (needed = 15) => {
-                if (y + needed > 277) {
-                    doc.addPage();
-                    y = MARGIN;
-                }
-            };
+            await renderPortada(doc);
 
-            // ═══════════════════════════════════════════════════════
-            // PORTADA / ENCABEZADO
-            // ═══════════════════════════════════════════════════════
-            // Franja superior oscura
-            doc.setFillColor(...COLOR.ink);
-            doc.rect(0, 0, PAGE_W, 38, "F");
+            let y = 52;
+            y = renderFichaProyecto(doc, proyecto, isAdmin, y, checkPage);
 
-            // Fecha de generación
-            const fechaHoy = new Date().toLocaleDateString("es-CO", {
-                day: "2-digit", month: "long", year: "numeric",
-            });
-
-            // Intentar cargar el logo desde /public/logo-header.png
-            try {
-                await new Promise((resolve) => {
-                    const img = new Image();
-                    img.crossOrigin = "anonymous";
-                    img.onload = () => {
-                        // Logo en la esquina izquierda del header oscuro
-                        doc.addImage(img, "PNG", MARGIN, 6, 40, 22);
-                        resolve();
-                    };
-                    img.onerror = () => {
-                        // Si falla el logo, mostrar texto
-                        doc.setTextColor(...COLOR.white);
-                        doc.setFont("helvetica", "bold");
-                        doc.setFontSize(18);
-                        doc.text("H&E ARQUITECTOS", MARGIN, 17);
-                        resolve();
-                    };
-                    img.src = "/hye-letrasblancas.png";
-                });
-            } catch {
-                doc.setTextColor(...COLOR.white);
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(18);
-                doc.text("H&E ARQUITECTOS", MARGIN, 17);
-            }
-
-            // Subtítulo y fecha a la derecha
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.setTextColor(200, 190, 175);
-            doc.text("Reporte de Proyecto", PAGE_W - MARGIN, 20, { align: "right" });
-            doc.text(`Generado el ${fechaHoy}`, PAGE_W - MARGIN, 28, { align: "right" });
-
-            y = 52;
-
-            // ═══════════════════════════════════════════════════════
-            // FICHA DEL PROYECTO
-            // ═══════════════════════════════════════════════════════
-            seccionTitulo(doc, "INFORMACIÓN DEL PROYECTO", y);
-            y += 14;
-
-            const avance = proyecto.avance ?? calcAvance(proyecto.fases);
-            const campos = [
-                ["Nombre del proyecto", proyecto.name || proyecto.nombre || "—"],
-                ["Cliente", proyecto.client || proyecto.cliente || "—"],
-                ["Estado", proyecto.status || proyecto.estado || "—"],
-                ["Avance global", `${avance}%`],
-            ];
-
-            if (isAdmin) {
-                if (proyecto.startDate || proyecto.fechaInicio)
-                    campos.push(["Fecha de inicio", formatDate(proyecto.startDate || proyecto.fechaInicio)]);
-                if (proyecto.endDate || proyecto.fechaFin)
-                    campos.push(["Entrega estimada", formatDate(proyecto.endDate || proyecto.fechaFin)]);
-            }
-
-            campos.forEach(([label, valor]) => {
-                checkPage(8);
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(8);
-                doc.setTextColor(...COLOR.taupe);
-                doc.text(label.toUpperCase(), MARGIN, y);
-
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(10);
-                doc.setTextColor(...COLOR.ink);
-                doc.text(String(valor), MARGIN + 52, y);
-                y += 7;
-            });
-
-            // Barra de avance global
-            y += 3;
-            checkPage(14);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(8);
-            doc.setTextColor(...COLOR.taupe);
-            doc.text("AVANCE GLOBAL", MARGIN, y);
-            y += 4;
-
-            const barW = CONTENT_W;
-            doc.setFillColor(230, 225, 215);
-            doc.roundedRect(MARGIN, y, barW, 5, 1, 1, "F");
-            const pct = Math.min(Math.max(avance, 0), 100) / 100;
-            doc.setFillColor(...COLOR.completada);
-            if (pct > 0) doc.roundedRect(MARGIN, y, barW * pct, 5, 1, 1, "F");
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(8);
-            doc.setTextColor(...COLOR.ink);
-            doc.text(`${avance}%`, MARGIN + barW + 3, y + 4);
-            y += 14;
-
-            // ═══════════════════════════════════════════════════════
-            // FASES
-            // ═══════════════════════════════════════════════════════
             seccionTitulo(doc, "DETALLE POR FASE", y);
             y += 10;
 
             for (const fase of fasesConDatos) {
-                checkPage(30);
-
-                // ── Cabecera de fase ─────────────────────────────────
-                const estadoColor = COLOR[fase.estado] || COLOR.pendiente;
-                doc.setFillColor(...COLOR.sand);
-                doc.roundedRect(MARGIN, y, CONTENT_W, 12, 2, 2, "F");
-
-                // Nombre
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(11);
-                doc.setTextColor(...COLOR.ink);
-                doc.text(fase.nombre || `Fase ${fase.id}`, MARGIN + 4, y + 8);
-
-                // Badge estado
-                const estadoLabel = {
-                    completada: "Completada",
-                    en_curso: "En curso",
-                    pendiente: "Pendiente",
-                }[fase.estado] || fase.estado;
-
-                doc.setFillColor(...estadoColor);
-                doc.roundedRect(PAGE_W - MARGIN - 32, y + 2, 32, 8, 2, 2, "F");
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(7);
-                doc.setTextColor(...COLOR.white);
-                doc.text(estadoLabel, PAGE_W - MARGIN - 16, y + 7, { align: "center" });
-
-                y += 15;
-
-                // Barra de avance de la fase
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(8);
-                doc.setTextColor(...COLOR.taupe);
-                doc.text(`Avance: ${fase.porcentaje || 0}%`, MARGIN, y);
-                y += 4;
-
-                const faseBarW = CONTENT_W - 20;
-                doc.setFillColor(230, 225, 215);
-                doc.roundedRect(MARGIN, y, faseBarW, 3, 1, 1, "F");
-                const fasePct = Math.min(Math.max(fase.porcentaje || 0, 0), 100) / 100;
-                doc.setFillColor(...estadoColor);
-                if (fasePct > 0) doc.roundedRect(MARGIN, y, faseBarW * fasePct, 3, 1, 1, "F");
-                y += 8;
-
-                // ── Notas ────────────────────────────────────────────
-                if (fase.notas && fase.notas.length > 0) {
-                    checkPage(10);
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
-                    doc.setTextColor(...COLOR.taupe);
-                    doc.text("NOTAS", MARGIN, y);
-                    y += 5;
-
-                    for (const nota of fase.notas) {
-                        const fechaNota = nota.createdAt?.toDate
-                            ? nota.createdAt.toDate().toLocaleDateString("es-CO")
-                            : "";
-
-                        const textoCompleto = nota.text || "";
-                        const prefixNota = fechaNota ? "[" + fechaNota + "] " : "";
-                        const lineas = doc.splitTextToSize(
-                            "• " + prefixNota + textoCompleto,
-                            CONTENT_W - 4
-                        );
-
-                        checkPage(lineas.length * 5 + 4);
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(9);
-                        doc.setTextColor(...COLOR.ink);
-                        doc.text(lineas, MARGIN + 2, y);
-                        y += lineas.length * 5 + 3;
-                    }
-                    y += 2;
-                }
-
-                // ── Archivos ─────────────────────────────────────────
-                if (fase.archivos && fase.archivos.length > 0) {
-                    checkPage(10);
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
-                    doc.setTextColor(...COLOR.taupe);
-                    doc.text("ARCHIVOS", MARGIN, y);
-                    y += 5;
-
-                    for (const archivo of fase.archivos) {
-                        checkPage(8);
-
-                        const nombreArchivo = archivo.fileName || "Archivo sin nombre";
-                        doc.setFont("helvetica", "normal");
-                        doc.setFontSize(9);
-
-                        // Viñeta
-                        doc.setTextColor(...COLOR.taupe);
-                        doc.text("-", MARGIN + 2, y);
-
-                        // Nombre truncado si es muy largo
-                        doc.setTextColor(...COLOR.ink);
-                        const maxW = CONTENT_W - 30;
-                        let nombreMostrar = nombreArchivo;
-                        while (doc.getTextWidth(nombreMostrar) > maxW && nombreMostrar.length > 10) {
-                            nombreMostrar = nombreMostrar.slice(0, -4) + "...";
-                        }
-                        doc.text(nombreMostrar, MARGIN + 6, y);
-
-                        // "Ver archivo" alineado a la derecha, clickeable
-                        if (archivo.downloadURL) {
-                            doc.setFont("helvetica", "bold");
-                            doc.setFontSize(8);
-                            doc.setTextColor(80, 120, 180);
-                            doc.textWithLink("Ver archivo", PAGE_W - MARGIN, y, {
-                                url: archivo.downloadURL,
-                                align: "right",
-                            });
-                        }
-
-                        // Línea separadora sutil
-                        doc.setDrawColor(235, 230, 220);
-                        doc.setLineWidth(0.2);
-                        doc.line(MARGIN + 6, y + 2, PAGE_W - MARGIN, y + 2);
-                        doc.setTextColor(...COLOR.ink);
-                        y += 7;
-                    }
-                    y += 2;
-                }
-
-                // Sin notas ni archivos
-                if ((!fase.notas || fase.notas.length === 0) && (!fase.archivos || fase.archivos.length === 0)) {
-                    doc.setFont("helvetica", "italic");
-                    doc.setFontSize(8);
-                    doc.setTextColor(...COLOR.taupe);
-                    doc.text("Sin notas ni archivos registrados.", MARGIN + 2, y);
-                    y += 7;
-                }
-
-                // Separador entre fases
-                doc.setDrawColor(...COLOR.sand);
-                doc.setLineWidth(0.5);
-                doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-                y += 8;
+                y = renderFaseEnPDF(doc, fase, y, checkPage);
             }
 
-            // ═══════════════════════════════════════════════════════
-            // PIE DE PÁGINA en todas las páginas
-            // ═══════════════════════════════════════════════════════
-            const totalPages = doc.getNumberOfPages();
-            for (let i = 1; i <= totalPages; i++) {
-                doc.setPage(i);
-                doc.setFillColor(...COLOR.sand);
-                doc.rect(0, 287, PAGE_W, 10, "F");
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(7);
-                doc.setTextColor(...COLOR.taupe);
-                doc.text("H&E Arquitectos — Documento generado automáticamente", MARGIN, 293);
-                doc.text(`Página ${i} de ${totalPages}`, PAGE_W - MARGIN, 293, { align: "right" });
-            }
+            renderPiePaginas(doc);
 
             // ═══════════════════════════════════════════════════════
             // DESCARGAR
@@ -323,6 +62,7 @@ export function useReportePDF() {
 
             doc.save(nombreArchivo);
         } catch (err) {
+            console.error(err);
             alert("Ocurrió un error al generar el reporte. Intenta de nuevo.");
         } finally {
             setLoading(false);
@@ -330,6 +70,231 @@ export function useReportePDF() {
     };
 
     return { generar, loading };
+}
+
+// ── Helper para añadir nueva página si es necesario ──────────
+function checkPageInDoc(doc, y, needed = 15) {
+    if (y + needed > 277) {
+        doc.addPage();
+        return MARGIN;
+    }
+    return y;
+}
+
+// ── Portada / encabezado del PDF ──────────────────────────────
+async function renderPortada(doc) {
+    doc.setFillColor(...COLOR.ink);
+    doc.rect(0, 0, PAGE_W, 38, "F");
+    const fechaHoy = new Date().toLocaleDateString("es-CO", {
+        day: "2-digit", month: "long", year: "numeric",
+    });
+    try {
+        await new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => { doc.addImage(img, "PNG", MARGIN, 6, 40, 22); resolve(); };
+            img.onerror = () => {
+                doc.setTextColor(...COLOR.white);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(18);
+                doc.text("H&E ARQUITECTOS", MARGIN, 17);
+                resolve();
+            };
+            img.src = "/hye-letrasblancas.png";
+        });
+    } catch {
+        doc.setTextColor(...COLOR.white);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(18);
+        doc.text("H&E ARQUITECTOS", MARGIN, 17);
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(200, 190, 175);
+    doc.text("Reporte de Proyecto", PAGE_W - MARGIN, 20, { align: "right" });
+    doc.text(`Generado el ${fechaHoy}`, PAGE_W - MARGIN, 28, { align: "right" });
+}
+
+// ── Renderizar ficha del proyecto ─────────────────────────────
+function renderFichaProyecto(doc, proyecto, isAdmin, yInit, checkPage) {
+    let y = yInit;
+    seccionTitulo(doc, "INFORMACIÓN DEL PROYECTO", y);
+    y += 14;
+    const avance = proyecto.avance ?? calcAvance(proyecto.fases);
+    const campos = [
+        ["Nombre del proyecto", proyecto.name || proyecto.nombre || "—"],
+        ["Cliente", proyecto.client || proyecto.cliente || "—"],
+        ["Estado", proyecto.status || proyecto.estado || "—"],
+        ["Avance global", `${avance}%`],
+    ];
+    if (isAdmin) {
+        if (proyecto.startDate || proyecto.fechaInicio)
+            campos.push(["Fecha de inicio", formatDate(proyecto.startDate || proyecto.fechaInicio)]);
+        if (proyecto.endDate || proyecto.fechaFin)
+            campos.push(["Entrega estimada", formatDate(proyecto.endDate || proyecto.fechaFin)]);
+    }
+    campos.forEach(([label, valor]) => {
+        y = checkPage(y, 8);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...COLOR.taupe);
+        doc.text(label.toUpperCase(), MARGIN, y);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(...COLOR.ink);
+        doc.text(String(valor), MARGIN + 52, y);
+        y += 7;
+    });
+    y += 3;
+    y = checkPage(y, 14);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR.taupe);
+    doc.text("AVANCE GLOBAL", MARGIN, y);
+    y += 4;
+    const barW = CONTENT_W;
+    doc.setFillColor(230, 225, 215);
+    doc.roundedRect(MARGIN, y, barW, 5, 1, 1, "F");
+    const pct = Math.min(Math.max(avance, 0), 100) / 100;
+    doc.setFillColor(...COLOR.completada);
+    if (pct > 0) doc.roundedRect(MARGIN, y, barW * pct, 5, 1, 1, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR.ink);
+    doc.text(`${avance}%`, MARGIN + barW + 3, y + 4);
+    y += 14;
+    return y;
+}
+
+// ── Pie de página en todas las páginas ────────────────────────
+function renderPiePaginas(doc) {
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFillColor(...COLOR.sand);
+        doc.rect(0, 287, PAGE_W, 10, "F");
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...COLOR.taupe);
+        doc.text("H&E Arquitectos — Documento generado automáticamente", MARGIN, 293);
+        doc.text(`Página ${i} de ${totalPages}`, PAGE_W - MARGIN, 293, { align: "right" });
+    }
+}
+
+// ── Renderizar fase en el PDF ─────────────────────────────────
+function renderFaseEnPDF(doc, fase, yInit, checkPage) {
+    let y = yInit;
+    y = checkPage(y, 30);
+    const estadoColor = COLOR[fase.estado] || COLOR.pendiente;
+    doc.setFillColor(...COLOR.sand);
+    doc.roundedRect(MARGIN, y, CONTENT_W, 12, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...COLOR.ink);
+    doc.text(fase.nombre || `Fase ${fase.id}`, MARGIN + 4, y + 8);
+    const estadoLabel = {
+        completada: "Completada",
+        en_curso: "En curso",
+        pendiente: "Pendiente",
+    }[fase.estado] || fase.estado;
+    doc.setFillColor(...estadoColor);
+    doc.roundedRect(PAGE_W - MARGIN - 32, y + 2, 32, 8, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...COLOR.white);
+    doc.text(estadoLabel, PAGE_W - MARGIN - 16, y + 7, { align: "center" });
+    y += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR.taupe);
+    doc.text(`Avance: ${fase.porcentaje || 0}%`, MARGIN, y);
+    y += 4;
+    const faseBarW = CONTENT_W - 20;
+    doc.setFillColor(230, 225, 215);
+    doc.roundedRect(MARGIN, y, faseBarW, 3, 1, 1, "F");
+    const fasePct = Math.min(Math.max(fase.porcentaje || 0, 0), 100) / 100;
+    doc.setFillColor(...estadoColor);
+    if (fasePct > 0) doc.roundedRect(MARGIN, y, faseBarW * fasePct, 3, 1, 1, "F");
+    y += 8;
+    y = renderNotasFase(doc, fase, y, checkPage);
+    y = renderArchivosFase(doc, fase, y, checkPage);
+    if ((!fase.notas || fase.notas.length === 0) && (!fase.archivos || fase.archivos.length === 0)) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(8);
+        doc.setTextColor(...COLOR.taupe);
+        doc.text("Sin notas ni archivos registrados.", MARGIN + 2, y);
+        y += 7;
+    }
+    doc.setDrawColor(...COLOR.sand);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 8;
+    return y;
+}
+
+function renderNotasFase(doc, fase, yInit, checkPage) {
+    if (!fase.notas || fase.notas.length === 0) return yInit;
+    let y = yInit;
+    y = checkPage(y, 10);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR.taupe);
+    doc.text("NOTAS", MARGIN, y);
+    y += 5;
+    for (const nota of fase.notas) {
+        const fechaNota = nota.createdAt?.toDate
+            ? nota.createdAt.toDate().toLocaleDateString("es-CO") : "";
+        const textoCompleto = nota.text || "";
+        const prefixNota = fechaNota ? "[" + fechaNota + "] " : "";
+        const lineas = doc.splitTextToSize("• " + prefixNota + textoCompleto, CONTENT_W - 4);
+        y = checkPage(y, lineas.length * 5 + 4);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...COLOR.ink);
+        doc.text(lineas, MARGIN + 2, y);
+        y += lineas.length * 5 + 3;
+    }
+    y += 2;
+    return y;
+}
+
+function renderArchivosFase(doc, fase, yInit, checkPage) {
+    if (!fase.archivos || fase.archivos.length === 0) return yInit;
+    let y = yInit;
+    y = checkPage(y, 10);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR.taupe);
+    doc.text("ARCHIVOS", MARGIN, y);
+    y += 5;
+    for (const archivo of fase.archivos) {
+        y = checkPage(y, 8);
+        const nombreArchivo = archivo.fileName || "Archivo sin nombre";
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...COLOR.taupe);
+        doc.text("-", MARGIN + 2, y);
+        doc.setTextColor(...COLOR.ink);
+        const maxW = CONTENT_W - 30;
+        let nombreMostrar = nombreArchivo;
+        while (doc.getTextWidth(nombreMostrar) > maxW && nombreMostrar.length > 10) {
+            nombreMostrar = nombreMostrar.slice(0, -4) + "...";
+        }
+        doc.text(nombreMostrar, MARGIN + 6, y);
+        if (archivo.downloadURL) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(8);
+            doc.setTextColor(80, 120, 180);
+            doc.textWithLink("Ver archivo", PAGE_W - MARGIN, y, { url: archivo.downloadURL, align: "right" });
+        }
+        doc.setDrawColor(235, 230, 220);
+        doc.setLineWidth(0.2);
+        doc.line(MARGIN + 6, y + 2, PAGE_W - MARGIN, y + 2);
+        doc.setTextColor(...COLOR.ink);
+        y += 7;
+    }
+    y += 2;
+    return y;
 }
 
 // ── Helpers ──────────────────────────────────────────────────

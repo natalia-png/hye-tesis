@@ -93,7 +93,6 @@ export function detectChanges(prevFases = [], nextFases = [], projectProgress = 
         phaseId: next.id,
         phaseName: next.nombre,
       });
-      continue;
     }
   }
 

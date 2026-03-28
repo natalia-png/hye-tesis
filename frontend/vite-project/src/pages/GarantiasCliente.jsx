@@ -74,9 +74,8 @@ export default function GarantiasCliente() {
             )}
 
             {/* Lista de solicitudes */}
-            {loading ? (
-                <LoadingSpinner text="Cargando solicitudes…" />
-            ) : solicitudes.length === 0 ? (
+            {loading && <LoadingSpinner text="Cargando solicitudes…" />}
+            {!loading && solicitudes.length === 0 && (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">🛡️</p>
                     <p className="text-[14px] font-medium text-ink/70">
@@ -86,7 +85,8 @@ export default function GarantiasCliente() {
                         Cuando necesites reportar un problema, usa el botón "+ Nueva"
                     </p>
                 </div>
-            ) : (
+            )}
+            {!loading && solicitudes.length > 0 && (
                 <div className="space-y-3">
                     {solicitudes.map(s => (
                         <TarjetaSolicitudCliente key={s.id} solicitud={s} />
@@ -293,7 +293,7 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                     className="w-full border-2 border-dashed border-ink/20 rounded-xl py-3 text-[12px] text-ink/50 hover:border-ink/40 hover:text-ink/70 transition-all"
                 >
                     {fotos.length > 0
-                        ? fotos.length + " foto" + (fotos.length > 1 ? "s" : "") + " seleccionada" + (fotos.length > 1 ? "s" : "")
+                        ? (() => { const fotoSuffix = fotos.length === 1 ? "" : "s"; return fotos.length + " foto" + fotoSuffix + " seleccionada" + fotoSuffix; })()
                         : "Toca para adjuntar fotos"}
                 </button>
 

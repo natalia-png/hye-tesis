@@ -51,7 +51,7 @@ export function isOneOf(role, allowed = []) {
 }
 
 // Helper para saber si puede editar una fase específica
-// Admin puede todo. Colaborador solo si es el responsableUid de esa fase.
+// Admin tiene acceso completo. Colaborador solo si es el responsableUid de esa fase.
 export function canEditFase(userRole, userUid, fase) {
   if (!userRole) return false;
   if (userRole === "admin") return true;

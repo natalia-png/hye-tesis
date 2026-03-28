@@ -64,6 +64,7 @@ export default function DashboardCliente() {
         setProjects(list);
         setSelected(list[0] || null);
       } catch (e) {
+        console.error(e);
         setErr("No se pudo cargar tu Dashboard.");
       } finally {
         setLoading(false);
@@ -350,7 +351,7 @@ function ProjectSelector({ projects, selected, onChange }) {
 
 /* ── Mensaje contextual ── */
 function MensajeContexto({ progress, daysLeft, completed, total }) {
-  let emoji = "🏗", titulo = "", subtitulo = "", color = "bg-ivory border-sand";
+  let emoji = "📋", titulo = "Tu proyecto está siendo planificado", subtitulo = "El equipo de H&E está organizando las etapas. Pronto comenzará la ejecución.", color = "bg-ivory border-sand";
 
   if (progress >= 100 || completed === total) {
     emoji = "🎉"; titulo = "¡Tu proyecto está completado!";
@@ -366,16 +367,10 @@ function MensajeContexto({ progress, daysLeft, completed, total }) {
     color = "bg-green-50 border-green-200";
   } else if (progress >= 40) {
     emoji = "⚙️"; titulo = "Tu proyecto avanza bien";
-    subtitulo = `Hay ${completed} etapa${completed !== 1 ? "s" : ""} completada${completed !== 1 ? "s" : ""}. El equipo de H&E está trabajando activamente.`;
-    color = "bg-ivory border-sand";
+    subtitulo = `Hay ${completed} etapa${completed === 1 ? "" : "s"} completada${completed === 1 ? "" : "s"}. El equipo de H&E está trabajando activamente.`;
   } else if (progress > 0) {
     emoji = "📐"; titulo = "Tu proyecto está en marcha";
     subtitulo = "El equipo ha comenzado a trabajar. Podrás ver los avances aquí a medida que progresen.";
-    color = "bg-ivory border-sand";
-  } else {
-    emoji = "📋"; titulo = "Tu proyecto está siendo planificado";
-    subtitulo = "El equipo de H&E está organizando las etapas. Pronto comenzará la ejecución.";
-    color = "bg-ivory border-sand";
   }
 
   return (
@@ -498,7 +493,7 @@ function computeProjectKPIs(p) {
   };
 }
 function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
-function calcDaysLeft(endDate) { if (!endDate) return null; const d = new Date(endDate); return Number.isNaN(d.getTime()) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000); }
+function calcDaysLeft(endDate) { if (!endDate) { return null; } const d = new Date(endDate); return Number.isNaN(d.getTime()) ? null : Math.ceil((d.getTime() - Date.now()) / 86400000); }
 
 DashboardCliente.propTypes = {};
 

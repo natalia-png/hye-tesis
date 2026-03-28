@@ -252,11 +252,12 @@ exports.onGarantiaRespondida = onDocumentUpdated(
 
     // Última respuesta agregada
     const ultimaRespuesta = after.respuestas[after.respuestas.length - 1];
+    const textoArchivoPreview = ultimaRespuesta?.archivo
+      ? `Archivo adjunto: ${ultimaRespuesta.archivo.name}`
+      : "El equipo ha respondido tu solicitud.";
     const textoPreview = ultimaRespuesta?.texto
       ? ultimaRespuesta.texto.substring(0, 100)
-      : ultimaRespuesta?.archivo
-        ? `Archivo adjunto: ${ultimaRespuesta.archivo.name}`
-        : "El equipo ha respondido tu solicitud.";
+      : textoArchivoPreview;
 
     const payload = {
       type: "garantia_respondida",
@@ -574,27 +575,7 @@ exports.eliminarProyecto = onRequest(
       // Eliminar el proyecto
       await db.collection("projects").doc(projectId).delete();
 
-      let clienteEliminado = false;
-
-      // Si tiene cliente asignado, verificar si tiene otros proyectos
-      if (clientId) {
-        const otrosProyectos = await db.collection("projects")
-          .where("clientId", "==", clientId)
-          .limit(1)
-          .get();
-
-        if (otrosProyectos.empty) {
-          // No tiene otros proyectos — eliminar cuenta
-          try {
-            await admin.auth().deleteUser(clientId);
-          } catch (authErr) {
-            // Si ya no existe en Auth, ignorar
-            if (authErr.code !== "auth/user-not-found") throw authErr;
-          }
-          await db.collection("users").doc(clientId).delete();
-          clienteEliminado = true;
-        }
-      }
+      const clienteEliminado = await eliminarClienteSiSinProyectos(clientId);
 
       res.json({ success: true, clienteEliminado });
     } catch (e) {
@@ -603,6 +584,22 @@ exports.eliminarProyecto = onRequest(
     }
   }
 );
+
+async function eliminarClienteSiSinProyectos(clientId) {
+  if (!clientId) return false;
+  const otrosProyectos = await db.collection("projects")
+    .where("clientId", "==", clientId)
+    .limit(1)
+    .get();
+  if (!otrosProyectos.empty) return false;
+  try {
+    await admin.auth().deleteUser(clientId);
+  } catch (authErr) {
+    if (authErr.code !== "auth/user-not-found") throw authErr;
+  }
+  await db.collection("users").doc(clientId).delete();
+  return true;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    HELPERS

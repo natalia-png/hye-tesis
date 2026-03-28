@@ -8,6 +8,17 @@ import { Ctx } from "./auth-ctx";
 import { usePushNotifications } from "../hooks/usePushNotifications.js";
 import PropTypes from "prop-types";
 
+// ── Helper para mezclar datos de perfil actualizados ──
+function mergeProfileData(prev, data) {
+  if (!prev) return prev;
+  return {
+    ...prev,
+    role: (data.role || prev.role).toLowerCase(),
+    subRole: (data.subRole || "").toLowerCase(),
+    name: data.name || prev.name,
+  };
+}
+
 // ── Toast de notificación en primer plano ──
 function ForegroundToast({ notif, onClose }) {
   useEffect(() => {
@@ -97,12 +108,7 @@ export function AuthProvider({ children }) {
         profileUnsub = onSnapshot(doc(db, "users", fbUser.uid), snap => {
           if (!snap.exists()) return;
           const data = snap.data();
-          setUser(prev => prev ? {
-            ...prev,
-            role: (data.role || prev.role).toLowerCase(),
-            subRole: (data.subRole || "").toLowerCase(),
-            name: data.name || prev.name,
-          } : prev);
+          setUser(prev => mergeProfileData(prev, data));
         });
 
       } catch (e) {

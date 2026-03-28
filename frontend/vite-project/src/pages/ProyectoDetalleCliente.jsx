@@ -432,7 +432,7 @@ function ArchivosPanel({ projectId, phaseId }) {
         <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-ink/45">
           Documentos
         </p>
-        <span className="ml-auto text-[10px] text-ink/30">{archivos.length} archivo{archivos.length !== 1 ? "s" : ""}</span>
+        <span className="ml-auto text-[10px] text-ink/30">{archivos.length} archivo{archivos.length === 1 ? "" : "s"}</span>
       </div>
 
       <div className="space-y-2">

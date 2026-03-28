@@ -56,7 +56,7 @@ export default function FasesProyecto({
   const isAdmin = user?.role === "admin";
   const isColab = user?.role === "colaborador";
 
-  // canEditHere global: admin puede editar todo, colaborador solo sus fases
+  // canEditHere global: admin puede editar cualquier fase, colaborador solo sus fases
   // (la lógica por fase se evalúa en cada item)
   const safeFases = useMemo(() => normalizeFases(fases), [fases]);
   const [localFases, setLocalFases] = useState(safeFases);
@@ -84,7 +84,7 @@ export default function FasesProyecto({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [safeFases]);
 
-  // Admin edita todo. Colaborador solo edita sus fases asignadas.
+  // Admin edita cualquier fase. Colaborador solo edita sus fases asignadas.
   const handleResponsableChange = (faseId, uid) => {
     const col = colaboradores.find(c => c.uid === uid);
     setLocalFases(prev => prev.map(fase => {

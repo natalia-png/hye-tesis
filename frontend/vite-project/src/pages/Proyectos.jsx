@@ -9,6 +9,12 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
 
+function getProgress(data) {
+  if (typeof data.progress === "number") { return data.progress; }
+  if (typeof data.avance === "number") { return data.avance; }
+  return 0;
+}
+
 export default function Proyectos() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -35,11 +41,7 @@ export default function Proyectos() {
           name: data.name || data.nombre || "Proyecto sin nombre",
           client: data.client || data.cliente || "Cliente sin nombre",
           status: data.status || data.estado || "Sin estado",
-          progress: (() => {
-            if (typeof data.progress === "number") { return data.progress; }
-            if (typeof data.avance === "number") { return data.avance; }
-            return 0;
-          })(),
+          progress: getProgress(data),
           createdAt: data.createdAt || null,
         };
       // Excluir archivados y finalizados de la lista activa
@@ -222,15 +224,7 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
 
       {/* Archivar */}
       <div className="border-t border-sand pt-2.5 mt-1">
-        {!confirm ? (
-          <button
-            type="button"
-            onClick={e => { e.stopPropagation(); setConfirm(true); }}
-            className="text-[11px] text-ink/35 hover:text-amber-600 transition-colors"
-          >
-            Archivar proyecto →
-          </button>
-        ) : (
+        {confirm ? (
           <div className="flex items-center gap-2">
             <p className="text-[11px] text-amber-700 font-medium">¿Mover al historial?</p>
             <button
@@ -249,6 +243,14 @@ function TarjetaProyecto({ proyecto: p, onNav, onArchivar }) {
               Cancelar
             </button>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); setConfirm(true); }}
+            className="text-[11px] text-ink/35 hover:text-amber-600 transition-colors"
+          >
+            Archivar proyecto →
+          </button>
         )}
       </div>
     </article>

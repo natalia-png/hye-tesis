@@ -4,6 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query, where, limit } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
+function getProgress(data) {
+  if (typeof data.progress === "number") { return data.progress; }
+  if (typeof data.avance === "number") { return data.avance; }
+  return 0;
+}
+
 export default function ProyectosCliente() {
   const { user, ready } = useAuth();
   const nav = useNavigate();
@@ -46,11 +52,7 @@ export default function ProyectosCliente() {
             code: data.code || d.id,
             name: data.name || data.nombre || "Proyecto sin nombre",
             status: data.status || data.estado || "Sin estado",
-            progress: (() => {
-              if (typeof data.progress === "number") { return data.progress; }
-              if (typeof data.avance === "number") { return data.avance; }
-              return 0;
-            })(),
+            progress: getProgress(data),
             location: data.location || data.ubicacion || "",
             createdAt: data.createdAt || null,
           };

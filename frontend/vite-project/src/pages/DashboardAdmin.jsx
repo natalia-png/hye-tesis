@@ -43,6 +43,7 @@ export default function DashboardAdmin() {
         setProjects(list);
         setSelectedId(cur => cur || list[0]?.id || "");
       } catch (e) {
+        console.error(e);
         setErr("No se pudieron cargar los proyectos. Revisa permisos de Firestore.");
       } finally {
         setLoading(false);
@@ -150,7 +151,7 @@ export default function DashboardAdmin() {
           <p className="text-[12px] text-ink/50">Crea el primer proyecto para comenzar.</p>
           <button className="btn-primary text-[13px] mt-2" onClick={() => nav("/proyectos/nuevo")}>Crear proyecto</button>
         </div>
-      ) : !selected ? null : (
+      ) : selected ? (
         <>
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3">
@@ -211,7 +212,7 @@ export default function DashboardAdmin() {
             <span className="text-ink/40 text-[13px]">→</span>
           </button>
         </>
-      )}
+      ) : null}
     </section>
   );
 }
@@ -228,11 +229,30 @@ function PlanVsRealCard({ proyecto }) {
     if (fin > ini) {
       planGlobal = Math.max(0, Math.min(100, Math.round(((hoy - ini) / (fin - ini)) * 100)));
       diasRestantes = Math.ceil((fin - hoy) / 86400000);
-      estadoGlobal = diasRestantes < 0 ? "vencido" : diasRestantes <= 14 ? "proximo" : "en_curso";
+      const estadoProximo = diasRestantes <= 14 ? "proximo" : "en_curso";
+      estadoGlobal = diasRestantes < 0 ? "vencido" : estadoProximo;
     }
   }
-  const variacion = planGlobal != null ? realGlobal - planGlobal : null;
+  const variacion = planGlobal == null ? null : realGlobal - planGlobal;
   const fasesConPlan = fases.filter(f => f.fechaInicioPlaneada && f.fechaFinPlaneada);
+
+  let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
+  if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
+  else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
+  const diasText = diasRestantes != null
+    ? (diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`)
+    : "";
+
+  let varValue = "—";
+  let varSub = "sin plan";
+  let varColor = "neutral";
+  if (variacion != null) {
+    varValue = variacion >= 0 ? `+${variacion}%` : `${variacion}%`;
+    varSub = variacion >= 0 ? "adelantado" : "atrasado";
+    if (variacion >= 0) { varColor = "green"; }
+    else if (variacion >= -15) { varColor = "amber"; }
+    else { varColor = "red"; }
+  }
 
   return (
     <div className="rounded-2xl bg-white border border-black/[0.06] p-4 space-y-3">
@@ -241,34 +261,16 @@ function PlanVsRealCard({ proyecto }) {
           <p className="text-[13px] font-semibold text-ink">Plan vs avance real</p>
           <p className="text-[11px] text-ink/45 mt-0.5">Cronograma vs avance registrado.</p>
         </div>
-        {diasRestantes != null && (() => {
-          let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
-          if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
-          else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
-          const diasText = diasRestantes < 0 ? `Vencido ${Math.abs(diasRestantes)}d` : `${diasRestantes}d restantes`;
-          return (
-            <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${diasCls}`}>
-              {diasText}
-            </span>
-          );
-        })()}
+        {diasRestantes != null && (
+          <span className={`text-[10px] font-medium px-2 py-1 rounded-full flex-shrink-0 border ${diasCls}`}>
+            {diasText}
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-3 gap-2">
-        <MiniKpi label="Plan" value={planGlobal != null ? `${planGlobal}%` : "—"} sub="tiempo" />
+        <MiniKpi label="Plan" value={planGlobal == null ? "—" : `${planGlobal}%`} sub="tiempo" />
         <MiniKpi label="Real" value={`${realGlobal}%`} sub="avance" />
-        {(() => {
-          let varValue = "—";
-          let varSub = "sin plan";
-          let varColor = "neutral";
-          if (variacion != null) {
-            varValue = variacion >= 0 ? `+${variacion}%` : `${variacion}%`;
-            varSub = variacion >= 0 ? "adelantado" : "atrasado";
-            if (variacion >= 0) { varColor = "green"; }
-            else if (variacion >= -15) { varColor = "amber"; }
-            else { varColor = "red"; }
-          }
-          return <MiniKpi label="Δ" value={varValue} sub={varSub} color={varColor} />;
-        })()}
+        <MiniKpi label="Δ" value={varValue} sub={varSub} color={varColor} />
       </div>
       {planGlobal != null && (
         <div className="space-y-1.5">
@@ -378,15 +380,8 @@ function PhaseBars({ fases = [] }) {
   );
 }
 
-function computeKPIs(p) {
-  if (!p) return { progress: 0, progressHint: "—", daysLeftLabel: "—", deadlineHint: "—", completed: 0, total: 0, phaseHint: "—", riskLabel: "—", riskHint: "—", fases: [] };
-  const fases = Array.isArray(p.fases) ? p.fases : [];
-  const total = fases.length;
-  const completed = fases.filter(f => f?.estado === "completada" || Number(f?.porcentaje) >= 100).length;
-  const progress = clampInt(p.progress ?? p.avance ?? 0, 0, 100);
-  const daysLeft = getDaysLeft(p.endDate || p.fechaEntrega);
-  let daysLeftLabel = "—";
-  if (daysLeft != null) { daysLeftLabel = daysLeft < 0 ? "Vencido" : String(daysLeft); }
+function getDeadlineInfo(daysLeft) {
+  const daysLeftLabel = daysLeft == null ? "—" : daysLeft < 0 ? "Vencido" : String(daysLeft);
   let deadlineHint = "Sin fecha.";
   if (daysLeft != null) {
     if (daysLeft < 0) { deadlineHint = "Plazo vencido."; }
@@ -394,19 +389,35 @@ function computeKPIs(p) {
     else if (daysLeft <= 30) { deadlineHint = "Monitoreo semanal."; }
     else { deadlineHint = "En rango."; }
   }
-  let progressHint = "Requiere impulso.";
-  if (progress >= 80) { progressHint = "Buen desempeño."; }
-  else if (progress >= 50) { progressHint = "Normal."; }
+  return { daysLeftLabel, deadlineHint };
+}
+
+function getRiskInfo(daysLeft, progress) {
   let riskLabel = "Bajo", riskHint = "Estable.";
   if (daysLeft != null) {
     if (daysLeft < 0 || (daysLeft <= 14 && progress < 80)) { riskLabel = "Alto"; riskHint = "Acción inmediata."; }
     else if (daysLeft <= 30 && progress < 70) { riskLabel = "Medio"; riskHint = "Reforzar seguimiento."; }
   }
+  return { riskLabel, riskHint };
+}
+
+function computeKPIs(p) {
+  if (!p) return { progress: 0, progressHint: "—", daysLeftLabel: "—", deadlineHint: "—", completed: 0, total: 0, phaseHint: "—", riskLabel: "—", riskHint: "—", fases: [] };
+  const fases = Array.isArray(p.fases) ? p.fases : [];
+  const total = fases.length;
+  const completed = fases.filter(f => f?.estado === "completada" || Number(f?.porcentaje) >= 100).length;
+  const progress = clampInt(p.progress ?? p.avance ?? 0, 0, 100);
+  const daysLeft = getDaysLeft(p.endDate || p.fechaEntrega);
+  const { daysLeftLabel, deadlineHint } = getDeadlineInfo(daysLeft);
+  let progressHint = "Requiere impulso.";
+  if (progress >= 80) { progressHint = "Buen desempeño."; }
+  else if (progress >= 50) { progressHint = "Normal."; }
+  const { riskLabel, riskHint } = getRiskInfo(daysLeft, progress);
   return { progress, progressHint, daysLeftLabel, deadlineHint, completed, total, phaseHint: total ? "Balance por etapas." : "Sin fases.", riskLabel, riskHint, fases: fases.map(f => ({ id: f.id, nombre: f.nombre, porcentaje: clampInt(f.porcentaje, 0, 100), estado: f.estado })) };
 }
 
 function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
-function getDaysLeft(d) { if (!d) return null; const t = new Date(d); return Number.isNaN(t.getTime()) ? null : Math.ceil((t - Date.now()) / 86400000); }
+function getDaysLeft(d) { if (!d) { return null; } const t = new Date(d); return Number.isNaN(t.getTime()) ? null : Math.ceil((t - Date.now()) / 86400000); }
 function calcPctEsperado(ini, fin) {
   if (!ini || !fin) return null;
   const a = new Date(ini), b = new Date(fin), h = new Date();

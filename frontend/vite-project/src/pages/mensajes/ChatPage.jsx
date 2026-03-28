@@ -190,11 +190,7 @@ function ChatInner({ chatId, user, onBack }) {
   );
 }
 
-ChatPage.propTypes = {
-  chatId: PropTypes.string,
-  user: PropTypes.object,
-  onBack: PropTypes.func,
-};
+ChatPage.propTypes = {};
 
 ChatInner.propTypes = {
   chatId: PropTypes.string,

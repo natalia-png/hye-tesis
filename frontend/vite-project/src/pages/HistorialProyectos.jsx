@@ -95,7 +95,7 @@ export default function HistorialProyectos() {
           Historial de proyectos
         </h1>
         <p className="text-[12px] text-ink/50 mt-0.5">
-          {loading ? "Cargando…" : `${proyectos.length} proyecto${proyectos.length !== 1 ? "s" : ""}`}
+          {loading ? "Cargando…" : `${proyectos.length} proyecto${proyectos.length === 1 ? "" : "s"}`}
         </p>
       </div>
 
@@ -115,12 +115,13 @@ export default function HistorialProyectos() {
         </div>
       )}
 
-      {loading ? (
+      {loading && (
         <div className="flex items-center gap-2 py-6">
           <div className="w-4 h-4 rounded-full border-2 border-ink/20 border-t-ink animate-spin" />
           <p className="text-[13px] text-ink/50">Cargando historial…</p>
         </div>
-      ) : filtrados.length === 0 ? (
+      )}
+      {!loading && filtrados.length === 0 && (
         <div className="card text-center py-12 space-y-3">
           <p className="text-4xl">🏛</p>
           <p className="text-[14px] font-semibold text-ink">
@@ -132,7 +133,8 @@ export default function HistorialProyectos() {
               : "Archiva proyectos desde la lista activa o completa todas sus fases."}
           </p>
         </div>
-      ) : (
+      )}
+      {!loading && filtrados.length > 0 && (
         <div className="space-y-3">
           {filtrados.map(p => (
             <TarjetaHistorial key={p.id} proyecto={p} nav={nav} />
@@ -143,11 +145,25 @@ export default function HistorialProyectos() {
   );
 }
 
+function calcFechaCierre(proyecto) {
+  const fmt = (d) => d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+  if (proyecto.fechaCierre?.toDate) return fmt(proyecto.fechaCierre.toDate());
+  if (proyecto.fechaCierre) return fmt(new Date(proyecto.fechaCierre));
+  return "—";
+}
+
+function calcDuracion(proyecto) {
+  if (!proyecto.startDate || !proyecto.fechaCierre) return null;
+  const ini = new Date(proyecto.startDate);
+  const fin = proyecto.fechaCierre?.toDate ? proyecto.fechaCierre.toDate() : new Date(proyecto.fechaCierre);
+  return Math.ceil((fin - ini) / 86400000);
+}
+
 /* ── TARJETA ── */
 function TarjetaHistorial({ proyecto, nav }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteResult, setDeleteResult] = useState(null); // { clienteEliminado: bool }
+  const [deleteResult, setDeleteResult] = useState(null);
 
   const handleEliminar = async () => {
     setDeleting(true);
@@ -171,12 +187,7 @@ function TarjetaHistorial({ proyecto, nav }) {
     ? new Date(proyecto.startDate).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
     : "—";
 
-  let fechaCierre = "—";
-  if (proyecto.fechaCierre?.toDate) {
-    fechaCierre = proyecto.fechaCierre.toDate().toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
-  } else if (proyecto.fechaCierre) {
-    fechaCierre = new Date(proyecto.fechaCierre).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
-  }
+  const fechaCierre = calcFechaCierre(proyecto);
 
   const fechaArchivo = proyecto.archivedAt?.toDate
     ? proyecto.archivedAt.toDate().toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })
@@ -185,12 +196,7 @@ function TarjetaHistorial({ proyecto, nav }) {
   const fases = Array.isArray(proyecto.fases) ? proyecto.fases : [];
   const totalFases = fases.length;
 
-  let duracion = null;
-  if (proyecto.startDate && proyecto.fechaCierre) {
-    const ini = new Date(proyecto.startDate);
-    const fin = proyecto.fechaCierre?.toDate ? proyecto.fechaCierre.toDate() : new Date(proyecto.fechaCierre);
-    duracion = Math.ceil((fin - ini) / 86400000);
-  }
+  const duracion = calcDuracion(proyecto);
 
   // Si ya fue eliminado exitosamente, no renderizar
   if (deleteResult) return null;
@@ -261,15 +267,7 @@ function TarjetaHistorial({ proyecto, nav }) {
 
       {/* Eliminar permanentemente */}
       <div className="border-t border-sand pt-3">
-        {!confirmDelete ? (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="text-[11px] text-ink/35 hover:text-red-500 transition-colors"
-          >
-            Eliminar permanentemente
-          </button>
-        ) : (
+        {confirmDelete ? (
           <div className="space-y-2">
             <p className="text-[11px] text-red-600 font-medium leading-snug">
               ¿Eliminar permanentemente? Si el cliente no tiene otros proyectos, su cuenta también se eliminará.
@@ -292,6 +290,14 @@ function TarjetaHistorial({ proyecto, nav }) {
               </button>
             </div>
           </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="text-[11px] text-ink/35 hover:text-red-500 transition-colors"
+          >
+            Eliminar permanentemente
+          </button>
         )}
       </div>
     </div>

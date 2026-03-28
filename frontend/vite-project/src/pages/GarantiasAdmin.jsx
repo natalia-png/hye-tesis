@@ -56,7 +56,7 @@ export default function GarantiasAdmin() {
                     Garantías y Posventa
                 </h1>
                 <p className="text-[12px] text-ink/50 mt-0.5">
-                    {solicitudes.length} solicitud{solicitudes.length !== 1 ? "es" : ""} en total
+                    {solicitudes.length} solicitud{solicitudes.length === 1 ? "" : "es"} en total
                 </p>
             </div>
 
@@ -74,9 +74,8 @@ export default function GarantiasAdmin() {
             />
 
             {/* Lista */}
-            {loading ? (
-                <LoadingSpinner />
-            ) : filtradas.length === 0 ? (
+            {loading && <LoadingSpinner />}
+            {!loading && filtradas.length === 0 && (
                 <div className="card text-center py-10 space-y-2">
                     <p className="text-3xl">✅</p>
                     <p className="text-[13px] text-ink/60">
@@ -85,7 +84,8 @@ export default function GarantiasAdmin() {
                             : `Sin solicitudes ${ESTADO_LABEL[filtro]?.toLowerCase()}`}
                     </p>
                 </div>
-            ) : (
+            )}
+            {!loading && filtradas.length > 0 && (
                 <div className="space-y-3">
                     {filtradas.map(s => (
                         <TarjetaSolicitudAdmin

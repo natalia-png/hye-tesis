@@ -185,6 +185,7 @@ export default function ArchivosFase({
       setOk(current ? "✅ Oculto para cliente." : "✅ Visible para cliente.");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
+      console.error(e);
       setError("No se pudo actualizar la visibilidad.");
     } finally {
       setBusy(false);
@@ -218,6 +219,7 @@ export default function ArchivosFase({
       setOk("Archivo eliminado ✅");
       setTimeout(() => setOk(""), 2000);
     } catch (e) {
+      console.error(e);
       setError("No se pudo eliminar el archivo.");
     } finally {
       setBusy(false);
@@ -245,6 +247,7 @@ export default function ArchivosFase({
       const url = await getDownloadURL(storageRef(storage, file.storagePath));
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
+      console.error(e);
       setError("No se pudo descargar.");
     }
   };

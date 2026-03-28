@@ -226,7 +226,9 @@ function calcProyectoTimeline(proyecto) {
   if (fin <= ini) { return { planGlobal: null, diasRestantes: null, estadoGlobal: "sin_plan" }; }
   const planGlobal = Math.max(0, Math.min(100, Math.round(((hoy - ini) / (fin - ini)) * 100)));
   const diasRestantes = Math.ceil((fin - hoy) / 86400000);
-  const estadoGlobal = diasRestantes < 0 ? "vencido" : diasRestantes <= 14 ? "proximo" : "en_curso";
+  let estadoGlobal = "en_curso";
+  if (diasRestantes < 0) { estadoGlobal = "vencido"; }
+  else if (diasRestantes <= 14) { estadoGlobal = "proximo"; }
   return { planGlobal, diasRestantes, estadoGlobal };
 }
 

@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "jest --config jest.config.cjs",
-    "test:ci": "jest --config jest.config.cjs --ci"
+    "test:ci": "jest --config jest.config.cjs --ci",
+    "test:sonar": "jest --config jest.ci.cjs --passWithNoTests --forceExit --runInBand"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.1.0",

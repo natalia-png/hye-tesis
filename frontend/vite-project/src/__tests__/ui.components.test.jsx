@@ -17,13 +17,13 @@ describe("ChevronIcon", () => {
   test("aplica clase rotate-180 cuando expanded=true", () => {
     const { container } = render(<ChevronIcon expanded={true} />);
     const svg = container.querySelector("svg");
-    expect(svg.className).toContain("rotate-180");
+    expect(svg.getAttribute("class")).toContain("rotate-180");
   });
 
   test("no aplica rotate-180 cuando expanded=false", () => {
     const { container } = render(<ChevronIcon expanded={false} />);
     const svg = container.querySelector("svg");
-    expect(svg.className).not.toContain("rotate-180");
+    expect(svg.getAttribute("class")).not.toContain("rotate-180");
   });
 
   test("renderiza sin props", () => {
@@ -95,14 +95,14 @@ describe("AttachIcon", () => {
   test("aplica la clase por defecto 'w-4 h-4'", () => {
     const { container } = render(<AttachIcon />);
     const svg = container.querySelector("svg");
-    expect(svg.className).toContain("w-4");
-    expect(svg.className).toContain("h-4");
+    expect(svg.getAttribute("class")).toContain("w-4");
+    expect(svg.getAttribute("class")).toContain("h-4");
   });
 
   test("aplica className personalizado", () => {
     const { container } = render(<AttachIcon className="w-6 h-6" />);
     const svg = container.querySelector("svg");
-    expect(svg.className).toContain("w-6");
+    expect(svg.getAttribute("class")).toContain("w-6");
   });
 });
 

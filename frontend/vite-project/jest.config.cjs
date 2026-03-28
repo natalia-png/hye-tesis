@@ -1,6 +1,7 @@
 module.exports = {
   testEnvironment: "jsdom",
   setupFilesAfterFramework: ["@testing-library/jest-dom"],
+  setupFiles: ["<rootDir>/src/__mocks__/setupTests.cjs"],
   transform: {
     "^.+\\.[jt]sx?$": "babel-jest",
   },
@@ -9,6 +10,8 @@ module.exports = {
     "^../lib/firebase$": "<rootDir>/src/__mocks__/firebase.cjs",
     "^../../lib/firebase$": "<rootDir>/src/__mocks__/firebase.cjs",
     "^../../../lib/firebase$": "<rootDir>/src/__mocks__/firebase.cjs",
+    "^../app/useAuth$": "<rootDir>/src/__mocks__/useAuth.cjs",
+    "^../../app/useAuth$": "<rootDir>/src/__mocks__/useAuth.cjs",
   },
   collectCoverage: true,
   coverageReporters: ["lcov", "text", "text-summary"],

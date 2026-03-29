@@ -94,8 +94,15 @@ export default function FasesProyecto({
         responsableUid: uid || null,
         responsableNombre: col?.name || null,
         responsableSubRole: col?.subRole || null,
+        fechaEntregaResponsable: uid ? (fase.fechaEntregaResponsable || "") : null,
       };
     }));
+  };
+
+  const handleFechaEntregaChange = (faseId, value) => {
+    setLocalFases(prev => prev.map(fase => (
+      fase.id !== faseId ? fase : { ...fase, fechaEntregaResponsable: value || null }
+    )));
   };
 
   const canEditFaseActual = (fase) => {
@@ -159,6 +166,14 @@ export default function FasesProyecto({
             : (prevFases.find(p => p.id === f.id) || f) // fase ajena — restaura original
         )
         : localFases;
+      if (isAdmin) {
+        const faseSinFecha = nextFases.find(f => f.responsableUid && !f.fechaEntregaResponsable);
+        if (faseSinFecha) {
+          setError(`La fase "${faseSinFecha.nombre}" tiene responsable pero no fecha de entrega.`);
+          setSaving(false);
+          return;
+        }
+      }
       const progress = calcAvanceGlobal(nextFases);
       const prevProgress = calcAvanceGlobal(prevFases);
 
@@ -258,6 +273,11 @@ export default function FasesProyecto({
                         {f.responsableNombre.split(" ")[0]}
                       </span>
                     )}
+                    {f.fechaEntregaResponsable && (
+                      <span className="text-[11px] text-ink/50">
+                        · Entrega {formatFechaCorta(f.fechaEntregaResponsable)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -276,22 +296,39 @@ export default function FasesProyecto({
 
                   {/* Selector de responsable — solo admin */}
                   {isAdmin && colaboradores.length > 0 && (
-                    <div className="mt-3 space-y-1">
-                      <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
-                        Responsable
-                      </p>
-                      <select
-                        value={localFases.find(lf => lf.id === f.id)?.responsableUid || ""}
-                        onChange={e => handleResponsableChange(f.id, e.target.value)}
-                        className="input w-full text-[12px]"
-                      >
-                        <option value="">Sin responsable</option>
-                        {colaboradores.map(col => (
-                          <option key={col.uid} value={col.uid}>
-                            {col.name} ({SUB_ROLE_LABEL[col.subRole] || col.subRole})
-                          </option>
-                        ))}
-                      </select>
+                    <div className="mt-3 space-y-3">
+                      <div className="space-y-1">
+                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
+                          Responsable
+                        </p>
+                        <select
+                          value={localFases.find(lf => lf.id === f.id)?.responsableUid || ""}
+                          onChange={e => handleResponsableChange(f.id, e.target.value)}
+                          className="input w-full text-[12px]"
+                        >
+                          <option value="">Sin responsable</option>
+                          {colaboradores.map(col => (
+                            <option key={col.uid} value={col.uid}>
+                              {col.name} ({SUB_ROLE_LABEL[col.subRole] || col.subRole})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
+                          Fecha de entrega
+                        </p>
+                        <input
+                          type="date"
+                          value={localFases.find(lf => lf.id === f.id)?.fechaEntregaResponsable || ""}
+                          onChange={e => handleFechaEntregaChange(f.id, e.target.value)}
+                          disabled={!(localFases.find(lf => lf.id === f.id)?.responsableUid)}
+                          className="input w-full text-[12px] disabled:opacity-50"
+                        />
+                        <p className="text-[10px] text-ink/45">
+                          Define para cuando necesitas esta fase una vez tenga responsable.
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -367,6 +404,13 @@ function pickComparable(f) {
     estado: f?.estado,
     peso: f?.peso,
     responsableUid: f?.responsableUid || null,
+    fechaEntregaResponsable: f?.fechaEntregaResponsable || null,
   };
 }
 
+function formatFechaCorta(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+}

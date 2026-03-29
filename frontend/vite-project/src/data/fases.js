@@ -40,6 +40,7 @@ export const normalizeFases = (fases) => {
     const responsableUid = f?.responsableUid ?? null;
     const responsableNombre = f?.responsableNombre ?? null;
     const responsableSubRole = f?.responsableSubRole ?? null;
+    const fechaEntregaResponsable = f?.fechaEntregaResponsable ?? null;
 
     // ── Fechas del plan (también se preservan) ──
     const fechaInicioPlaneada = f?.fechaInicioPlaneada ?? null;
@@ -54,6 +55,7 @@ export const normalizeFases = (fases) => {
       responsableUid,
       responsableNombre,
       responsableSubRole,
+      fechaEntregaResponsable,
       fechaInicioPlaneada,
       fechaFinPlaneada,
     };

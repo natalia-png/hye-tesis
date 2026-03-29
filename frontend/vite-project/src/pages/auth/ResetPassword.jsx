@@ -19,6 +19,16 @@ export default function ResetPassword() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    if (hadDark) root.classList.remove("dark");
+
+    return () => {
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!oobCode) {
       setStep("error");
       setErrMsg("El enlace no es válido o ha expirado. Solicita uno nuevo desde el login.");

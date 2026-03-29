@@ -47,6 +47,8 @@ export default function DashboardColaborador() {
     const pendientes = misFases.filter(f => f.estado !== "completada");
     const completadas = misFases.filter(f => f.estado === "completada");
     const enCurso = misFases.filter(f => f.estado === "en_curso");
+    const vencidas = pendientes.filter(f => isFechaVencida(f.fechaEntregaResponsable));
+    const porVencer = pendientes.filter(f => isFechaProxima(f.fechaEntregaResponsable));
 
     const subRole = user?.subRole || "";
     const rolLabel = SUB_ROLE_LABEL[subRole] || "Colaborador";
@@ -99,6 +101,21 @@ export default function DashboardColaborador() {
                 <KpiMini label="En curso" value={enCurso.length} color="text-amber-600" />
                 <KpiMini label="Completadas" value={completadas.length} color="text-emerald-600" />
             </div>
+
+            {(vencidas.length > 0 || porVencer.length > 0) && (
+                <div className="flex flex-wrap gap-2">
+                    {vencidas.length > 0 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium border bg-red-50 text-red-700 border-red-200">
+                            {vencidas.length} vencida{vencidas.length === 1 ? "" : "s"}
+                        </span>
+                    )}
+                    {porVencer.length > 0 && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-medium border bg-amber-50 text-amber-700 border-amber-200">
+                            {porVencer.length} por vencer
+                        </span>
+                    )}
+                </div>
+            )}
 
             {loading && (
                 <div className="flex items-center gap-2 py-6">
@@ -184,6 +201,14 @@ function TarjetaFase({ fase, nav, completada = false }) {
 
             {/* Barra de progreso */}
             <div className="space-y-1">
+                {fase.fechaEntregaResponsable && (
+                    <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-ink/50">Entrega</span>
+                        <span className={getEntregaClass(fase.fechaEntregaResponsable, completada)}>
+                            {getEntregaLabel(fase.fechaEntregaResponsable, completada)}
+                        </span>
+                    </div>
+                )}
                 <div className="flex justify-between text-[11px] text-ink/50">
                     <span>Avance</span>
                     <span className="font-medium text-ink">{pct}%</span>
@@ -210,6 +235,46 @@ function KpiMini({ label, value, color }) {
             <p className="text-[10px] text-ink/50 uppercase tracking-[0.12em]">{label}</p>
         </div>
     );
+}
+
+function getEntregaLabel(fecha, completada = false) {
+    if (!fecha) return "Sin fecha";
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) return fecha;
+    const base = date.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
+    if (completada) return base;
+
+    const diff = diffDays(fecha);
+    if (diff < 0) return `Vencida · ${base}`;
+    if (diff === 0) return `Entrega hoy · ${base}`;
+    if (diff <= 3) return `Vence pronto · ${base}`;
+    return base;
+}
+
+function getEntregaClass(fecha, completada = false) {
+    if (completada || !fecha) return "text-ink/70";
+    const diff = diffDays(fecha);
+    if (diff < 0) return "text-red-600 font-medium";
+    if (diff <= 3) return "text-amber-700 font-medium";
+    return "text-ink/70";
+}
+
+function diffDays(fecha) {
+    const end = new Date(fecha);
+    end.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return Math.ceil((end - today) / 86400000);
+}
+
+function isFechaVencida(fecha) {
+    return !!fecha && diffDays(fecha) < 0;
+}
+
+function isFechaProxima(fecha) {
+    if (!fecha) return false;
+    const diff = diffDays(fecha);
+    return diff >= 0 && diff <= 3;
 }
 
 DashboardColaborador.propTypes = {};

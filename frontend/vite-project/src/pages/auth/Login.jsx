@@ -27,6 +27,16 @@ export default function Login() {
   const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    if (hadDark) root.classList.remove("dark");
+
+    return () => {
+      if (hadDark) root.classList.add("dark");
+    };
+  }, []);
+
+  useEffect(() => {
     if (ready && user) navigate(from, { replace: true });
   }, [ready, user, from, navigate]);
 

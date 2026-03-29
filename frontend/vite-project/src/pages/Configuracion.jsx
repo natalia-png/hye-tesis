@@ -266,9 +266,9 @@ export default function Configuracion() {
           onClick={logout}
           className="w-full rounded-2xl px-4 py-3 text-[13px] font-semibold border transition active:scale-[0.99]"
           style={{
-            background: "rgb(var(--ink))",
-            borderColor: "rgb(var(--ink) / 0.15)",
-            color: "rgb(var(--ivory))",
+            background: dark ? "#EDE9E0" : "rgb(var(--ink))",
+            borderColor: dark ? "rgb(237 233 224 / 0.35)" : "rgb(var(--ink) / 0.15)",
+            color: dark ? "#1A1917" : "rgb(var(--ivory))",
           }}
         >
           Cerrar sesion

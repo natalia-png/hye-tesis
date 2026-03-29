@@ -6,15 +6,31 @@ import { useAuth } from "../app/useAuth";
 import { timeAgo } from "../utils/timeAgo";
 
 const ICONS = {
-  phase_done: "✓",
-  phase_started: "→",
-  progress_update: "↑",
+  phase_done:              "✓",
+  phase_started:           "→",
+  progress_update:         "↑",
+  deadline_project:        "⏰",
+  deadline_fase:           "⏰",
+  new_note:                "📝",
+  new_file:                "📎",
+  new_message:             "💬",
+  nueva_garantia:          "🔧",
+  garantia_respondida:     "✅",
+  nueva_solicitud_comercial: "🏗",
 };
 
 const ICON_BG = {
-  phase_done: "bg-emerald-100 text-emerald-700",
-  phase_started: "bg-amber-100 text-amber-700",
-  progress_update: "bg-blue-100 text-blue-700",
+  phase_done:              "bg-emerald-100 text-emerald-700",
+  phase_started:           "bg-amber-100 text-amber-700",
+  progress_update:         "bg-blue-100 text-blue-700",
+  deadline_project:        "bg-orange-100 text-orange-700",
+  deadline_fase:           "bg-orange-100 text-orange-700",
+  new_note:                "bg-violet-100 text-violet-700",
+  new_file:                "bg-sky-100 text-sky-700",
+  new_message:             "bg-blue-100 text-blue-700",
+  nueva_garantia:          "bg-red-100 text-red-700",
+  garantia_respondida:     "bg-emerald-100 text-emerald-700",
+  nueva_solicitud_comercial: "bg-amber-100 text-amber-700",
 };
 
 export default function NotificationBell() {

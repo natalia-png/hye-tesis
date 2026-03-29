@@ -34,7 +34,8 @@
       "Bash(npm.cmd test:*)",
       "Bash(node node_modules/jest-cli/bin/jest.js --config jest.ci.cjs --coverage --coverageReporters=text)",
       "Bash(node -e \"const f = require\\(''./node_modules/firebase/package.json''\\); console.log\\(f.version\\)\")",
-      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project -name capacitor.config*)"
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project -name capacitor.config*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

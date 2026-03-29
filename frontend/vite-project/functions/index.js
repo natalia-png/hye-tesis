@@ -27,6 +27,7 @@ const {
 } = require("firebase-functions/firestore");
 
 const { onRequest } = require("firebase-functions/https");
+const { onSchedule } = require("firebase-functions/scheduler");
 
 if (!admin.apps.length) admin.initializeApp();
 
@@ -599,6 +600,120 @@ async function eliminarClienteSiSinProyectos(clientId) {
   }
   await db.collection("users").doc(clientId).delete();
   return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCHEDULED — Notificaciones de vencimiento (diario 8am Colombia)
+   - Admin: proyectos con endDate ≤ 7 días
+   - Colaborador: fases con fechaEntregaResponsable ≤ 7 días
+   ID determinístico → sin duplicados si corre varias veces el mismo día
+═══════════════════════════════════════════════════════════════ */
+exports.notificarVencimientos = onSchedule(
+  { schedule: "0 8 * * *", timeZone: "America/Bogota" },
+  async () => {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const dayStr = hoy.toISOString().split("T")[0]; // "YYYY-MM-DD"
+
+    // Obtener UID del admin
+    const adminSnap = await db.collection("users")
+      .where("email", "==", "admin@hye.com")
+      .limit(1).get();
+    const adminUid = adminSnap.empty ? null : adminSnap.docs[0].id;
+
+    // Leer todos los proyectos activos (máximo 200)
+    const proyectosSnap = await db.collection("projects").limit(200).get();
+
+    for (const docSnap of proyectosSnap.docs) {
+      const p = docSnap.data();
+      const projectId = docSnap.id;
+      const projectName = p.name || p.nombre || "Proyecto";
+      const status = (p.status || "").toLowerCase();
+
+      if (["archivado", "finalizado", "completado"].includes(status)) continue;
+
+      // ── Vencimiento del proyecto → admin ──────────────────────
+      if (adminUid) {
+        const endDate = parseDateValue(p.endDate || p.fechaFin);
+        if (endDate) {
+          const dias = Math.round((endDate - hoy) / 86400000);
+          if (dias >= 0 && dias <= 7) {
+            const label = dias === 0 ? "hoy" : `en ${dias} día${dias > 1 ? "s" : ""}`;
+            await createDeadlineNotif(adminUid, `deadline_proj_${projectId}_${dayStr}`, {
+              type: "deadline_project",
+              title: "⏰ Proyecto próximo a vencer",
+              body: `"${projectName}" vence ${label}.`,
+              projectId,
+              projectName,
+              phaseId: "",
+              phaseName: "",
+            });
+          }
+        }
+      }
+
+      // ── Vencimiento de fase → colaborador responsable ─────────
+      const fases = Array.isArray(p.fases) ? p.fases : [];
+      for (const fase of fases) {
+        const uid = fase.responsableUID || fase.responsable || null;
+        if (!uid || !fase.fechaEntregaResponsable) continue;
+
+        const fechaFase = parseDateValue(fase.fechaEntregaResponsable);
+        if (!fechaFase) continue;
+
+        const dias = Math.round((fechaFase - hoy) / 86400000);
+        if (dias >= 0 && dias <= 7) {
+          const label = dias === 0 ? "hoy" : `en ${dias} día${dias > 1 ? "s" : ""}`;
+          const faseId = fase.id || fase.nombre || "fase";
+          await createDeadlineNotif(uid, `deadline_fase_${projectId}_${faseId}_${dayStr}`, {
+            type: "deadline_fase",
+            title: "⏰ Tarea próxima a vencer",
+            body: `"${fase.nombre || "Fase"}" en ${projectName} vence ${label}.`,
+            projectId,
+            projectName,
+            phaseId: fase.id || "",
+            phaseName: fase.nombre || "",
+          });
+        }
+      }
+    }
+
+    console.log(`notificarVencimientos completado — ${dayStr}`);
+  }
+);
+
+/* Convierte string "YYYY-MM-DD" o Timestamp de Firestore a Date */
+function parseDateValue(val) {
+  if (!val) return null;
+  if (typeof val === "string") {
+    const d = new Date(val + "T12:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (typeof val.toDate === "function") return val.toDate();
+  return null;
+}
+
+/* Crea/sobreescribe una notificación con ID fijo para evitar duplicados.
+   Si ya existe con ese ID del mismo día, solo actualiza. */
+async function createDeadlineNotif(uid, notifId, payload) {
+  try {
+    const ref = db.collection("notifications").doc(uid)
+      .collection("items").doc(notifId);
+    const existing = await ref.get();
+    // Si ya fue leída hoy, no molestar de nuevo
+    if (existing.exists && existing.data().read) return;
+    await ref.set({
+      ...payload,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    // Push solo si no existía antes (primera vez del día)
+    if (!existing.exists) {
+      await sendPushToUser(uid, payload);
+    }
+  } catch (e) {
+    console.error("createDeadlineNotif:", e);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════

@@ -26,6 +26,7 @@ import GarantiasAdmin from "./pages/GarantiasAdmin.jsx";
 import GarantiasCliente from "./pages/GarantiasCliente.jsx";
 import BandejaMensajes from "./pages/mensajes/BandejaMensajes.jsx";
 import ChatPage from "./pages/mensajes/ChatPage.jsx";
+import Configuracion from "./pages/Configuracion.jsx";
 
 
 
@@ -40,13 +41,13 @@ function ProyectoDetalleWrapper() {
 
 function ShellLayout() {
   return (
-    <div className="min-h-[100dvh] bg-[#F2EEE7]">
+    <div className="min-h-[100dvh] transition-colors duration-300 bg-[#F2EEE7] dark:bg-[#1A1917]">
       <Header />
       <main
         className="max-w-[500px] mx-auto px-4 pt-16"
         style={{ paddingBottom: 'max(6rem, calc(6rem + env(safe-area-inset-bottom, 0px)))' }}
       >
-        <div className="rounded-[18px] bg-ivory/90 border border-taupe/30 shadow-card p-3">
+        <div className="rounded-[18px] border shadow-card p-3 transition-colors duration-300 bg-ivory/92 dark:bg-[#252320] border-taupe/30 dark:border-[#3a3731]">
           <Outlet />
         </div>
       </main>
@@ -110,6 +111,9 @@ export default function App() {
         {/* Mensajes — todos los roles */}
         <Route path="mensajes" element={<BandejaMensajes />} />
         <Route path="mensajes/:chatId" element={<ChatPage />} />
+
+        {/* Configuración — todos los roles */}
+        <Route path="configuracion" element={<Configuracion />} />
 
       </Route>
 

@@ -1,17 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Neutros elegantes
-        ink:   "#111111",  // casi negro
-        coal:  "#1b1b1b",  // negro suave
-        ivory: "#F7F6F2",  // blanco cálido
-        linen: "#F2EEE7",  // beige muy claro
-        sand:  "#E7E2D7",  // beige suave
-        taupe: "#BBB4A8",  // greige medio para bordes
-        stone: "#6B7280",  // texto secundario frío
+        // CSS variables — cambian automáticamente con el tema
+        ink:   "rgb(var(--ink)   / <alpha-value>)",
+        coal:  "rgb(var(--coal)  / <alpha-value>)",
+        ivory: "rgb(var(--ivory) / <alpha-value>)",
+        linen: "rgb(var(--linen) / <alpha-value>)",
+        sand:  "rgb(var(--sand)  / <alpha-value>)",
+        taupe: "rgb(var(--taupe) / <alpha-value>)",
+        stone: "rgb(var(--stone) / <alpha-value>)",
       },
       borderRadius: {
         xl: "14px",

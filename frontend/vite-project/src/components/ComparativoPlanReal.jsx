@@ -2,6 +2,7 @@
 // Comparativo Plan vs Avance Real por fase
 // Visible para admin y cliente. Las fechas planeadas las ingresa Luisa en FasesProyecto.
 import PropTypes from "prop-types";
+import { useTheme } from "../app/ThemeContext.jsx";
 
 /**
  * Calcula cuánto % del tiempo planeado de una fase ya transcurrió (hoy).
@@ -40,8 +41,8 @@ function estadoSemaforoFase(esperado, real, estado) {
   // Si la fase ya está completada, siempre verde
   if (estado === "completada") {
     return {
-      color: "text-green-700",
-      bg: "bg-green-50 border-green-200",
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800/50",
       dot: "bg-green-500",
       label: "Completada ✓",
     };
@@ -51,7 +52,7 @@ function estadoSemaforoFase(esperado, real, estado) {
   if (esperado === null) {
     return {
       color: "text-ink/50",
-      bg: "bg-ivory border-sand",
+      bg: "neutral",
       dot: "bg-ink/20",
       label: "Sin fechas plan",
     };
@@ -61,8 +62,8 @@ function estadoSemaforoFase(esperado, real, estado) {
 
   if (diff >= 0) {
     return {
-      color: "text-green-700",
-      bg: "bg-green-50 border-green-200",
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800/50",
       dot: "bg-green-500",
       label: diff === 0 ? "En tiempo" : `+${diff}% adelantado`,
     };
@@ -70,22 +71,26 @@ function estadoSemaforoFase(esperado, real, estado) {
 
   if (diff >= -15) {
     return {
-      color: "text-amber-700",
-      bg: "bg-amber-50 border-amber-200",
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/50",
       dot: "bg-amber-400",
       label: `${diff}% atrasado`,
     };
   }
 
   return {
-    color: "text-red-700",
-    bg: "bg-red-50 border-red-200",
+    color: "text-red-600 dark:text-red-400",
+    bg: "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/50",
     dot: "bg-red-500",
     label: `${diff}% atrasado`,
   };
 }
 
 export default function ComparativoPlanReal({ fases = [], startDate, endDate }) {
+  const { dark } = useTheme();
+  const trackBg  = dark ? "#2E2B26" : "rgb(var(--sand))";
+  const cardBg   = dark ? "#252320" : "rgb(255 255 255 / 0.95)";
+
   // Calcular variación global del proyecto
   const proyectoInicio = startDate ? new Date(startDate) : null;
   const proyectoFin = endDate ? new Date(endDate) : null;
@@ -115,7 +120,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
   const variacionGlobal = planGlobal == null ? null : realGlobal - planGlobal;
 
   return (
-    <div className="card space-y-4">
+    <div className="card space-y-4" style={{ background: cardBg }}>
       {/* Header */}
       <div>
         <h2 className="text-[14px] font-semibold text-ink">Plan vs avance real</h2>
@@ -166,7 +171,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
               <span>Plan</span>
               <span>{planGlobal}%</span>
             </div>
-            <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
+            <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: trackBg }}>
               <div className="h-full bg-ink/35 rounded-full" style={{ width: `${planGlobal}%` }} />
             </div>
           </div>
@@ -175,7 +180,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
               <span>Real</span>
               <span>{realGlobal}%</span>
             </div>
-            <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
+            <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: trackBg }}>
               <div className="h-full bg-ink rounded-full" style={{ width: `${realGlobal}%` }} />
             </div>
           </div>
@@ -213,10 +218,12 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
             const semaforo = estadoSemaforoFase(esperado, real, f.estado);
             const tieneFechas = f.fechaInicioPlaneada && f.fechaFinPlaneada;
 
+            const isNeutral = semaforo.bg === "neutral";
             return (
               <div
                 key={f.id}
-                className={`rounded-xl border p-3 ${semaforo.bg}`}
+                className={`rounded-xl border p-3 ${isNeutral ? "border-taupe/30" : semaforo.bg}`}
+                style={isNeutral ? { background: cardBg } : undefined}
               >
                 {/* Fila superior: nombre + estado */}
                 <div className="flex items-start justify-between gap-2">
@@ -243,7 +250,7 @@ export default function ComparativoPlanReal({ fases = [], startDate, endDate }) 
                   {tieneFechas && esperado !== null && (
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-ink/45 w-8 flex-shrink-0">Plan</span>
-                      <div className="flex-1 h-1.5 bg-white/60 rounded-full overflow-hidden">
+                      <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: trackBg }}>
                         <div
                           className="h-full bg-ink/30 rounded-full"
                           style={{ width: `${esperado}%` }}
@@ -304,7 +311,7 @@ function KpiCard({ label, value, sub, highlight = "neutral" }) {
   };
 
   return (
-    <div className="rounded-xl border border-taupe/30 bg-ivory/80 px-3 py-2">
+    <div className="rounded-xl border border-taupe/30 bg-[#F7F6F2] dark:!bg-[#252320] px-3 py-2">
       <p className="text-[10px] text-ink/55">{label}</p>
       <p className={`mt-0.5 text-[14px] font-semibold leading-none ${colors[highlight]}`}>
         {value}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { timeAgo } from "../utils/timeAgo";
+import Avatar from "./ui/Avatar.jsx";
 
 const ROLE_COLOR = {
   admin: "bg-ink text-ivory",
@@ -16,7 +17,7 @@ const ROLE_LABEL = {
   cliente: "Cliente",
 };
 
-export default function ChatWindow({ messages, onSend, ready, currentUid, chatName, subtitle }) {
+export default function ChatWindow({ messages, onSend, ready, currentUid, chatName, subtitle, participantPhotos = {} }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
@@ -78,12 +79,18 @@ export default function ChatWindow({ messages, onSend, ready, currentUid, chatNa
           return (
             <div key={msg.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
               {/* Nombre + rol (solo al cambiar de remitente) */}
-              {showSender && !isOwn && (
-                <div className="flex items-center gap-1.5 mb-1 ml-1">
-                  <span className="text-[11px] font-semibold text-ink/70">{msg.senderName}</span>
+              {showSender && (
+                <div className={`flex items-center gap-2 mb-1 ${isOwn ? "mr-1 self-end flex-row-reverse" : "ml-1"}`}>
+                  <Avatar
+                    name={msg.senderName || "Usuario"}
+                    photoURL={msg.senderPhoto || participantPhotos?.[msg.senderId] || ""}
+                    size={22}
+                    textClassName="text-[9px]"
+                  />
+                  <span className="text-[11px] font-semibold text-ink/70">{isOwn ? "Tú" : msg.senderName}</span>
                   {msg.senderRole && (
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${ROLE_COLOR[msg.senderRole] || "bg-sand text-ink"}`}>
-                      {ROLE_LABEL[msg.senderRole] || msg.senderRole}
+                      {isOwn ? "Tú" : (ROLE_LABEL[msg.senderRole] || msg.senderRole)}
                     </span>
                   )}
                 </div>
@@ -145,5 +152,5 @@ ChatWindow.propTypes = {
   currentUid: PropTypes.string,
   chatName: PropTypes.string,
   subtitle: PropTypes.string,
+  participantPhotos: PropTypes.object,
 };
-

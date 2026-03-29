@@ -20,6 +20,7 @@ function mergeProfileData(prev, data) {
     role: (data.role || prev.role).toLowerCase(),
     subRole: (data.subRole || "").toLowerCase(),
     name: data.name || prev.name,
+    photoURL: data.photoURL || prev.photoURL || "",
   };
 }
 
@@ -103,6 +104,7 @@ export function AuthProvider({ children }) {
           uid: fbUser.uid,
           email: (fbUser.email || "").trim().toLowerCase(),
           name: fbUser.displayName || p?.name || "Usuario",
+          photoURL: p?.photoURL || fbUser.photoURL || "",
           role: (p?.role || "sin-rol").toLowerCase(),
           subRole: (p?.subRole || "").toLowerCase(),
         });
@@ -121,6 +123,7 @@ export function AuthProvider({ children }) {
           uid: fbUser.uid,
           email: (fbUser.email || "").trim().toLowerCase(),
           name: "Usuario",
+          photoURL: fbUser.photoURL || "",
           role: "sin-rol",
           subRole: "",
         });

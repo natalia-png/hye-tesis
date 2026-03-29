@@ -2,8 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Variables tema claro (default) ── */
 :root {
   --sidebar-w: 260px;
+
+  --ink:   17  17  17;     /* #111111 */
+  --coal:  27  27  27;     /* #1b1b1b */
+  --ivory: 247 246 242;    /* #F7F6F2 */
+  --linen: 242 238 231;    /* #F2EEE7 */
+  --sand:  231 226 215;    /* #E7E2D7 */
+  --taupe: 187 180 168;    /* #BBB4A8 */
+  --stone: 107 114 128;    /* #6B7280 */
+}
+
+/* ── Variables tema oscuro — carbón cálido ── */
+html.dark {
+  --ink:   237 233 224;    /* #EDE9E0 — texto principal */
+  --coal:  255 252 247;    /* #FFFCF7 — texto fuerte */
+  /* ivory y linen NO cambian: se usan como text-ivory/text-linen (texto claro sobre fondos oscuros) */
+  /* sus backgrounds se sobreescriben con CSS directo abajo */
+  --sand:  46  43  38;     /* #2E2B26 — fondo secundario */
+  --taupe: 58  55  49;     /* #3A3731 — bordes */
+  --stone: 138 130 120;    /* #8A8278 — texto muted */
 }
 
 html {
@@ -23,16 +43,29 @@ a {
 
 body {
   background: #F2EEE7;
-  color: #111111;
+  color: rgb(var(--ink));
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+html.dark body {
+  background: #1A1917;
 }
 
 @layer components {
 
   /* ── Cards ── */
   .card {
-    @apply rounded-2xl bg-white p-4 shadow-card border border-taupe/30;
+    @apply rounded-2xl p-4 shadow-card border;
+    background: rgb(255 255 255 / 0.95);
+    border-color: rgb(var(--taupe) / 0.3);
+  }
+
+  html.dark .card {
+    background: #252320;
+    border-color: rgb(58 55 49 / 0.5);
+    box-shadow: none;
   }
 
   /* ── Botones base ── */
@@ -40,43 +73,111 @@ body {
     @apply rounded-full px-4 py-2 text-sm font-medium transition active:scale-95;
   }
 
-  /* Botón primario — fondo negro, texto beige */
+  /* Botón primario */
   .btn-primary {
-    @apply btn bg-ink text-ivory hover:bg-coal;
+    @apply btn;
+    background: rgb(var(--ink));
+    color: rgb(var(--linen));
   }
 
-  /* ── btn-outline — FALTABA, causaba botones rotos ── */
+  .btn-primary:hover {
+    background: rgb(var(--coal));
+  }
+
+  /* Botón outline */
   .btn-outline {
-    @apply btn bg-transparent text-ink border border-ink/25 hover:border-ink hover:bg-ink/5 disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply btn bg-transparent disabled:opacity-40 disabled:cursor-not-allowed;
+    color: rgb(var(--ink));
+    border: 1px solid rgb(var(--ink) / 0.25);
+  }
+
+  .btn-outline:hover {
+    border-color: rgb(var(--ink) / 0.6);
+    background: rgb(var(--ink) / 0.05);
   }
 
   /* ── Inputs ── */
   .input {
-    @apply rounded-full border border-taupe/60 bg-white/80 px-4 py-2 text-sm focus:ring-2 focus:ring-ink/15 focus:border-ink/30 outline-none shadow-sm;
+    @apply rounded-full px-4 py-2 text-sm outline-none shadow-sm;
+    border: 1px solid rgb(var(--taupe) / 0.6);
+    background: rgb(255 255 255 / 0.8);
+    color: rgb(var(--ink));
+  }
+
+  html.dark .input {
+    background: rgb(var(--sand));
+    border-color: rgb(var(--taupe) / 0.6);
+    color: rgb(var(--ink));
+  }
+
+  .input::placeholder {
+    color: rgb(var(--ink) / 0.35);
+  }
+
+  .input:focus {
+    outline: none;
+    ring: 2px solid rgb(var(--ink) / 0.15);
+    border-color: rgb(var(--ink) / 0.3);
   }
 
   /* ── Texto atenuado ── */
   .muted {
-    @apply text-ink/50;
+    color: rgb(var(--ink) / 0.5);
   }
 }
 
-/* ── Grid decorativo sobre beige ── */
+/* ── Dark mode: colores semáforo (verde/ámbar/rojo) ── */
+html.dark .bg-green-50  { background-color: rgb(5 46 22 / 0.4); }
+html.dark .bg-amber-50  { background-color: rgb(69 26 3 / 0.4); }
+html.dark .bg-red-50    { background-color: rgb(69 10 10 / 0.4); }
+html.dark .bg-yellow-50 { background-color: rgb(66 32 6 / 0.4); }
+html.dark .bg-blue-50   { background-color: rgb(8 47 73 / 0.4); }
+html.dark .bg-emerald-50 { background-color: rgb(5 46 22 / 0.4); }
+html.dark .border-green-200  { border-color: rgb(22 101 52 / 0.5); }
+html.dark .border-amber-200  { border-color: rgb(146 64 14 / 0.5); }
+html.dark .border-red-200    { border-color: rgb(153 27 27 / 0.5); }
+html.dark .border-emerald-200 { border-color: rgb(6 78 59 / 0.5); }
+
+/* ── Dark mode: bg-white / bg-ivory / bg-linen overrides ── */
+/* text-white/text-ivory/text-linen NO se tocan — se usan en texto sobre fondos oscuros */
+html.dark .bg-white    { background-color: #252320; }
+html.dark .bg-white\/5  { background-color: rgb(37 35 32 / 0.05); }
+html.dark .bg-white\/10 { background-color: rgb(37 35 32 / 0.1); }
+html.dark .bg-white\/20 { background-color: rgb(37 35 32 / 0.2); }
+html.dark .bg-white\/30 { background-color: rgb(37 35 32 / 0.3); }
+html.dark .bg-white\/50 { background-color: rgb(37 35 32 / 0.5); }
+html.dark .bg-white\/60 { background-color: rgb(37 35 32 / 0.6); }
+html.dark .bg-white\/70 { background-color: rgb(37 35 32 / 0.7); }
+html.dark .bg-white\/80 { background-color: rgb(37 35 32 / 0.8); }
+html.dark .bg-white\/90 { background-color: rgb(37 35 32 / 0.9); }
+html.dark .bg-white\/95 { background-color: rgb(37 35 32 / 0.95); }
+
+html.dark .bg-ivory    { background-color: #252320; }
+html.dark .bg-ivory\/90 { background-color: rgb(37 35 32 / 0.9); }
+html.dark .bg-ivory\/95 { background-color: rgb(37 35 32 / 0.95); }
+html.dark .bg-ivory\/80 { background-color: rgb(37 35 32 / 0.8); }
+html.dark .bg-ivory\/70 { background-color: rgb(37 35 32 / 0.7); }
+html.dark .bg-ivory\/8  { background-color: rgb(37 35 32 / 0.08); }
+
+html.dark .bg-linen    { background-color: #1A1917; }
+html.dark .bg-linen\/90 { background-color: rgb(26 25 23 / 0.9); }
+html.dark .bg-linen\/95 { background-color: rgb(26 25 23 / 0.95); }
+
+/* ── Dark mode: botones con bg-ink (en oscuro = crema) necesitan texto oscuro ── */
+/* Cubre: btn-primary, tabs activos, AsistenteIA, FiltroTabs, ordenadores, etc. */
+html.dark .btn-primary       { color: #1A1917; }
+html.dark .btn-primary:hover { color: #1A1917; }
+html.dark .bg-ink            { color: #1A1917; }
+
+/* ── Grid decorativo ── */
 .bg-grid-sand {
-  background-image: radial-gradient(#0000000D 1px, transparent 1px);
+  background-image: radial-gradient(rgb(var(--ink) / 0.05) 1px, transparent 1px);
   background-size: 18px 18px;
   background-position: 0 0;
 }
 
-/* ── Animación toast de notificación ── */
+/* ── Animación toast ── */
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
+  from { opacity: 0; transform: translate(-50%, -12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }

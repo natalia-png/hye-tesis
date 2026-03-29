@@ -62,6 +62,7 @@ export function useChatMessages(chatId, currentUid) {
       text: text.trim(),
       senderId: sender.uid,
       senderName: sender.name,
+      senderPhoto: sender.photoURL || "",
       senderRole: sender.role,
       createdAt: serverTimestamp(),
     });
@@ -74,6 +75,8 @@ export function useChatMessages(chatId, currentUid) {
     await updateDoc(chatRef, {
       lastMessage: text.trim().substring(0, 80),
       lastMessageSender: sender.name,
+      [`participantPhotos.${sender.uid}`]: sender.photoURL || "",
+      [`participantNames.${sender.uid}`]: sender.name,
       lastAt: serverTimestamp(),
       // Des-archivar el chat para los receptores cuando llega un nuevo mensaje
       ...(recipients.length > 0 ? { hiddenFor: arrayRemove(...recipients) } : {}),
@@ -95,7 +98,7 @@ export async function leaveChat(chatId, uid) {
 }
 
 // ── Utilidad: crear/obtener chat de proyecto ──────────────────────────
-export async function ensureProjectChat(projectId, projectName, clientId, clientName, adminId, adminName) {
+export async function ensureProjectChat(projectId, projectName, clientId, clientName, adminId, adminName, clientPhoto = "", adminPhoto = "") {
   const chatId = `project_${projectId}`;
   const chatRef = doc(db, "chats", chatId);
   const snap = await getDoc(chatRef);
@@ -114,6 +117,10 @@ export async function ensureProjectChat(projectId, projectName, clientId, client
         ...(clientId ? { [clientId]: "cliente" } : {}),
         ...(adminId ? { [adminId]: "admin" } : {}),
       },
+      participantPhotos: {
+        ...(clientId ? { [clientId]: clientPhoto } : {}),
+        ...(adminId ? { [adminId]: adminPhoto } : {}),
+      },
       unread: {
         ...(clientId ? { [clientId]: 0 } : {}),
         ...(adminId ? { [adminId]: 0 } : {}),
@@ -128,7 +135,7 @@ export async function ensureProjectChat(projectId, projectName, clientId, client
 }
 
 // ── Utilidad: crear/obtener chat directo entre dos usuarios ───────────
-export async function ensureDirectChat(uid1, name1, role1, uid2, name2, role2) {
+export async function ensureDirectChat(uid1, name1, role1, uid2, name2, role2, photo1 = "", photo2 = "") {
   const chatId = `direct_${[uid1, uid2].sort((a, b) => a.localeCompare(b)).join("_")}`;
   const chatRef = doc(db, "chats", chatId);
   const snap = await getDoc(chatRef);
@@ -141,6 +148,7 @@ export async function ensureDirectChat(uid1, name1, role1, uid2, name2, role2) {
       participants: [uid1, uid2],
       participantNames: { [uid1]: name1, [uid2]: name2 },
       participantRoles: { [uid1]: role1, [uid2]: role2 },
+      participantPhotos: { [uid1]: photo1, [uid2]: photo2 },
       unread: { [uid1]: 0, [uid2]: 0 },
       lastMessage: null,
       lastMessageSender: null,

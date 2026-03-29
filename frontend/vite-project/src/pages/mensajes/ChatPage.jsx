@@ -7,6 +7,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from "../../app/useAuth";
 import { useChatMessages, ensureProjectChat } from "../../hooks/useChatMessages";
 import ChatWindow from "../../components/ChatWindow";
+import Avatar from "../../components/ui/Avatar.jsx";
 import PropTypes from "prop-types";
 
 export default function ChatPage() {
@@ -55,6 +56,7 @@ export default function ChatPage() {
         const adminDoc = adminSnap.docs[0];
         const adminId = adminDoc?.id || null;
         const adminName = adminDoc?.data()?.name || "H&E Arquitectos";
+        const adminPhoto = adminDoc?.data()?.photoURL || "";
 
         const cId = await ensureProjectChat(
           chatId,
@@ -63,6 +65,8 @@ export default function ChatPage() {
           project.client || project.cliente || "Cliente",
           adminId,
           adminName,
+          user?.uid === project.clientId ? user?.photoURL || "" : "",
+          adminPhoto,
         );
 
         // Verificar acceso para colaboradores
@@ -138,6 +142,7 @@ function ChatInner({ chatId, user, onBack }) {
     return sendMessage(text, {
       uid: user.uid,
       name: user.name || user.email || "Usuario",
+      photoURL: user.photoURL || "",
       role: user.role,
     });
   };
@@ -167,6 +172,12 @@ function ChatInner({ chatId, user, onBack }) {
               <span key={uid} className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
                 isMe ? "bg-ink/10 border-ink/20 text-ink" : "bg-sand border-taupe/30 text-ink/70"
               }`}>
+                <Avatar
+                  name={name}
+                  photoURL={chat.participantPhotos?.[uid] || ""}
+                  size={18}
+                  textClassName="text-[8px]"
+                />
                 <span className={`w-1.5 h-1.5 rounded-full ${dotCls}`} />
                 {name.split(" ")[0]}{isMe ? " (tú)" : ""}
               </span>
@@ -176,7 +187,7 @@ function ChatInner({ chatId, user, onBack }) {
       )}
 
       {/* Ventana de chat */}
-      <div className="flex-1 rounded-2xl border border-taupe/25 overflow-hidden bg-[#F7F4EE]">
+      <div className="flex-1 rounded-2xl border border-taupe/25 overflow-hidden bg-linen">
         <ChatWindow
           messages={messages}
           onSend={handleSend}
@@ -184,6 +195,7 @@ function ChatInner({ chatId, user, onBack }) {
           currentUid={user?.uid}
           chatName={chatName}
           subtitle={subtitle}
+          participantPhotos={chat?.participantPhotos || {}}
         />
       </div>
     </div>

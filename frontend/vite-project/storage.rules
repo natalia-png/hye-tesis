@@ -1,0 +1,79 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() { return request.auth != null; }
+    function myUid()    { return request.auth.uid; }
+    function myEmail()  { return request.auth.token.email; }
+
+    function isAdmin() {
+      return signedIn() && (
+        myEmail() == "admin@hye.com"
+        || (
+          exists(/databases/(default)/documents/users/$(myUid()))
+          && get(/databases/(default)/documents/users/$(myUid())).data.role == "admin"
+        )
+      );
+    }
+
+    function isColaborador() {
+      return signedIn()
+        && exists(/databases/(default)/documents/users/$(myUid()))
+        && get(/databases/(default)/documents/users/$(myUid())).data.role == "colaborador";
+    }
+
+    function isClientOfProject(projectId) {
+      return signedIn()
+        && exists(/databases/(default)/documents/projects/$(projectId))
+        && (
+          get(/databases/(default)/documents/projects/$(projectId)).data.clientId == myUid()
+          || get(/databases/(default)/documents/projects/$(projectId)).data.clientEmail == myEmail()
+        );
+    }
+
+    function isVisiblePhaseFile(projectId, faseId, fileId) {
+      return exists(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId))
+        && get(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId)).data.visibleToClient == true;
+    }
+
+    function isImage() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    function isSmallEnough() {
+      return request.resource != null
+        && request.resource.size < 2 * 1024 * 1024;
+    }
+
+    /* ── Fotos de perfil ── */
+    match /profilePhotos/{userId}/{fileName=**} {
+      allow read: if signedIn();
+      allow write, delete: if signedIn()
+        && myUid() == userId
+        && isImage()
+        && isSmallEnough();
+    }
+
+    /* ── Archivos de fases ── */
+    match /phaseFiles/{projectId}/{faseId}/{fileId} {
+      allow read, write, delete: if isAdmin() || isColaborador();
+      allow read: if isClientOfProject(projectId) && isVisiblePhaseFile(projectId, faseId, fileId);
+    }
+
+    /* ── Archivos de garantías ── */
+    match /garantias/{projectId}/{fileName=**} {
+      allow read, write, delete: if signedIn();
+    }
+
+    match /garantias/{projectId}/respuestas/{fileName=**} {
+      allow read, write, delete: if signedIn();
+    }
+
+    /* ── Bloquear todo lo demás ── */
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+  }
+}

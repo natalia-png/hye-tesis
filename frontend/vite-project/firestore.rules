@@ -31,7 +31,13 @@ service cloud.firestore {
     match /users/{userId} {
       // Cualquier usuario autenticado puede leer perfiles de admin o colaborador (para iniciar chats)
       allow read: if signedIn() && (myUid() == userId || isAdmin() || isColaborador() || resource.data.role == "admin" || resource.data.role == "colaborador");
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin()
+        || (
+          signedIn()
+          && myUid() == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["photoURL", "updatedAt"])
+        );
       match /fcmTokens/{tokenId} {
         allow read, write: if signedIn() && myUid() == userId;
       }

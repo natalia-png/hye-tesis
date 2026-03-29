@@ -9,6 +9,7 @@ import { ensureDirectChat, archiveChat, leaveChat } from "../../hooks/useChatMes
 import PropTypes from "prop-types";
 import { timeAgo as timeAgoUtil } from "../../utils/timeAgo";
 import LoadingSpinner from "../../components/ui/LoadingSpinner";
+import Avatar from "../../components/ui/Avatar.jsx";
 
 export default function BandejaMensajes() {
   const { user } = useAuth();
@@ -115,12 +116,21 @@ function getChatDisplay(chat, currentUid) {
       .filter(uid => uid !== currentUid)
       .map(uid => chat.participantNames?.[uid]?.split(" ")[0])
       .filter(Boolean).join(", ");
-    return { displayName: chat.projectName || "Proyecto", subtitle: others || "Chat de proyecto" };
+    const otherUid = (chat.participants || []).find(uid => uid !== currentUid);
+    return {
+      displayName: chat.projectName || "Proyecto",
+      subtitle: others || "Chat de proyecto",
+      photoURL: otherUid ? chat.participantPhotos?.[otherUid] || "" : "",
+    };
   }
   const otherUid = (chat.participants || []).find(uid => uid !== currentUid);
   const displayName = otherUid ? (chat.participantNames?.[otherUid] || "Usuario") : "Chat";
   const otherRole = otherUid ? chat.participantRoles?.[otherUid] : "";
-  return { displayName, subtitle: ROLE_LABEL[otherRole] || "Usuario" };
+  return {
+    displayName,
+    subtitle: ROLE_LABEL[otherRole] || "Usuario",
+    photoURL: otherUid ? chat.participantPhotos?.[otherUid] || "" : "",
+  };
 }
 
 /* ── Tarjeta chat en bandeja ── */
@@ -140,7 +150,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  const { displayName, subtitle } = getChatDisplay(chat, currentUid);
+  const { displayName, subtitle, photoURL } = getChatDisplay(chat, currentUid);
 
   const lastTime = chat.lastAt?.seconds
     ? timeAgoUtil(new Date(chat.lastAt.seconds * 1000)) : "";
@@ -179,9 +189,16 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   return (
     <div className="relative">
       <button type="button" onClick={onClick} className="w-full card flex items-center gap-3 text-left pr-10">
+        <Avatar
+          name={displayName}
+          photoURL={photoURL}
+          size={40}
+          textClassName="text-[13px]"
+          className={!photoURL && chat.type === "project" ? "bg-ink text-ivory" : ""}
+        />
         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-[14px] ${
           chat.type === "project" ? "bg-ink" : "bg-[#5C5852]"
-        }`}>
+        } hidden`}>
           {chat.type === "project" ? "🏗" : (
             <span className="font-bold text-ivory text-[13px]">{displayName[0]?.toUpperCase() || "?"}</span>
           )}
@@ -356,6 +373,7 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
       const chatId = await ensureDirectChat(
         currentUser.uid, currentUser.name || currentUser.email, currentUser.role,
         otherUser.uid, otherUser.name || otherUser.email, otherUser.role,
+        currentUser.photoURL || "", otherUser.photoURL || "",
       );
       onCreated(chatId);
     } catch (e) { console.error(e);
@@ -380,7 +398,14 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
             <button key={u.uid} type="button" disabled={!!creating}
               onClick={() => handleSelect(u)}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-sand/60 transition text-left disabled:opacity-60">
-              <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center flex-shrink-0">
+              <Avatar
+                name={u.name || "Usuario"}
+                photoURL={u.photoURL || ""}
+                size={32}
+                textClassName="text-[12px]"
+                className={!u.photoURL ? "bg-ink text-ivory" : ""}
+              />
+              <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center flex-shrink-0 hidden">
                 <span className="text-[12px] font-bold text-ivory">{(u.name || "?")[0].toUpperCase()}</span>
               </div>
               <div className="flex-1 min-w-0">

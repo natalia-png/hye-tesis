@@ -94,7 +94,7 @@ export default function DashboardAdmin() {
         <div className="mt-3 rounded-2xl bg-white/8 border border-white/10 p-3">
           <p className="text-[10px] text-ivory/50 uppercase tracking-[0.15em] mb-2">Proyecto en foco</p>
           <select
-            className="w-full rounded-xl bg-[#F2EEE7] text-ink text-[13px] px-3 py-2 outline-none"
+            className="w-full rounded-xl bg-sand text-ink text-[13px] px-3 py-2 outline-none"
             value={selectedId}
             onChange={e => setSelectedId(e.target.value)}
           >
@@ -146,7 +146,7 @@ export default function DashboardAdmin() {
       )}
 
       {projects.length === 0 && (
-        <div className="rounded-2xl bg-white border border-black/[0.06] p-6 text-center space-y-2">
+        <div className="rounded-2xl bg-white border border-black/[0.06] dark:!border-white/20 p-6 text-center space-y-2">
           <p className="text-[14px] font-semibold text-ink">Sin proyectos aún</p>
           <p className="text-[12px] text-ink/50">Crea el primer proyecto para comenzar.</p>
           <button className="btn-primary text-[13px] mt-2" onClick={() => nav("/proyectos/nuevo")}>Crear proyecto</button>
@@ -169,12 +169,12 @@ export default function DashboardAdmin() {
 
           {/* Gráficos */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white border border-black/[0.06] p-4 space-y-2">
+            <div className="rounded-2xl bg-white border border-black/[0.06] dark:!border-white/20 p-4 space-y-2">
               <p className="text-[12px] font-semibold text-ink">Avance</p>
               <p className="text-[11px] text-ink/50">Lectura ejecutiva.</p>
               <div className="pt-2 flex items-center justify-center"><RingChart value={computed.progress} /></div>
             </div>
-            <div className="rounded-2xl bg-white border border-black/[0.06] p-4 space-y-2">
+            <div className="rounded-2xl bg-white border border-black/[0.06] dark:!border-white/20 p-4 space-y-2">
               <p className="text-[12px] font-semibold text-ink">Por fases</p>
               <p className="text-[11px] text-ink/50">Dónde está el trabajo.</p>
               <div className="pt-1"><PhaseBars fases={computed.fases} /></div>
@@ -185,7 +185,7 @@ export default function DashboardAdmin() {
           <PlanVsRealCard proyecto={selected} />
 
           {/* Acciones */}
-          <div className="rounded-2xl bg-white border border-black/[0.06] p-4 flex items-center justify-between gap-3">
+          <div className="rounded-2xl bg-white border border-black/[0.06] dark:!border-white/20 p-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-[13px] font-semibold text-ink">Acciones rápidas</p>
               <p className="text-[11px] text-ink/50">Ir al detalle para ajustes por fase.</p>
@@ -233,7 +233,7 @@ function calcProyectoTimeline(proyecto) {
 }
 
 function calcDiasDisplay(estadoGlobal, diasRestantes) {
-  let diasCls = "bg-[#F2EEE7] text-ink/60 border-black/[0.06]";
+  let diasCls = "bg-[#F2EEE7] dark:!bg-[#2E2B26] text-ink/60 border-black/[0.06]";
   if (estadoGlobal === "vencido") { diasCls = "bg-red-50 text-red-600 border-red-200"; }
   else if (estadoGlobal === "proximo") { diasCls = "bg-amber-50 text-amber-700 border-amber-200"; }
   let diasText = "";
@@ -268,7 +268,7 @@ function PlanVsRealCard({ proyecto }) {
   const { varValue, varSub, varColor } = calcVariacionDisplay(variacion);
 
   return (
-    <div className="rounded-2xl bg-white border border-black/[0.06] p-4 space-y-3">
+    <div className="rounded-2xl bg-white border border-black/[0.06] dark:!border-white/20 p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-[13px] font-semibold text-ink">Plan vs avance real</p>
@@ -328,7 +328,7 @@ function KpiCard({ label, value, hint, highlight = "neutral" }) {
   else if (highlight === "amber") { vc = "text-amber-600"; }
   else if (highlight === "green") { vc = "text-green-700"; }
   return (
-    <div className="rounded-2xl border border-black/[0.06] bg-white px-3 py-3">
+    <div className="rounded-2xl border border-black/[0.06] dark:!border-white/20 bg-white px-3 py-3">
       <p className="text-[10px] text-ink/45 uppercase tracking-[0.12em]">{label}</p>
       <p className={`mt-1 text-[20px] font-bold leading-none truncate ${vc}`}>{value}</p>
       <p className="mt-1 text-[11px] text-ink/45">{hint}</p>
@@ -339,7 +339,7 @@ function KpiCard({ label, value, hint, highlight = "neutral" }) {
 function MiniKpi({ label, value, sub, color = "neutral" }) {
   const c = { neutral: "text-ink", green: "text-green-700", amber: "text-amber-700", red: "text-red-600" };
   return (
-    <div className="rounded-xl border border-black/[0.06] bg-[#FAFAF7] px-2.5 py-2">
+    <div className="rounded-xl border border-black/[0.06] dark:!border-white/20 bg-[#FAFAF7] dark:!bg-[#252320] px-2.5 py-2">
       <p className="text-[10px] text-ink/40">{label}</p>
       <p className={`text-[14px] font-bold leading-tight mt-0.5 ${c[color]}`}>{value}</p>
       <p className="text-[10px] text-ink/35 mt-0.5">{sub}</p>
@@ -351,7 +351,7 @@ function BarraDoble({ label, pct, dim = false, small = false }) {
   return (
     <div className="flex items-center gap-2">
       <span className={`text-ink/35 flex-shrink-0 ${small ? "text-[9px] w-6" : "text-[10px] w-7"}`}>{label}</span>
-      <div className={`flex-1 bg-[#F2EEE7] rounded-full overflow-hidden ${small ? "h-1" : "h-1.5"}`}>
+      <div className={`flex-1 bg-[#F2EEE7] dark:!bg-[#2E2B26] rounded-full overflow-hidden ${small ? "h-1" : "h-1.5"}`}>
         <div className={`h-full rounded-full ${dim ? "bg-ink/30" : "bg-ink"}`} style={{ width: `${pct}%` }} />
       </div>
       <span className={`text-ink/40 flex-shrink-0 text-right ${small ? "text-[9px] w-6" : "text-[10px] w-7"}`}>{pct}%</span>
@@ -364,7 +364,7 @@ function RingChart({ value = 0 }) {
   return (
     <div className="relative h-[100px] w-[100px] rounded-full"
       style={{ background: `conic-gradient(#141414 ${pct * 3.6}deg, rgba(20,20,20,0.1) 0deg)` }}>
-      <div className="absolute inset-[9px] rounded-full bg-white border border-black/[0.06] flex items-center justify-center">
+      <div className="absolute inset-[9px] rounded-full bg-white border border-black/[0.06] dark:!border-white/20 flex items-center justify-center">
         <div className="text-center">
           <p className="text-[17px] font-bold text-ink leading-none">{pct}%</p>
           <p className="text-[9px] text-ink/40 mt-0.5">avance</p>
@@ -383,7 +383,7 @@ function PhaseBars({ fases = [] }) {
             <p className="text-[11px] text-ink/60 truncate">{f.nombre}</p>
             <p className="text-[11px] text-ink/50">{f.porcentaje}%</p>
           </div>
-          <div className="h-1.5 w-full bg-[#F2EEE7] rounded-full overflow-hidden">
+          <div className="h-1.5 w-full bg-[#F2EEE7] dark:!bg-[#2E2B26] rounded-full overflow-hidden">
             <div className="h-full bg-ink rounded-full" style={{ width: `${f.porcentaje}%` }} />
           </div>
         </div>
@@ -440,7 +440,7 @@ function calcPctEsperado(ini, fin) {
 }
 function getSemaforo(esp, real, estado) {
   if (estado === "completada") return { color: "text-green-700", bg: "bg-green-50 border-green-200", dot: "bg-green-500", label: "Completada ✓" };
-  if (esp === null) return { color: "text-ink/40", bg: "bg-[#F2EEE7] border-black/[0.06]", dot: "bg-ink/20", label: "sin plan" };
+  if (esp === null) return { color: "text-ink/40", bg: "bg-[#F2EEE7] dark:!bg-[#252320] border-black/[0.06]", dot: "bg-ink/20", label: "sin plan" };
   const d = real - esp;
   if (d >= 0) return { color: "text-green-700", bg: "bg-green-50 border-green-200", dot: "bg-green-500", label: d === 0 ? "En tiempo" : `+${d}%` };
   if (d >= -15) return { color: "text-amber-700", bg: "bg-amber-50 border-amber-200", dot: "bg-amber-400", label: `${d}%` };

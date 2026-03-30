@@ -200,7 +200,7 @@ export default function Configuracion() {
           Apariencia
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2">
           {themeOptions.map((option) => {
             const active = currentTheme === option.id;
 
@@ -209,44 +209,27 @@ export default function Configuracion() {
                 key={option.id}
                 type="button"
                 onClick={() => setTheme(option.id)}
-                className={`rounded-2xl border p-3 text-left transition ${active ? "ring-2 ring-ink/20" : "hover:-translate-y-0.5"}`}
+                className="flex items-center justify-between px-3 py-2.5 rounded-xl border transition"
                 style={{
-                  borderColor: active ? "rgb(var(--ink) / 0.35)" : "rgb(var(--taupe) / 0.3)",
-                  background: "rgb(var(--sand) / 0.28)",
+                  borderColor: active ? "rgb(var(--ink) / 0.35)" : "rgb(var(--taupe) / 0.25)",
+                  background: active ? "rgb(var(--ink) / 0.06)" : "transparent",
                 }}
               >
-                <div className={`rounded-xl border p-3 ${option.cardClass}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className={`text-[12px] font-semibold ${option.id === "dark" ? "text-[#EDE9E0]" : "text-[#111111]"}`}>
-                        {option.title}
-                      </p>
-                      <p className={`text-[10px] ${option.id === "dark" ? "text-[#EDE9E0]/60" : "text-[#111111]/50"}`}>
-                        {option.subtitle}
-                      </p>
-                    </div>
-                    <span className={`text-[9px] px-2 py-1 rounded-full ${option.chipClass}`}>
-                      {active ? "Activo" : "Aplicar"}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className={`h-2 w-20 rounded-full ${option.barClass}`} />
-                    <div className={`h-8 rounded-lg ${option.lineClass}`} />
-                    <div className="flex gap-2">
-                      <div className={`h-14 flex-1 rounded-lg ${option.lineClass}`} />
-                      <div className={`h-14 flex-1 rounded-lg ${option.lineClass}`} />
-                    </div>
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-7 h-7 rounded-lg border flex-shrink-0 ${option.cardClass}`} />
+                  <div className="text-left">
+                    <p className="text-[12px] font-medium" style={{ color: "rgb(var(--ink))" }}>{option.title}</p>
+                    <p className="text-[10px]" style={{ color: "rgb(var(--ink) / 0.45)" }}>{option.subtitle}</p>
                   </div>
                 </div>
+                <span className={`text-[9px] px-2 py-0.5 rounded-full ${option.chipClass}`}>
+                  {active ? "Activo" : "Aplicar"}
+                </span>
               </button>
             );
           })}
         </div>
 
-        <p className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>
-          La vista previa ahora aplica el tema al tocar cada tarjeta.
-        </p>
       </div>
 
       <div className="card space-y-3">

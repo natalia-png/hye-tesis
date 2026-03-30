@@ -35,7 +35,18 @@
       "Bash(node node_modules/jest-cli/bin/jest.js --config jest.ci.cjs --coverage --coverageReporters=text)",
       "Bash(node -e \"const f = require\\(''./node_modules/firebase/package.json''\\); console.log\\(f.version\\)\")",
       "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project -name capacitor.config*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(\"\"scripts\"\" \" -A 10)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(java -version)",
+      "Bash(echo $JAVA_HOME)",
+      "Read(//c/Program Files/Android/Android Studio/jbr/**)",
+      "Read(//c/Program Files/Android/Android Studio/**)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug)",
+      "Read(//c/Users/HP/**)",
+      "Bash(keytool -list -keystore \"c:/Users/HP/Downloads/HYE AP/signing.keystore\" -storepass android)",
+      "Bash(keytool -list -keystore \"c:/Users/HP/Downloads/HYE AP/signing.keystore\" -storepass hye2024)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew bundleRelease)"
     ]
   }
 }

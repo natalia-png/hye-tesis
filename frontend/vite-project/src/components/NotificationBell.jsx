@@ -98,7 +98,7 @@ export default function NotificationBell() {
 
       {/* Panel desplegable */}
       {open && (
-        <div className="absolute right-0 top-11 w-[320px] bg-white rounded-2xl border border-taupe/30 shadow-xl z-[200] overflow-hidden flex flex-col">
+        <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-[68px] sm:top-11 w-auto sm:w-[320px] bg-white rounded-2xl border border-taupe/30 shadow-xl z-[200] overflow-hidden flex flex-col">
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-taupe/20">
@@ -152,7 +152,7 @@ export default function NotificationBell() {
           )}
 
           {/* Lista notificaciones */}
-          <div className="max-h-[360px] overflow-y-auto divide-y divide-taupe/10">
+          <div className="max-h-[50vh] sm:max-h-[360px] overflow-y-auto divide-y divide-taupe/10">
             {items.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <p className="text-[13px] text-ink/40">Sin notificaciones aún.</p>

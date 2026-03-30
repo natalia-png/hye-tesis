@@ -75,7 +75,11 @@ export default function BottomNav() {
 
         {/* PROYECTOS */}
         <NavBtn onClick={() => nav(isCliente ? "/mis-proyectos" : "/proyectos")} active={isProjects} label="Proyectos">
-          <span className="text-xs">🧱</span>
+          <svg className="w-3.5 h-3.5" style={{ color: iconColor(isProjects) }}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+          </svg>
         </NavBtn>
 
         {/* MENSAJES */}

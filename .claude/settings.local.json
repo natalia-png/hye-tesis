@@ -49,7 +49,11 @@
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew bundleRelease)",
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug bundleRelease)",
       "Bash(npm list:*)",
-      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos -name *.js -path */functions/*)"
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos -name *.js -path */functions/*)",
+      "Bash(ls c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/app/*.keystore)",
+      "Bash(ls c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/*.keystore)",
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos -name *.keystore)",
+      "Bash(find c:/Users/HP -maxdepth 4 -name *.jks -o -name *.keystore)"
     ]
   }
 }

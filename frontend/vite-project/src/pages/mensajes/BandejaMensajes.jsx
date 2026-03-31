@@ -28,15 +28,15 @@ export default function BandejaMensajes() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="space-y-3">
         <div>
           <p className="text-[10px] uppercase tracking-[0.2em] text-ink/40 font-medium">Comunicación</p>
           <h1 className="text-[20px] font-bold text-ink leading-tight">Mensajes</h1>
         </div>
-        <div className="flex rounded-xl border border-taupe/30 overflow-hidden text-[11px]">
+        <div className="flex rounded-xl border border-taupe/30 overflow-hidden text-[11px] w-full">
           {tabs.map(t => (
             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-              className={`px-3 py-1.5 font-medium transition ${tab === t.id ? "bg-ink text-ivory" : "text-ink/60"}`}>
+              className={`flex-1 py-1.5 font-medium transition text-center ${tab === t.id ? "bg-ink text-ivory" : "text-ink/60"}`}>
               {t.label}
             </button>
           ))}

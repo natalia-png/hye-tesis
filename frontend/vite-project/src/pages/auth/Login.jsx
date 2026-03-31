@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../app/useAuth";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../lib/firebase";
-import { findUserByEmail } from "../../lib/firestore";
 import Logo from "../../assets/hye-letrasblancas.png";
 import Bg from "../../assets/bg-arch.png";
 
@@ -59,22 +58,15 @@ export default function Login() {
     if (!resetEmail.trim()) { setResetError("Ingresa tu correo."); return; }
     setResetLoading(true);
     try {
-      // Verificar si el correo existe en Firestore antes de enviar
-      const userRecord = await findUserByEmail(resetEmail.trim());
-      if (!userRecord) {
-        setResetError("No existe una cuenta registrada con ese correo.");
-        setResetLoading(false);
-        return;
-      }
-
-      const actionCodeSettings = {
-        url: globalThis.location.origin + "/login",
-        handleCodeInApp: false,
-      };
-      await sendPasswordResetEmail(auth, resetEmail.trim(), actionCodeSettings);
+      await sendPasswordResetEmail(auth, resetEmail.trim().toLowerCase());
       setResetMsg("✅ Correo enviado. Revisa tu bandeja de entrada (y la carpeta de spam).");
-    } catch {
-      setResetError("No se pudo enviar el correo. Intenta de nuevo.");
+    } catch (err) {
+      const msgs = {
+        "auth/user-not-found":    "No existe una cuenta con ese correo.",
+        "auth/invalid-email":     "El correo no es válido.",
+        "auth/too-many-requests": "Demasiados intentos. Espera unos minutos.",
+      };
+      setResetError(msgs[err.code] || "No se pudo enviar el correo. Intenta de nuevo.");
     } finally {
       setResetLoading(false);
     }

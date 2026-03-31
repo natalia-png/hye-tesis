@@ -44,10 +44,13 @@ function ShellLayout() {
     <div className="min-h-[100dvh] transition-colors duration-300 bg-[#F2EEE7] dark:bg-[#1A1917]">
       <Header />
       <main
-        className="max-w-[500px] mx-auto px-4 pt-16"
-        style={{ paddingBottom: 'max(6rem, calc(6rem + env(safe-area-inset-bottom, 0px)))' }}
+        className="w-full max-w-[560px] mx-auto px-3 sm:px-5"
+        style={{
+          paddingTop: 'calc(3.5rem + env(safe-area-inset-top, 24px))',
+          paddingBottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))',
+        }}
       >
-        <div className="rounded-[18px] border shadow-card p-3 transition-colors duration-300 bg-ivory/92 dark:bg-[#252320] border-taupe/30 dark:border-[#3a3731]">
+        <div className="rounded-[18px] border shadow-card p-3 sm:p-4 transition-colors duration-300 bg-ivory/92 dark:bg-[#252320] border-taupe/30 dark:border-[#3a3731]">
           <Outlet />
         </div>
       </main>

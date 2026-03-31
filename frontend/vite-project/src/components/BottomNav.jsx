@@ -7,9 +7,9 @@ import PropTypes from "prop-types";
 
 function NavBtn({ onClick, active, children, label }) {
   return (
-    <button type="button" onClick={onClick} className="flex flex-col items-center gap-0.5">
+    <button type="button" onClick={onClick} className="flex flex-col items-center gap-0.5 min-w-[52px] py-1">
       <span
-        className="inline-flex h-6 w-6 items-center justify-center rounded-full border transition-colors"
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full border transition-colors"
         style={active
           ? { background: "rgb(var(--ink))", borderColor: "rgb(var(--ink))" }
           : { background: "transparent", borderColor: "rgb(var(--ink) / 0.2)" }
@@ -64,7 +64,7 @@ export default function BottomNav() {
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <div className="mx-auto max-w-[500px] flex items-center justify-around py-2 text-[11px]">
+      <div className="mx-auto max-w-[560px] flex items-center justify-around py-2.5 text-[11px]">
 
         {/* INICIO */}
         <NavBtn onClick={() => nav("/")} active={isHome} label="Inicio">

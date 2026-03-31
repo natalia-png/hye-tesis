@@ -142,12 +142,19 @@ async function renderPortada(doc, proyecto) {
     doc.setLineWidth(0.4);
     doc.line(MARGIN, 72, PAGE_W - MARGIN, 72);
 
-    // Nombre del proyecto
+    // Avance global — círculo grande (se dibuja primero para calcular posición)
+    const avance = proyecto.avance ?? calcAvance(proyecto.fases);
+    const cx = PAGE_W - MARGIN - 22;
+    const cy = 108;
+    const r = 18;
+
+    // Nombre del proyecto — ancho reducido para no solapar con el círculo
     const nombreProyecto = proyecto.name || proyecto.nombre || "Proyecto";
     doc.setFont("helvetica", "bold");
     doc.setFontSize(26);
     doc.setTextColor(...C.white);
-    const lineasNombre = doc.splitTextToSize(nombreProyecto.toUpperCase(), CONTENT_W);
+    const textoMaxW = cx - r - MARGIN - 4; // deja espacio al círculo
+    const lineasNombre = doc.splitTextToSize(nombreProyecto.toUpperCase(), textoMaxW);
     doc.text(lineasNombre, MARGIN, 85);
 
     // Cliente
@@ -158,12 +165,6 @@ async function renderPortada(doc, proyecto) {
     doc.text("Cliente:", MARGIN, yCliente);
     doc.setTextColor(...C.white);
     doc.text(proyecto.client || proyecto.cliente || "—", MARGIN + 22, yCliente);
-
-    // Avance global — círculo grande
-    const avance = proyecto.avance ?? calcAvance(proyecto.fases);
-    const cx = PAGE_W - MARGIN - 22;
-    const cy = 100;
-    const r = 18;
     doc.setDrawColor(...C.taupe);
     doc.setLineWidth(2);
     doc.circle(cx, cy, r, "S");

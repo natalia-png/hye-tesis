@@ -18,10 +18,10 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("C:/Users/HP/Downloads/HYE AP/signing.keystore")
-            storePassword "70LxsaEhJKd7"
-            keyAlias "my-key-alias"
-            keyPassword "70LxsaEhJKd7"
+            storeFile file("C:/Users/HP/Downloads/HYE AP/hye-release.keystore")
+            storePassword "Equipohye123"
+            keyAlias "hye-release"
+            keyPassword "Equipohye123"
         }
     }
     buildTypes {

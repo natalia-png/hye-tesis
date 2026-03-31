@@ -21,9 +21,10 @@ export default function Header() {
         style={{
           background: "rgb(var(--sand) / 0.95)",
           borderColor: "rgb(var(--taupe) / 0.35)",
+          paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
-        <div className="max-w-[500px] mx-auto h-16 px-4 flex items-center justify-between gap-2">
+        <div className="max-w-[560px] mx-auto h-14 px-4 flex items-center justify-between gap-2">
           <div className="flex items-center flex-shrink-0">
             <img
               src={logoHye}

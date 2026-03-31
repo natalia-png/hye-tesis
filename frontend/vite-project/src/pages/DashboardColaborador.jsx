@@ -254,7 +254,7 @@ function KpiMini({ label, value, color, active = false, onClick }) {
             }`}
         >
             <p className={`text-[22px] font-bold ${color}`}>{value}</p>
-            <p className="text-[10px] text-ink/50 uppercase tracking-[0.12em]">{label}</p>
+            <p className="text-[9px] text-ink/50 uppercase tracking-[0.06em] leading-tight break-words px-1">{label}</p>
             {active && <div className="w-4 h-0.5 bg-ink/30 rounded-full mx-auto mt-0.5" />}
         </button>
     );

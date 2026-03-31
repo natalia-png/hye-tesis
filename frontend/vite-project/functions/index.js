@@ -386,7 +386,7 @@ exports.onSolicitudComercialCreada = onDocumentCreated(
    Solo ejecutable por admin (verificado por token)
 ═══════════════════════════════════════════════════════════════ */
 exports.crearColaborador = onRequest(
-  { cors: true },
+  { cors: true, secrets: ["GMAIL_USER", "GMAIL_PASS"] },
   async (req, res) => {
     if (req.method !== "POST") {
       res.status(405).json({ error: "Method not allowed" });
@@ -417,6 +417,61 @@ exports.crearColaborador = onRequest(
         subRole: subRole,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
+
+      // Enviar correo de bienvenida con enlace para establecer contraseña
+      try {
+        const resetLink = await admin.auth().generatePasswordResetLink(email.trim().toLowerCase());
+        const transporter = getTransporter();
+        const firstName = name.trim().split(" ")[0];
+        await transporter.sendMail({
+          from: `"H&E Arquitectos" <${process.env.GMAIL_USER}>`,
+          to: email.trim().toLowerCase(),
+          subject: "🏛️ Bienvenido al equipo — H&E Arquitectos",
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+              <div style="background: #141414; color: white; padding: 28px 20px; text-align: center;">
+                <p style="margin: 0 0 6px 0; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: rgba(255,255,255,0.5);">H&E Arquitectos</p>
+                <h1 style="margin: 0; font-size: 22px; font-weight: 600;">¡Bienvenido al equipo!</h1>
+              </div>
+
+              <div style="padding: 32px 28px; background: #F2EEE7;">
+                <p style="margin: 0 0 16px 0;">Hola <strong>${firstName}</strong>,</p>
+
+                <p style="margin: 0 0 16px 0;">Tu cuenta de colaborador en la plataforma <strong>H&E Arquitectos</strong> ha sido creada exitosamente. Ya puedes acceder para gestionar tus proyectos y fases asignadas.</p>
+
+                <div style="background: white; border-left: 4px solid #141414; padding: 16px 18px; margin: 24px 0; border-radius: 0 8px 8px 0;">
+                  <p style="margin: 0 0 6px 0; font-size: 13px;"><strong>Correo:</strong> ${email.trim().toLowerCase()}</p>
+                  <p style="margin: 0; font-size: 13px;"><strong>Rol:</strong> Colaborador</p>
+                </div>
+
+                <p style="margin: 0 0 20px 0;">Para establecer tu contraseña y comenzar a usar la plataforma, haz clic en el botón a continuación:</p>
+
+                <div style="text-align: center; margin: 28px 0;">
+                  <a href="${resetLink}"
+                     style="display: inline-block; background: #141414; color: white; text-decoration: none;
+                            padding: 14px 32px; border-radius: 12px; font-size: 15px; font-weight: 600;
+                            letter-spacing: 0.02em;">
+                    Establecer contraseña
+                  </a>
+                </div>
+
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #999;">Este enlace es de un solo uso y expira en 24 horas. Si no solicitaste esta cuenta, ignora este correo.</p>
+
+                <p style="margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.08); color: #999; font-size: 12px;">
+                  <strong style="color: #333;">H&E Arquitectos</strong><br>
+                  Bogotá, Colombia<br>
+                  <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
+                </p>
+              </div>
+            </div>
+          `,
+          text: `Hola ${firstName},\n\nTu cuenta de colaborador en H&E Arquitectos ha sido creada.\n\nCorreo: ${email.trim().toLowerCase()}\n\nEstablece tu contraseña aquí: ${resetLink}\n\nEste enlace expira en 24 horas.\n\nH&E Arquitectos`,
+        });
+        console.log(`✅ Email de bienvenida enviado a ${email}`);
+      } catch (emailErr) {
+        console.error("❌ Error enviando email de bienvenida:", emailErr.message);
+        // No falla la creación si el correo no se pudo enviar
+      }
 
       res.json({ success: true, uid: userRecord.uid });
     } catch (e) {

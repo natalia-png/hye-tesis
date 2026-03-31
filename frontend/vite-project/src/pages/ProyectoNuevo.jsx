@@ -265,7 +265,6 @@ export default function ProyectoNuevo() {
               name="budget"
               type="number"
               min="0"
-              step="1000000"
               value={form.budget}
               onChange={handleChange}
               placeholder="250000000"

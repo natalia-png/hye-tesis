@@ -300,10 +300,41 @@ exports.onSolicitudComercialUpdated = onDocumentUpdated(
 
     try {
       const transporter = getTransporter();
+      const aprobada = estadoDespues === "aprobada";
+      const accentColor = aprobada ? "#10b981" : "#ef4444";
+      const accentLabel = aprobada ? "✅ Solicitud aprobada" : "❌ Solicitud no aprobada";
+      // Convertir saltos de línea del cuerpo editable en párrafos HTML
+      const cuerpoHtml = cuerpo
+        .split(/\n\n+/)
+        .map(block => `<p style="margin: 0 0 14px 0;">${block.replace(/\n/g, "<br>")}</p>`)
+        .join("");
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+          <div style="background: #141414; color: white; padding: 24px 20px; text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6;">H&amp;E Arquitectos</p>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700;">${accentLabel}</h1>
+          </div>
+
+          <div style="padding: 30px 28px; background: #F2EEE7;">
+            <div style="background: white; border-left: 4px solid ${accentColor}; border-radius: 4px; padding: 18px 20px; margin-bottom: 24px; font-size: 14px; line-height: 1.7;">
+              ${cuerpoHtml}
+            </div>
+
+            <p style="margin: 0; color: #999; font-size: 12px; line-height: 1.6;">
+              <strong style="color: #555;">H&amp;E Arquitectos</strong><br>
+              Bogotá, Colombia<br>
+              <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
+            </p>
+          </div>
+        </div>
+      `;
+
       await transporter.sendMail({
         from: `"H&E Arquitectos" <${process.env.GMAIL_USER}>`,
         to: email,
         subject: asunto,
+        html,
         text: cuerpo,
       });
       console.log(`Email enviado a ${email} — estado: ${estadoDespues}`);

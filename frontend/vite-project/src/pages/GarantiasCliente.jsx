@@ -2,15 +2,16 @@
 // Módulo de Garantías y Posventa — Vista del Cliente
 // El cliente puede crear solicitudes y ver el estado de cada una
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-    collection, addDoc, serverTimestamp, getDocs,
+    collection, addDoc, serverTimestamp, getDocs, query, where,
 } from "firebase/firestore";
 import {
     ref as storageRef, uploadBytesResumable, getDownloadURL,
 } from "firebase/storage";
 import { db, storage } from "../lib/firebase";
+import { createNotification } from "../lib/notifications";
 import { useAuth } from "../app/useAuth";
 import PropTypes from "prop-types";
 import { calcFechaSolicitud } from "../data/garantias";
@@ -183,6 +184,21 @@ function FormNuevaSolicitud({ projectId, userId, userName, onClose }) {
                 createdAt: serverTimestamp(),
                 respuestas: [],
             });
+
+            // 3. Notificar a admins y colaboradores
+            try {
+                const snap = await getDocs(
+                    query(collection(db, "users"), where("role", "in", ["admin", "colaborador"]))
+                );
+                await Promise.all(snap.docs.map(d =>
+                    createNotification(d.id, {
+                        type: "nueva_garantia",
+                        title: "🔧 Nueva solicitud de garantía",
+                        body: `${userName}: ${descripcion.trim().slice(0, 80)}`,
+                        projectId,
+                    })
+                ));
+            } catch (e) { console.error("Error notificando garantía:", e); }
 
             onClose();
         } catch (e) {

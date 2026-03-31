@@ -54,6 +54,15 @@ export default function DashboardColaborador() {
     const rolLabel = SUB_ROLE_LABEL[subRole] || "Colaborador";
     const rolColor = SUB_ROLE_COLOR[subRole] || "bg-sand text-ink border-taupe/30";
 
+    const [filtro, setFiltro] = useState("todas"); // "todas" | "pendiente" | "en_curso" | "completada"
+
+    const fasesFiltradas = filtro === "todas"
+        ? misFases
+        : misFases.filter(f => f.estado === filtro);
+
+    const pendientesFiltradas = fasesFiltradas.filter(f => f.estado !== "completada");
+    const completadasFiltradas = fasesFiltradas.filter(f => f.estado === "completada");
+
     return (
         <section className="space-y-5">
 
@@ -95,11 +104,14 @@ export default function DashboardColaborador() {
                 </div>
             )}
 
-            {/* KPIs */}
+            {/* KPIs — clicables para filtrar */}
             <div className="grid grid-cols-3 gap-2">
-                <KpiMini label="Asignadas" value={misFases.length} color="text-ink" />
-                <KpiMini label="En curso" value={enCurso.length} color="text-amber-600" />
-                <KpiMini label="Completadas" value={completadas.length} color="text-emerald-600" />
+                <KpiMini label="Asignadas" value={misFases.length} color="text-ink"
+                    active={filtro === "todas"} onClick={() => setFiltro("todas")} />
+                <KpiMini label="En curso" value={enCurso.length} color="text-amber-600"
+                    active={filtro === "en_curso"} onClick={() => setFiltro(f => f === "en_curso" ? "todas" : "en_curso")} />
+                <KpiMini label="Completadas" value={completadas.length} color="text-emerald-600"
+                    active={filtro === "completada"} onClick={() => setFiltro(f => f === "completada" ? "todas" : "completada")} />
             </div>
 
             {(vencidas.length > 0 || porVencer.length > 0) && (
@@ -134,25 +146,29 @@ export default function DashboardColaborador() {
             )}
             {!loading && misFases.length > 0 && (
                 <>
+                    {fasesFiltradas.length === 0 && (
+                        <p className="text-center text-[13px] text-ink/40 py-6">Sin fases en esta categoría.</p>
+                    )}
+
                     {/* Fases pendientes / en curso */}
-                    {pendientes.length > 0 && (
+                    {pendientesFiltradas.length > 0 && (
                         <div className="space-y-2">
                             <p className="text-[11px] uppercase tracking-[0.18em] text-ink/40 font-semibold">
                                 Pendientes y en curso
                             </p>
-                            {pendientes.map((f) => (
+                            {pendientesFiltradas.map((f) => (
                                 <TarjetaFase key={`${f.proyectoId}-${f.nombre}`} fase={f} nav={nav} />
                             ))}
                         </div>
                     )}
 
                     {/* Fases completadas */}
-                    {completadas.length > 0 && (
+                    {completadasFiltradas.length > 0 && (
                         <div className="space-y-2">
                             <p className="text-[11px] uppercase tracking-[0.18em] text-ink/40 font-semibold">
                                 Completadas
                             </p>
-                            {completadas.map((f) => (
+                            {completadasFiltradas.map((f) => (
                                 <TarjetaFase key={`${f.proyectoId}-${f.nombre}`} fase={f} nav={nav} completada />
                             ))}
                         </div>
@@ -202,9 +218,9 @@ function TarjetaFase({ fase, nav, completada = false }) {
             {/* Barra de progreso */}
             <div className="space-y-1">
                 {fase.fechaEntregaResponsable && (
-                    <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-ink/50">Entrega</span>
-                        <span className={getEntregaClass(fase.fechaEntregaResponsable, completada)}>
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-ink/40 uppercase tracking-[0.1em]">Entrega</span>
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${getEntregaChipClass(fase.fechaEntregaResponsable, completada)}`}>
                             {getEntregaLabel(fase.fechaEntregaResponsable, completada)}
                         </span>
                     </div>
@@ -228,12 +244,19 @@ function TarjetaFase({ fase, nav, completada = false }) {
     );
 }
 
-function KpiMini({ label, value, color }) {
+function KpiMini({ label, value, color, active = false, onClick }) {
     return (
-        <div className="card text-center py-3 space-y-0.5">
+        <button
+            type="button"
+            onClick={onClick}
+            className={`card text-center py-3 space-y-0.5 transition-all active:scale-[0.97] w-full ${
+                active ? "ring-2 ring-ink/30 shadow-md" : "opacity-80 hover:opacity-100"
+            }`}
+        >
             <p className={`text-[22px] font-bold ${color}`}>{value}</p>
             <p className="text-[10px] text-ink/50 uppercase tracking-[0.12em]">{label}</p>
-        </div>
+            {active && <div className="w-4 h-0.5 bg-ink/30 rounded-full mx-auto mt-0.5" />}
+        </button>
     );
 }
 
@@ -257,6 +280,14 @@ function getEntregaClass(fecha, completada = false) {
     if (diff < 0) return "text-red-600 font-medium";
     if (diff <= 3) return "text-amber-700 font-medium";
     return "text-ink/70";
+}
+
+function getEntregaChipClass(fecha, completada = false) {
+    if (completada || !fecha) return "bg-sand text-ink/60";
+    const diff = diffDays(fecha);
+    if (diff < 0) return "bg-red-50 text-red-600 border border-red-200";
+    if (diff <= 3) return "bg-amber-50 text-amber-700 border border-amber-200";
+    return "bg-sand text-ink/70";
 }
 
 function diffDays(fecha) {
@@ -289,4 +320,6 @@ KpiMini.propTypes = {
     label: PropTypes.string,
     value: PropTypes.number,
     color: PropTypes.string,
+    active: PropTypes.bool,
+    onClick: PropTypes.func,
 };

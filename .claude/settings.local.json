@@ -46,7 +46,10 @@
       "Read(//c/Users/HP/**)",
       "Bash(keytool -list -keystore \"c:/Users/HP/Downloads/HYE AP/signing.keystore\" -storepass android)",
       "Bash(keytool -list -keystore \"c:/Users/HP/Downloads/HYE AP/signing.keystore\" -storepass hye2024)",
-      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew bundleRelease)"
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew bundleRelease)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ./gradlew assembleDebug bundleRelease)",
+      "Bash(npm list:*)",
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos -name *.js -path */functions/*)"
     ]
   }
 }

@@ -85,7 +85,11 @@ export default function ComercialAdmin() {
                 <button
                     type="button"
                     onClick={() => {
-                        const url = `${globalThis.location.origin}/solicitar`;
+                        const origin = globalThis.location?.origin;
+                        const base = (!origin || origin.includes("localhost") || origin.includes("capacitor"))
+                            ? "https://hye-tesis.web.app"
+                            : origin;
+                        const url = `${base}/solicitar`;
                         navigator.clipboard?.writeText(url);
                         alert("Link copiado:\n" + url);
                     }}
@@ -148,6 +152,7 @@ function TarjetaSolicitud({ solicitud, nav }) {
     const [enviandoEmail, setEnviandoEmail] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [emailOk, setEmailOk] = useState("");
 
     const fecha = solicitud.createdAt?.toDate
         ? solicitud.createdAt.toDate().toLocaleDateString("es-CO", {
@@ -208,7 +213,11 @@ function TarjetaSolicitud({ solicitud, nav }) {
                     enviadoAt: new Date().toISOString(),
                 },
             });
+            const destinatario = solicitud.email;
+            const accion = modalEmail.estado === "aprobada" ? "aprobación" : "rechazo";
             setModalEmail(null);
+            setEmailOk(`✓ Correo de ${accion} enviado a ${destinatario}`);
+            setTimeout(() => setEmailOk(""), 5000);
         } catch (e) {
             console.error(e);
         } finally {
@@ -446,6 +455,14 @@ function TarjetaSolicitud({ solicitud, nav }) {
                     </div>
                 </div>
             )}
+            {/* ── Banner confirmación email ── */}
+            {emailOk && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+                    <span className="text-emerald-500 text-[14px]">✓</span>
+                    <p className="text-[12px] text-emerald-700 font-medium">{emailOk}</p>
+                </div>
+            )}
+
             {/* ── Modal editar email ── */}
             {modalEmail && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-4">

@@ -447,8 +447,8 @@ function RingChart({ value = 0 }) {
   const pct = clampInt(value, 0, 100);
   return (
     <div className="relative h-[90px] w-[90px] rounded-full flex-shrink-0"
-      style={{ background: `conic-gradient(#141414 ${pct * 3.6}deg, rgba(20,20,20,0.12) 0deg)` }}>
-      <div className="absolute inset-[8px] rounded-full bg-[#F2EEE7] border border-taupe/30 flex items-center justify-center">
+      style={{ background: `conic-gradient(rgb(var(--ink)) ${pct * 3.6}deg, rgb(var(--ink) / 0.12) 0deg)` }}>
+      <div className="absolute inset-[8px] rounded-full border border-taupe/30 flex items-center justify-center" style={{ background: "rgb(var(--sand))" }}>
         <div className="text-center">
           <p className="text-[15px] font-semibold text-ink leading-none">{pct}%</p>
           <p className="text-[9px] text-ink/60 mt-0.5">avance</p>

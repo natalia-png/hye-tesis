@@ -62,7 +62,17 @@ export default function FasesProyecto({
   const [localFases, setLocalFases] = useState(safeFases);
   const [colaboradores, setColaboradores] = useState([]);
   const initialRef = useRef(safeFases);
-  const [openId, setOpenId] = useState(safeFases?.[0]?.id || null);
+
+  // Colaborador solo ve sus fases asignadas; admin y cliente ven todas
+  const fasesVisibles = useMemo(() => {
+    if (!isColab) return localFases;
+    return localFases.filter(f => f.responsableUid === user?.uid);
+  }, [isColab, localFases, user?.uid]);
+
+  const primeraFaseColab = safeFases.find(f => f.responsableUid === user?.uid);
+  const [openId, setOpenId] = useState(
+    isColab ? (primeraFaseColab?.id || null) : (safeFases?.[0]?.id || null)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
@@ -225,7 +235,7 @@ export default function FasesProyecto({
         <div className="text-right">
           <p className="text-[11px] text-ink/60">Avance global</p>
           <p className="text-[16px] font-semibold text-ink leading-tight">{avanceGlobal}%</p>
-          <p className="text-[11px] text-ink/50">{completed}/{localFases.length} completadas</p>
+          <p className="text-[11px] text-ink/50">{completed}/{isColab ? fasesVisibles.length : localFases.length} {isColab ? "asignadas" : "completadas"}</p>
         </div>
       </div>
 
@@ -249,9 +259,17 @@ export default function FasesProyecto({
       {toast && <p className="text-[12px] text-ink/70">{toast}</p>}
       {error && <p className="text-[12px] text-red-600">{error}</p>}
 
+      {/* Empty state colaborador sin fases asignadas */}
+      {isColab && fasesVisibles.length === 0 && (
+        <div className="py-8 text-center space-y-1">
+          <p className="text-[13px] font-medium text-ink/60">No tienes fases asignadas aún</p>
+          <p className="text-[11px] text-ink/40">El administrador te asignará fases próximamente.</p>
+        </div>
+      )}
+
       {/* Acordeón */}
       <div className="grid gap-2">
-        {localFases.map(f => {
+        {fasesVisibles.map(f => {
           const pct = clampInt(f.porcentaje, 0, 100);
           const isOpen = openId === f.id;
 
@@ -263,7 +281,12 @@ export default function FasesProyecto({
                 className="w-full px-3 py-3 flex items-center justify-between gap-3 text-left"
               >
                 <div className="min-w-0">
-                  <p className="text-[13px] font-medium text-ink truncate">{f.nombre}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[13px] font-medium text-ink truncate">{f.nombre}</p>
+                    {isColab && f.responsableUid === user?.uid && (
+                      <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-ink text-ivory">Tu fase</span>
+                    )}
+                  </div>
                   <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <EstadoChip estado={f.estado} />
                     <span className="text-[11px] text-ink/60">{pct}%</span>
@@ -287,7 +310,7 @@ export default function FasesProyecto({
               </button>
 
               {isOpen && (
-                <div className="px-3 pb-3">
+                <div className="px-3 pb-3 overflow-hidden">
                   <div className="mt-2">
                     <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
                       <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
@@ -323,7 +346,7 @@ export default function FasesProyecto({
                           value={localFases.find(lf => lf.id === f.id)?.fechaEntregaResponsable || ""}
                           onChange={e => handleFechaEntregaChange(f.id, e.target.value)}
                           disabled={!(localFases.find(lf => lf.id === f.id)?.responsableUid)}
-                          className="input w-full text-[12px] disabled:opacity-50"
+                          className="input w-full max-w-full text-[12px] disabled:opacity-50 box-border"
                         />
                         <p className="text-[10px] text-ink/45">
                           Define para cuando necesitas esta fase una vez tenga responsable.

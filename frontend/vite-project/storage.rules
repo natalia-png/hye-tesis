@@ -6,34 +6,36 @@ service firebase.storage {
     function myUid()    { return request.auth.uid; }
     function myEmail()  { return request.auth.token.email; }
 
+    function userRole() {
+      return firestore.get(/databases/(default)/documents/users/$(myUid())).data.role;
+    }
+
     function isAdmin() {
-      return signedIn() && (
-        myEmail() == "admin@hye.com"
-        || (
-          exists(/databases/(default)/documents/users/$(myUid()))
-          && get(/databases/(default)/documents/users/$(myUid())).data.role == "admin"
-        )
-      );
+      return signedIn()
+        && myEmail() == "hyearquitectos@gmail.com"
+        || (signedIn()
+          && firestore.exists(/databases/(default)/documents/users/$(myUid()))
+          && userRole() == "admin");
     }
 
     function isColaborador() {
       return signedIn()
-        && exists(/databases/(default)/documents/users/$(myUid()))
-        && get(/databases/(default)/documents/users/$(myUid())).data.role == "colaborador";
+        && firestore.exists(/databases/(default)/documents/users/$(myUid()))
+        && userRole() == "colaborador";
     }
 
     function isClientOfProject(projectId) {
       return signedIn()
-        && exists(/databases/(default)/documents/projects/$(projectId))
+        && firestore.exists(/databases/(default)/documents/projects/$(projectId))
         && (
-          get(/databases/(default)/documents/projects/$(projectId)).data.clientId == myUid()
-          || get(/databases/(default)/documents/projects/$(projectId)).data.clientEmail == myEmail()
+          firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientId == myUid()
+          || firestore.get(/databases/(default)/documents/projects/$(projectId)).data.clientEmail == myEmail()
         );
     }
 
     function isVisiblePhaseFile(projectId, faseId, fileId) {
-      return exists(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId))
-        && get(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId)).data.visibleToClient == true;
+      return firestore.exists(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId))
+        && firestore.get(/databases/(default)/documents/projects/$(projectId)/fases/$(faseId)/archivos/$(fileId)).data.visibleToClient == true;
     }
 
     function isImage() {

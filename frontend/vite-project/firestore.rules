@@ -107,7 +107,8 @@ service cloud.firestore {
     /* ---------------- SOLICITUDES COMERCIALES ---------------- */
     match /solicitudesComerciales/{solicitudId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read, update: if isAdmin() || isColaborador();
+      allow delete: if isAdmin();
     }
 
     /* ---------------- CHATS ---------------- */

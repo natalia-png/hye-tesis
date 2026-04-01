@@ -10,7 +10,7 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { db, firebaseConfig } from "../lib/firebase";
 
 const FUNCTIONS_URL = "https://us-central1-hye-tesis.cloudfunctions.net";
-import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
+import { getSubRoleColor } from "../data/roles";
 
 // App secundaria — solo para crear usuarios sin afectar sesión de Luisa
 function getSecondaryAuth() {
@@ -20,10 +20,8 @@ function getSecondaryAuth() {
     return getAuth(secondaryApp);
 }
 
-const SUB_ROLES_OPTIONS = [
-    { value: "juridica", label: "Jurídica" },
-    { value: "sistemas", label: "Sistemas" },
-    { value: "arquitecto", label: "Arquitecto" },
+const SUB_ROLES_SUGERIDOS = [
+    "Arquitecto", "Diseño", "Residente de obra", "Jurídica", "Coordinación",
 ];
 
 export default function GestionColaboradores() {
@@ -34,7 +32,7 @@ export default function GestionColaboradores() {
     const [error, setError] = useState("");
 
     const [form, setForm] = useState({
-        name: "", email: "", password: "", subRole: "juridica",
+        name: "", email: "", password: "", subRole: "",
     });
     const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -176,18 +174,25 @@ export default function GestionColaboradores() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label htmlFor="colab-area" className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Área</label>
-                            <div id="colab-area" className="flex gap-2 flex-wrap">
-                                {SUB_ROLES_OPTIONS.map(opt => (
-                                    <button key={opt.value} type="button" onClick={() => set("subRole", opt.value)}
-                                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-all ${form.subRole === opt.value
-                                                ? "bg-ink text-ivory border-ink"
-                                                : "bg-white text-ink/60 border-ink/15 hover:border-ink/30"
-                                            }`}>
-                                        {opt.label}
+                            <label className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Área</label>
+                            <div className="flex gap-1.5 flex-wrap">
+                                {SUB_ROLES_SUGERIDOS.map(s => (
+                                    <button key={s} type="button" onClick={() => set("subRole", s)}
+                                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium border transition-all ${form.subRole === s
+                                            ? "bg-ink text-ivory border-ink"
+                                            : "bg-white text-ink/60 border-ink/15 hover:border-ink/30"
+                                        }`}>
+                                        {s}
                                     </button>
                                 ))}
                             </div>
+                            <input
+                                type="text"
+                                value={form.subRole}
+                                onChange={e => set("subRole", e.target.value)}
+                                placeholder="O escribe un área personalizada…"
+                                className="w-full border border-taupe/30 rounded-xl px-3 py-2 text-[12px] bg-white outline-none focus:border-ink/40 text-ink placeholder:text-ink/30 mt-1"
+                            />
                         </div>
 
                         <div className="space-y-1">
@@ -230,8 +235,8 @@ export default function GestionColaboradores() {
 
 function TarjetaColaborador({ colaborador, onEliminar }) {
     const subRole = colaborador.subRole || "";
-    const rolLabel = SUB_ROLE_LABEL[subRole] || "Colaborador";
-    const rolColor = SUB_ROLE_COLOR[subRole] || "bg-sand text-ink border-taupe/30";
+    const rolLabel = subRole || "Colaborador";
+    const rolColor = getSubRoleColor(subRole);
 
     return (
         <div className="card flex items-center justify-between gap-3">

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { updateProfile, verifyBeforeUpdateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { collection, doc, getDocs, limit, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../lib/firebase";
@@ -273,9 +273,8 @@ function InfoRow({ label, value }) {
 }
 
 function SeccionSeguridad() {
-  const [modo, setModo] = useState(null); // null | "email" | "password"
+  const [abierto, setAbierto] = useState(false);
   const [contraActual, setContraActual] = useState("");
-  const [nuevoEmail, setNuevoEmail] = useState("");
   const [nuevaContra, setNuevaContra] = useState("");
   const [confirmaContra, setConfirmaContra] = useState("");
   const [saving, setSaving] = useState(false);
@@ -283,43 +282,12 @@ function SeccionSeguridad() {
   const [ok, setOk] = useState("");
 
   const reset = () => {
-    setModo(null);
+    setAbierto(false);
     setContraActual("");
-    setNuevoEmail("");
     setNuevaContra("");
     setConfirmaContra("");
     setError("");
     setOk("");
-  };
-
-  const reautenticar = async () => {
-    const fbUser = auth.currentUser;
-    const cred = EmailAuthProvider.credential(fbUser.email, contraActual);
-    await reauthenticateWithCredential(fbUser, cred);
-  };
-
-  const handleEmail = async () => {
-    if (!nuevoEmail.trim()) return setError("Escribe el nuevo correo.");
-    if (!contraActual) return setError("Escribe tu contraseña actual.");
-    setSaving(true); setError("");
-    try {
-      await reautenticar();
-      const newEmail = nuevoEmail.trim().toLowerCase();
-      await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
-      // Actualizar Firestore optimistically — Firebase Auth cambiará cuando el usuario confirme
-      await updateDoc(doc(db, "users", auth.currentUser.uid), { email: newEmail });
-      setOk("Te enviamos un correo de verificación a la nueva dirección. Confírmalo para completar el cambio.");
-      setTimeout(reset, 4000);
-    } catch (e) {
-      const msgs = {
-        "auth/wrong-password": "Contraseña incorrecta.",
-        "auth/invalid-credential": "Contraseña incorrecta.",
-        "auth/email-already-in-use": "Ese correo ya está en uso.",
-        "auth/invalid-email": "Correo inválido.",
-        "auth/requires-recent-login": "Cierra sesión, vuelve a entrar e inténtalo de nuevo.",
-      };
-      setError(msgs[e.code] || "Error al actualizar el correo.");
-    } finally { setSaving(false); }
   };
 
   const handlePassword = async () => {
@@ -329,13 +297,16 @@ function SeccionSeguridad() {
     if (nuevaContra !== confirmaContra) return setError("Las contraseñas no coinciden.");
     setSaving(true); setError("");
     try {
-      await reautenticar();
-      await updatePassword(auth.currentUser, nuevaContra);
+      const fbUser = auth.currentUser;
+      const cred = EmailAuthProvider.credential(fbUser.email, contraActual);
+      await reauthenticateWithCredential(fbUser, cred);
+      await updatePassword(fbUser, nuevaContra);
       setOk("Contraseña actualizada correctamente.");
       setTimeout(reset, 2500);
     } catch (e) {
       const msgs = {
         "auth/wrong-password": "Contraseña actual incorrecta.",
+        "auth/invalid-credential": "Contraseña actual incorrecta.",
         "auth/requires-recent-login": "Cierra sesión, vuelve a entrar e inténtalo de nuevo.",
       };
       setError(msgs[e.code] || "Error al actualizar la contraseña.");
@@ -348,36 +319,20 @@ function SeccionSeguridad() {
         Seguridad
       </p>
 
-      {!modo && (
-        <div className="flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={() => setModo("email")}
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl border transition"
-            style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}
-          >
-            <span className="text-[13px]" style={{ color: "rgb(var(--ink))" }}>Cambiar correo</span>
-            <span className="text-[12px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>›</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setModo("password")}
-            className="flex items-center justify-between px-3 py-2.5 rounded-xl border transition"
-            style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}
-          >
-            <span className="text-[13px]" style={{ color: "rgb(var(--ink))" }}>Cambiar contraseña</span>
-            <span className="text-[12px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>›</span>
-          </button>
-        </div>
-      )}
-
-      {modo && (
+      {!abierto ? (
+        <button
+          type="button"
+          onClick={() => setAbierto(true)}
+          className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl border transition"
+          style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}
+        >
+          <span className="text-[13px]" style={{ color: "rgb(var(--ink))" }}>Cambiar contraseña</span>
+          <span className="text-[12px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>›</span>
+        </button>
+      ) : (
         <div className="space-y-3">
-          <p className="text-[13px] font-medium" style={{ color: "rgb(var(--ink))" }}>
-            {modo === "email" ? "Cambiar correo" : "Cambiar contraseña"}
-          </p>
+          <p className="text-[13px] font-medium" style={{ color: "rgb(var(--ink))" }}>Cambiar contraseña</p>
 
-          {/* Contraseña actual — siempre requerida */}
           <div className="space-y-1">
             <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Contraseña actual</label>
             <input
@@ -388,63 +343,35 @@ function SeccionSeguridad() {
               placeholder="••••••••"
             />
           </div>
-
-          {modo === "email" && (
-            <div className="space-y-1">
-              <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Nuevo correo</label>
-              <input
-                type="email"
-                value={nuevoEmail}
-                onChange={e => setNuevoEmail(e.target.value)}
-                className="input w-full text-[13px]"
-                placeholder="nuevo@correo.com"
-              />
-            </div>
-          )}
-
-          {modo === "password" && (
-            <>
-              <div className="space-y-1">
-                <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Nueva contraseña</label>
-                <input
-                  type="password"
-                  value={nuevaContra}
-                  onChange={e => setNuevaContra(e.target.value)}
-                  className="input w-full text-[13px]"
-                  placeholder="Mínimo 6 caracteres"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Confirmar contraseña</label>
-                <input
-                  type="password"
-                  value={confirmaContra}
-                  onChange={e => setConfirmaContra(e.target.value)}
-                  className="input w-full text-[13px]"
-                  placeholder="Repite la nueva contraseña"
-                />
-              </div>
-            </>
-          )}
+          <div className="space-y-1">
+            <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Nueva contraseña</label>
+            <input
+              type="password"
+              value={nuevaContra}
+              onChange={e => setNuevaContra(e.target.value)}
+              className="input w-full text-[13px]"
+              placeholder="Mínimo 6 caracteres"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Confirmar contraseña</label>
+            <input
+              type="password"
+              value={confirmaContra}
+              onChange={e => setConfirmaContra(e.target.value)}
+              className="input w-full text-[13px]"
+              placeholder="Repite la nueva contraseña"
+            />
+          </div>
 
           {error && <p className="text-[12px] text-red-500">{error}</p>}
           {ok && <p className="text-[12px] text-emerald-600">{ok}</p>}
 
           <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={reset}
-              disabled={saving}
-              className="flex-1 btn-outline text-[13px]"
-            >
+            <button type="button" onClick={reset} disabled={saving} className="flex-1 btn-outline text-[13px]">
               Cancelar
             </button>
-            <button
-              type="button"
-              onClick={modo === "email" ? handleEmail : handlePassword}
-              disabled={saving}
-              className="flex-1 btn-primary text-[13px] disabled:opacity-50"
-            >
+            <button type="button" onClick={handlePassword} disabled={saving} className="flex-1 btn-primary text-[13px] disabled:opacity-50">
               {saving ? "Guardando…" : "Guardar"}
             </button>
           </div>

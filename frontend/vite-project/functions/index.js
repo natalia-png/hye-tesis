@@ -192,7 +192,7 @@ exports.onGarantiaCreada = onDocumentCreated(
     if (!solicitud) return;
 
     // Buscar al admin por email fijo
-    const adminEmail = "admin@hye.com";
+    const adminEmail = "hyearquitectos@gmail.com";
     const adminSnap = await db.collection("users")
       .where("email", "==", adminEmail)
       .limit(1).get();
@@ -352,7 +352,7 @@ exports.onSolicitudComercialCreada = onDocumentCreated(
 
     // Buscar uid del admin por email
     const adminSnap = await db.collection("users")
-      .where("email", "==", "admin@hye.com")
+      .where("email", "==", "hyearquitectos@gmail.com")
       .limit(1).get();
 
     if (adminSnap.empty) return;
@@ -703,7 +703,7 @@ exports.notificarVencimientos = onSchedule(
 
     // Obtener UID del admin
     const adminSnap = await db.collection("users")
-      .where("email", "==", "admin@hye.com")
+      .where("email", "==", "hyearquitectos@gmail.com")
       .limit(1).get();
     const adminUid = adminSnap.empty ? null : adminSnap.docs[0].id;
 
@@ -741,7 +741,7 @@ exports.notificarVencimientos = onSchedule(
       // ── Vencimiento de fase → colaborador responsable ─────────
       const fases = Array.isArray(p.fases) ? p.fases : [];
       for (const fase of fases) {
-        const uid = fase.responsableUID || fase.responsable || null;
+        const uid = fase.responsableUid || fase.responsableUID || fase.responsable || null;
         if (!uid || !fase.fechaEntregaResponsable) continue;
 
         const fechaFase = parseDateValue(fase.fechaEntregaResponsable);

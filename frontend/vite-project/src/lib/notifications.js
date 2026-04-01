@@ -22,17 +22,8 @@ export async function createNotification(toUid, payload) {
     });
   } catch (e) { console.error("createNotification in-app error:", e.message || e); }
 
-  // 2 ── Push FCM (si el usuario tiene tokens guardados)
+  // 2 ── Push FCM via Cloud Function
   try {
-    const tokensSnap = await getDocs(
-      collection(db, "users", toUid, "fcmTokens")
-    );
-    if (tokensSnap.empty) return;
-
-    const tokens = tokensSnap.docs.map(d => d.data().token).filter(Boolean);
-    if (tokens.length === 0) return;
-
-    // URL de la Cloud Function
     const projectIdFirebase = db.app.options.projectId;
     const fnUrl = `https://us-central1-${projectIdFirebase}.cloudfunctions.net/sendPush`;
 
@@ -40,16 +31,15 @@ export async function createNotification(toUid, payload) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        tokens, // Arreglo de tokens devuelto por firestore
+        userId: toUid,
         title: payload.title,
-        body: payload.body,
+        body: payload.body || "",
         data: {
           type: payload.type || "general",
           projectId: payload.projectId || "",
           projectName: payload.projectName || "",
           phaseId: payload.phaseId || "",
           phaseName: payload.phaseName || "",
-          role: payload.role || "general",
         },
       }),
     });

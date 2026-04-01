@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
-import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
+import { SUB_ROLE_LABEL, getSubRoleColor } from "../data/roles";
 import PropTypes from "prop-types";
 
 export default function DashboardColaborador() {
@@ -51,8 +51,8 @@ export default function DashboardColaborador() {
     const porVencer = pendientes.filter(f => isFechaProxima(f.fechaEntregaResponsable));
 
     const subRole = user?.subRole || "";
-    const rolLabel = SUB_ROLE_LABEL[subRole] || "Colaborador";
-    const rolColor = SUB_ROLE_COLOR[subRole] || "bg-sand text-ink border-taupe/30";
+    const rolLabel = subRole || "Colaborador";
+    const rolColor = getSubRoleColor(subRole);
 
     const [filtro, setFiltro] = useState("todas"); // "todas" | "pendiente" | "en_curso" | "completada"
 

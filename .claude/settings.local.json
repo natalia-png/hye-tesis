@@ -53,7 +53,24 @@
       "Bash(ls c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/app/*.keystore)",
       "Bash(ls c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/*.keystore)",
       "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos -name *.keystore)",
-      "Bash(find c:/Users/HP -maxdepth 4 -name *.jks -o -name *.keystore)"
+      "Bash(find c:/Users/HP -maxdepth 4 -name *.jks -o -name *.keystore)",
+      "Bash(./gradlew bundleRelease)",
+      "Bash(where java:*)",
+      "Read(//c/Program Files/**)",
+      "Bash(find c:/Users/HP/.gradle/caches -name build.gradle -path *capacitor-filesystem*)",
+      "Bash(find c:/Users/HP/.android -name build.gradle -path *capacitor-filesystem*)",
+      "Bash(find c:/Users/HP/AppData -name build.gradle -path *capacitor-filesystem*)",
+      "Bash(npm show:*)",
+      "Bash(JAVA_HOME=\"C:/Users/HP/Downloads/Java 17/jdk-17.0.12\" ./gradlew bundleRelease)",
+      "Bash(firebase functions:secrets:set GMAIL_USER)",
+      "Bash(firebase functions:secrets:set GMAIL_PASS)",
+      "Bash(JAVA_HOME=\"C:/Users/HP/Downloads/Java 17/jdk-17.0.12\" ./gradlew assembleRelease)",
+      "Bash(./gradlew assembleRelease)",
+      "Bash(APK_SRC=\"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/app/build/outputs/apk/release/app-release.apk\")",
+      "Bash(AAB_SRC=\"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/app/build/outputs/bundle/release/app-release.aab\")",
+      "Bash(DEST=\"c:/Users/HP/Downloads/HYE AP\")",
+      "Bash(__NEW_LINE_a0f6dab48d3d0261__ cp:*)",
+      "Bash(cp \"$AAB_SRC\" \"$DEST/HyE Arquitectos.aab\")"
     ]
   }
 }

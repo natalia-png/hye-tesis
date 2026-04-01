@@ -1,10 +1,19 @@
 // src/components/FasesProyecto.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, DragOverlay,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy,
+  useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import PropTypes from "prop-types";
 import { doc, getDoc, getDocs, collection, query, where, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
-import { SUB_ROLE_LABEL, SUB_ROLE_COLOR } from "../data/roles";
+import { SUB_ROLE_LABEL, getSubRoleColor } from "../data/roles";
 import NotasFase from "./NotasFase.jsx";
 import ArchivosFase from "./ArchivosFase.jsx";
 import { calcAvanceGlobal, clampInt, labelEstado, normalizeFases } from "../data/fases";
@@ -160,6 +169,48 @@ export default function FasesProyecto({
     setTimeout(() => setToast(""), 2500);
   };
 
+  const [nuevaFaseNombre, setNuevaFaseNombre] = useState("");
+  const [mostrarFormNueva, setMostrarFormNueva] = useState(false);
+
+  const agregarFase = useCallback(() => {
+    const nombre = nuevaFaseNombre.trim();
+    if (!nombre) return;
+    const newId = `fase_extra_${Date.now()}`;
+    setLocalFases(prev => [...prev, {
+      id: newId,
+      nombre,
+      porcentaje: 0,
+      estado: "pendiente",
+      responsableUid: null,
+      responsableNombre: null,
+      responsableSubRole: null,
+      fechaEntregaResponsable: null,
+    }]);
+    setNuevaFaseNombre("");
+    setMostrarFormNueva(false);
+  }, [nuevaFaseNombre]);
+
+  const eliminarFase = useCallback((faseId) => {
+    setLocalFases(prev => prev.filter(f => f.id !== faseId));
+    setOpenId(cur => cur === faseId ? null : cur);
+  }, []);
+
+  // ── Drag & drop (solo admin) ─────────────────────────────────
+  const [activeDragId, setActiveDragId] = useState(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 200, tolerance: 8 } }),
+  );
+  const handleDragEnd = useCallback(({ active, over }) => {
+    setActiveDragId(null);
+    if (!over || active.id === over.id) return;
+    setLocalFases(prev => {
+      const oldIdx = prev.findIndex(f => f.id === active.id);
+      const newIdx = prev.findIndex(f => f.id === over.id);
+      return arrayMove(prev, oldIdx, newIdx);
+    });
+  }, []);
+
   const saveAll = async () => {
     if (!canEditHere || !projectId || !dirty) return;
     setSaving(true);
@@ -241,18 +292,44 @@ export default function FasesProyecto({
 
       {/* Acciones admin */}
       {canEditHere && (
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-ink/60">
-            {dirty ? "Tienes cambios sin guardar." : "Sin cambios pendientes."}
-          </p>
-          <div className="flex items-center gap-2">
-            <button type="button" className="btn-outline text-[12px]" onClick={reset} disabled={saving || !dirty}>
-              Restablecer
-            </button>
-            <button type="button" className="btn-primary text-[12px]" onClick={saveAll} disabled={saving || !dirty}>
-              {saving ? "Guardando…" : "Guardar cambios"}
-            </button>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-[11px] text-ink/60 flex-1 min-w-0">
+              {dirty ? "Tienes cambios sin guardar." : "Sin cambios pendientes."}
+            </p>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {isAdmin && (
+                <button type="button" className="btn-outline text-[11px] px-2.5 py-1" onClick={() => setMostrarFormNueva(v => !v)}>
+                  + Fase
+                </button>
+              )}
+              <button type="button" className="btn-outline text-[11px] px-2.5 py-1" onClick={reset} disabled={saving || !dirty}>
+                Restablecer
+              </button>
+              <button type="button" className="btn-primary text-[11px] px-2.5 py-1" onClick={saveAll} disabled={saving || !dirty}>
+                {saving ? "Guardando…" : "Guardar"}
+              </button>
+            </div>
           </div>
+          {mostrarFormNueva && isAdmin && (
+            <div className="flex gap-2 items-center bg-sand/50 border border-taupe/30 rounded-xl px-3 py-2">
+              <input
+                type="text"
+                value={nuevaFaseNombre}
+                onChange={e => setNuevaFaseNombre(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && agregarFase()}
+                placeholder="Nombre de la nueva fase…"
+                className="flex-1 bg-transparent text-[12px] outline-none text-ink placeholder:text-ink/40"
+                autoFocus
+              />
+              <button type="button" onClick={agregarFase} disabled={!nuevaFaseNombre.trim()} className="btn-primary text-[11px] py-1 px-3">
+                Agregar
+              </button>
+              <button type="button" onClick={() => { setMostrarFormNueva(false); setNuevaFaseNombre(""); }} className="text-[11px] text-ink/50 hover:text-ink">
+                Cancelar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -268,123 +345,51 @@ export default function FasesProyecto({
       )}
 
       {/* Acordeón */}
-      <div className="grid gap-2">
-        {fasesVisibles.map(f => {
-          const pct = clampInt(f.porcentaje, 0, 100);
-          const isOpen = openId === f.id;
-
-          return (
-            <div key={f.id} className="rounded-2xl border border-sand bg-white/80 overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setOpenId(cur => cur === f.id ? null : f.id)}
-                className="w-full px-3 py-3 flex items-center justify-between gap-3 text-left"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-[13px] font-medium text-ink truncate">{f.nombre}</p>
-                    {isColab && f.responsableUid === user?.uid && (
-                      <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-ink text-ivory">Tu fase</span>
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 flex-wrap">
-                    <EstadoChip estado={f.estado} />
-                    <span className="text-[11px] text-ink/60">{pct}%</span>
-                    <span className="text-[11px] text-ink/40">· Peso {f.peso}</span>
-                    {f.responsableNombre && (
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${SUB_ROLE_COLOR[f.responsableSubRole] || "bg-sand text-ink/60 border-taupe/20"}`}>
-                        {f.responsableNombre.split(" ")[0]}
-                      </span>
-                    )}
-                    {f.fechaEntregaResponsable && (
-                      <span className="text-[11px] text-ink/50">
-                        · Entrega {formatFechaCorta(f.fechaEntregaResponsable)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[14px] font-semibold text-ink">{pct}%</span>
-                  <span className="text-[12px] text-ink/50">{isOpen ? "▴" : "▾"}</span>
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="px-3 pb-3 overflow-hidden">
-                  <div className="mt-2">
-                    <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
-                      <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Selector de responsable — solo admin */}
-                  {isAdmin && colaboradores.length > 0 && (
-                    <div className="mt-3 space-y-3">
-                      <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
-                          Responsable
-                        </p>
-                        <select
-                          value={localFases.find(lf => lf.id === f.id)?.responsableUid || ""}
-                          onChange={e => handleResponsableChange(f.id, e.target.value)}
-                          className="input w-full text-[12px]"
-                        >
-                          <option value="">Sin responsable</option>
-                          {colaboradores.map(col => (
-                            <option key={col.uid} value={col.uid}>
-                              {col.name} ({SUB_ROLE_LABEL[col.subRole] || col.subRole})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">
-                          Fecha de entrega
-                        </p>
-                        <input
-                          type="date"
-                          value={localFases.find(lf => lf.id === f.id)?.fechaEntregaResponsable || ""}
-                          onChange={e => handleFechaEntregaChange(f.id, e.target.value)}
-                          disabled={!(localFases.find(lf => lf.id === f.id)?.responsableUid)}
-                          className="input w-full max-w-full text-[12px] disabled:opacity-50 box-border"
-                        />
-                        <p className="text-[10px] text-ink/45">
-                          Define para cuando necesitas esta fase una vez tenga responsable.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Slider — admin siempre, colaborador solo en sus fases */}
-                  {canEditFaseActual(f) ? (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-[11px] text-ink/60 mb-1">
-                        <span>Ajustar avance</span><span>{pct}%</span>
-                      </div>
-                      <input
-                        type="range" min={0} max={100} step={5} value={pct}
-                        onChange={e => setPct(f.id, e.target.value)}
-                        className="w-full accent-ink"
-                      />
-                      <p className="text-[10px] text-ink/50 mt-1">Incrementos de 5% para consistencia.</p>
-                    </div>
-                  ) : (
-                    <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/40">
-                      {isColab && f.responsableUid && f.responsableUid !== user?.uid
-                        ? <span>Esta fase está asignada a otro colaborador.</span>
-                        : <span>El avance lo actualiza el equipo de H&E.</span>
-                      }
-                    </div>
-                  )}
-
-                  <NotasFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
-                  <ArchivosFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
-                </div>
-              )}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={({ active }) => setActiveDragId(active.id)}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveDragId(null)}
+      >
+        <SortableContext
+          items={fasesVisibles.map(f => f.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="grid gap-2">
+            {fasesVisibles.map(f => (
+              <SortableFaseItem
+                key={f.id}
+                f={f}
+                isAdmin={isAdmin}
+                isColab={isColab}
+                canEditHere={canEditHere}
+                openId={openId}
+                setOpenId={setOpenId}
+                canEditFaseActual={canEditFaseActual}
+                colaboradores={colaboradores}
+                handleResponsableChange={handleResponsableChange}
+                handleFechaEntregaChange={handleFechaEntregaChange}
+                setPct={setPct}
+                projectId={projectId}
+                clientView={clientView}
+                user={user}
+                isDragging={activeDragId === f.id}
+                onEliminar={eliminarFase}
+              />
+            ))}
+          </div>
+        </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeDragId ? (
+            <div className="rounded-2xl border border-ink/20 bg-white shadow-xl px-3 py-3 opacity-95">
+              <p className="text-[13px] font-medium text-ink truncate">
+                {fasesVisibles.find(f => f.id === activeDragId)?.nombre}
+              </p>
             </div>
-          );
-        })}
-      </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {clientView && (
         <p className="text-[11px] text-ink/50">
@@ -436,4 +441,153 @@ function formatFechaCorta(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("es-CO", { day: "2-digit", month: "short" });
+}
+
+/* ── Componente sortable de fase ─────────────────────────────── */
+function SortableFaseItem({
+  f, isAdmin, isColab, canEditHere, openId, setOpenId,
+  canEditFaseActual, colaboradores, handleResponsableChange,
+  handleFechaEntregaChange, setPct, projectId, clientView, user, isDragging,
+  onEliminar,
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: f.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.35 : 1,
+  };
+
+  const pct = clampInt(f.porcentaje, 0, 100);
+  const isOpen = openId === f.id;
+
+  return (
+    <div ref={setNodeRef} style={style} className="rounded-2xl border border-sand bg-white/80 overflow-hidden">
+      <div className="flex items-stretch">
+        {/* Handle drag — solo admin, no en clientView */}
+        {isAdmin && canEditHere && (
+          <button
+            type="button"
+            {...listeners}
+            {...attributes}
+            className="flex items-center justify-center px-2 cursor-grab active:cursor-grabbing text-ink/20 hover:text-ink/50 transition-colors touch-none flex-shrink-0 focus:outline-none"
+            tabIndex={-1}
+            aria-label="Arrastrar para reordenar"
+          >
+            <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor">
+              <circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/>
+              <circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/>
+              <circle cx="2.5" cy="13.5" r="1.5"/><circle cx="7.5" cy="13.5" r="1.5"/>
+            </svg>
+          </button>
+        )}
+
+        {/* Cabecera acordeón */}
+        <button
+          type="button"
+          onClick={() => setOpenId(cur => cur === f.id ? null : f.id)}
+          className="flex-1 px-3 py-3 flex items-center justify-between gap-3 text-left min-w-0"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-[13px] font-medium text-ink truncate">{f.nombre}</p>
+              {isColab && f.responsableUid === user?.uid && (
+                <span className="flex-shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-ink text-ivory">Tu fase</span>
+              )}
+            </div>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <EstadoChip estado={f.estado} />
+              <span className="text-[11px] text-ink/60">{pct}%</span>
+              {f.responsableNombre && (
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getSubRoleColor(f.responsableSubRole)}`}>
+                  {f.responsableNombre.split(" ")[0]}
+                </span>
+              )}
+              {f.fechaEntregaResponsable && (
+                <span className="text-[11px] text-ink/50">· {formatFechaCorta(f.fechaEntregaResponsable)}</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[14px] font-semibold text-ink">{pct}%</span>
+            {isAdmin && canEditHere && (
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); onEliminar(f.id); }}
+                className="w-5 h-5 flex items-center justify-center rounded-full text-ink/25 hover:text-red-500 hover:bg-red-50 transition-colors"
+                aria-label="Eliminar fase"
+              >
+                ×
+              </button>
+            )}
+            <span className="text-[12px] text-ink/50">{isOpen ? "▴" : "▾"}</span>
+          </div>
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="px-3 pb-3 overflow-hidden">
+          <div className="mt-2">
+            <div className="h-2 w-full bg-sand rounded-full overflow-hidden">
+              <div className="h-full bg-ink" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+
+          {isAdmin && colaboradores.length > 0 && (
+            <div className="mt-3 space-y-3">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Responsable</p>
+                <select
+                  value={f.responsableUid || ""}
+                  onChange={e => handleResponsableChange(f.id, e.target.value)}
+                  className="input w-full text-[12px]"
+                >
+                  <option value="">Sin responsable</option>
+                  {colaboradores.map(col => (
+                    <option key={col.uid} value={col.uid}>
+                      {col.name} ({col.subRole || "Colaborador"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-ink/40 font-semibold">Fecha de entrega</p>
+                <input
+                  type="date"
+                  value={f.fechaEntregaResponsable || ""}
+                  onChange={e => handleFechaEntregaChange(f.id, e.target.value)}
+                  disabled={!f.responsableUid}
+                  className="input w-full max-w-full text-[12px] disabled:opacity-50 box-border"
+                />
+                <p className="text-[10px] text-ink/45">Define para cuando necesitas esta fase una vez tenga responsable.</p>
+              </div>
+            </div>
+          )}
+
+          {canEditFaseActual(f) ? (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] text-ink/60 mb-1">
+                <span>Ajustar avance</span><span>{pct}%</span>
+              </div>
+              <input
+                type="range" min={0} max={100} step={5} value={pct}
+                onChange={e => setPct(f.id, e.target.value)}
+                className="w-full accent-ink"
+              />
+              <p className="text-[10px] text-ink/50 mt-1">Incrementos de 5% para consistencia.</p>
+            </div>
+          ) : (
+            <div className="mt-3 flex items-center gap-2 text-[11px] text-ink/40">
+              {isColab && f.responsableUid && f.responsableUid !== user?.uid
+                ? <span>Esta fase está asignada a otro colaborador.</span>
+                : <span>El avance lo actualiza el equipo de H&E.</span>
+              }
+            </div>
+          )}
+
+          <NotasFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
+          <ArchivosFase projectId={projectId} phaseId={f.id} canEdit={canEditFaseActual(f)} clientView={clientView} />
+        </div>
+      )}
+    </div>
+  );
 }

@@ -4,21 +4,12 @@
 
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { collection, onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { db, firebaseConfig } from "../lib/firebase";
+import { collection, onSnapshot } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { db } from "../lib/firebase";
 
 const FUNCTIONS_URL = "https://us-central1-hye-tesis.cloudfunctions.net";
 import { getSubRoleColor } from "../data/roles";
-
-// App secundaria — solo para crear usuarios sin afectar sesión de Luisa
-function getSecondaryAuth() {
-    const existing = getApps().find(a => a.name === "secondary");
-    if (existing) return getAuth(existing);
-    const secondaryApp = initializeApp(firebaseConfig, "secondary");
-    return getAuth(secondaryApp);
-}
 
 const SUB_ROLES_SUGERIDOS = [
     "Arquitecto", "Diseño", "Residente de obra", "Jurídica", "Coordinación",
@@ -63,36 +54,27 @@ export default function GestionColaboradores() {
         setSaving(true);
         setError("");
         try {
-            // Crear en Auth usando app secundaria (no afecta sesión de Luisa)
-            const secondaryAuth = getSecondaryAuth();
-            const cred = await createUserWithEmailAndPassword(
-                secondaryAuth,
-                form.email.trim().toLowerCase(),
-                form.password
-            );
-            const uid = cred.user.uid;
-
-            // Cerrar sesión en la app secundaria
-            await secondaryAuth.signOut();
-
-            // Guardar perfil en Firestore con admin SDK (db principal)
-            await setDoc(doc(db, "users", uid), {
-                name: form.name.trim(),
-                email: form.email.trim().toLowerCase(),
-                role: "colaborador",
-                subRole: form.subRole,
-                createdAt: serverTimestamp(),
+            const token = await getAuth().currentUser.getIdToken();
+            const res = await fetch(`${FUNCTIONS_URL}/crearColaborador`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    email: form.email.trim().toLowerCase(),
+                    password: form.password,
+                    subRole: form.subRole || "",
+                }),
             });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Error al crear el colaborador.");
 
             setModal(false);
-            setForm({ name: "", email: "", password: "", subRole: "juridica" });
+            setForm({ name: "", email: "", password: "", subRole: "" });
         } catch (e) {
-            const msgs = {
-                "auth/email-already-in-use": "Este correo ya está registrado.",
-                "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
-                "auth/invalid-email": "El correo no es válido.",
-            };
-            setError(msgs[e.code] || "Error al crear el colaborador.");
+            setError(e.message);
         } finally {
             setSaving(false);
         }

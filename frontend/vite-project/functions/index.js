@@ -311,21 +311,26 @@ exports.onSolicitudComercialUpdated = onDocumentUpdated(
 
       const html = `
         <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <div style="background: #141414; color: white; padding: 24px 20px; text-align: center;">
-            <p style="margin: 0 0 6px 0; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.6;">H&amp;E Arquitectos</p>
-            <h1 style="margin: 0; font-size: 22px; font-weight: 700;">${accentLabel}</h1>
+          <div style="background: #141414; color: white; padding: 28px 20px; text-align: center;">
+            <p style="margin: 0 0 8px 0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.45); font-weight: 500;">H&amp;E Arquitectos</p>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.01em;">${accentLabel}</h1>
           </div>
 
-          <div style="padding: 30px 28px; background: #F2EEE7;">
-            <div style="background: white; border-left: 4px solid ${accentColor}; border-radius: 4px; padding: 18px 20px; margin-bottom: 24px; font-size: 14px; line-height: 1.7;">
+          <div style="padding: 32px 28px; background: #F2EEE7;">
+            <div style="background: white; border-left: 4px solid ${accentColor}; border-radius: 0 8px 8px 0; padding: 18px 20px; margin-bottom: 28px; font-size: 14px; line-height: 1.75;">
               ${cuerpoHtml}
             </div>
 
-            <p style="margin: 0; color: #999; font-size: 12px; line-height: 1.6;">
-              <strong style="color: #555;">H&amp;E Arquitectos</strong><br>
-              Bogotá, Colombia<br>
-              <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
+            <p style="margin: 0 0 28px 0; font-size: 13px; color: #555; line-height: 1.6;">
+              Si tienes alguna pregunta, responde directamente a este correo o escríbenos a
+              <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; font-weight: 600; text-decoration: none;">hyearquitectos@gmail.com</a>.
             </p>
+
+            <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 20px; color: #999; font-size: 12px; line-height: 1.7;">
+              <strong style="color: #444;">H&amp;E Arquitectos</strong><br>
+              Bogotá, Colombia<br>
+              <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; text-decoration: none;">hyearquitectos@gmail.com</a>
+            </div>
           </div>
         </div>
       `;
@@ -457,11 +462,11 @@ exports.crearColaborador = onRequest(
 
                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #999;">Este enlace es de un solo uso y expira en 24 horas. Si no solicitaste esta cuenta, ignora este correo.</p>
 
-                <p style="margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.08); color: #999; font-size: 12px;">
-                  <strong style="color: #333;">H&E Arquitectos</strong><br>
+                <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.08); color: #999; font-size: 12px; line-height: 1.7;">
+                  <strong style="color: #444;">H&amp;E Arquitectos</strong><br>
                   Bogotá, Colombia<br>
-                  <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
-                </p>
+                  <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; text-decoration: none;">hyearquitectos@gmail.com</a>
+                </div>
               </div>
             </div>
           `,
@@ -597,28 +602,39 @@ exports.crearCliente = onRequest(
         to: cleanEmail,
         subject: "Bienvenido/a a H&E Arquitectos — Accede a tu proyecto",
         html: `
-          <div style="font-family:Arial,sans-serif;color:#333;max-width:600px;margin:0 auto;">
-            <div style="background:#141414;color:white;padding:24px;text-align:center;">
-              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:1px;">H&E Arquitectos</h1>
+          <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+            <div style="background: #141414; color: white; padding: 28px 20px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.45); font-weight: 500;">H&amp;E Arquitectos</p>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 700;">Bienvenido/a a tu proyecto</h1>
             </div>
-            <div style="padding:32px;background:#F2EEE7;">
-              <p style="font-size:16px;">Hola <strong>${firstName}</strong>,</p>
-              <p>Luisa ha creado tu acceso a la <strong>Plataforma de Proyectos H&E Arquitectos</strong>, donde podrás seguir el avance de tu proyecto en tiempo real.</p>
-              <p>Para activar tu cuenta y establecer tu contraseña, haz clic en el botón:</p>
-              <div style="text-align:center;margin:28px 0;">
-                <a href="${resetLink}" style="background:#141414;color:white;padding:14px 32px;border-radius:12px;text-decoration:none;font-size:15px;font-weight:600;display:inline-block;">
+            <div style="padding: 32px 28px; background: #F2EEE7;">
+              <p style="margin: 0 0 16px 0; font-size: 15px;">Hola <strong>${firstName}</strong>,</p>
+              <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.7;">El equipo de <strong>H&amp;E Arquitectos</strong> ha creado tu acceso a nuestra plataforma de proyectos, donde podrás seguir el avance de tu obra en tiempo real.</p>
+
+              <div style="background: white; border-left: 4px solid #141414; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 24px 0; font-size: 13px; line-height: 1.75;">
+                <p style="margin: 0 0 6px 0;"><strong>Correo:</strong> ${cleanEmail}</p>
+                <p style="margin: 0;"><strong>Acceso:</strong> Plataforma H&amp;E Arquitectos</p>
+              </div>
+
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.7;">Para activar tu cuenta y establecer tu contraseña, haz clic en el botón a continuación:</p>
+
+              <div style="text-align: center; margin: 28px 0;">
+                <a href="${resetLink}" style="display: inline-block; background: #141414; color: white; text-decoration: none; padding: 14px 36px; border-radius: 12px; font-size: 15px; font-weight: 600; letter-spacing: 0.02em;">
                   Establecer mi contraseña →
                 </a>
               </div>
-              <p style="font-size:13px;color:#666;">Este enlace expira en 24 horas. Si no esperabas este correo, puedes ignorarlo.</p>
-              <hr style="border:none;border-top:1px solid #ddd;margin:24px 0;" />
-              <p style="font-size:12px;color:#999;margin:0;">
-                <strong>H&E Arquitectos</strong> · Bogotá, Colombia
-              </p>
+
+              <p style="margin: 0 0 28px 0; font-size: 12px; color: #999; line-height: 1.6;">Este enlace es de un solo uso y expira en 24 horas. Si no esperabas este correo, puedes ignorarlo.</p>
+
+              <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 20px; color: #999; font-size: 12px; line-height: 1.7;">
+                <strong style="color: #444;">H&amp;E Arquitectos</strong><br>
+                Bogotá, Colombia<br>
+                <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; text-decoration: none;">hyearquitectos@gmail.com</a>
+              </div>
             </div>
           </div>
         `,
-        text: `Hola ${firstName},\n\nLuisa ha creado tu acceso a la Plataforma H&E Arquitectos.\n\nEstablece tu contraseña aquí:\n${resetLink}\n\nEste enlace expira en 24 horas.\n\nH&E Arquitectos`,
+        text: `Hola ${firstName},\n\nEl equipo de H&E Arquitectos ha creado tu acceso a la plataforma de proyectos.\n\nCorreo: ${cleanEmail}\n\nEstablece tu contraseña aquí:\n${resetLink}\n\nEste enlace expira en 24 horas.\n\nH&E Arquitectos\nhyearquitectos@gmail.com`,
       });
 
       res.json({ success: true, uid: userRecord.uid });
@@ -1003,47 +1019,33 @@ async function sendEmailConfirmacionSolicitud(solicitud) {
       subject: "✅ Solicitud recibida — H&E Arquitectos",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
-          <div style="background: #141414; color: white; padding: 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">¡Gracias por contactarnos!</h1>
+          <div style="background: #141414; color: white; padding: 28px 20px; text-align: center;">
+            <p style="margin: 0 0 8px 0; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.45); font-weight: 500;">H&amp;E Arquitectos</p>
+            <h1 style="margin: 0; font-size: 22px; font-weight: 700;">¡Solicitud recibida!</h1>
           </div>
-          
-          <div style="padding: 30px; background: #F2EEE7;">
-            <p>Hola <strong>${nombre}</strong>,</p>
-            
-            <p>Hemos recibido tu solicitud de cotización para <strong>${tipoObra}</strong>.</p>
-            
-            <p>Nuestro equipo revisará la información y nos pondremos en contacto contigo dentro de las próximas 24 horas al número <strong>${solicitud.telefono || "teléfono que proporcionaste"}</strong> o a este correo.</p>
-            
-            <div style="background: white; border-left: 4px solid #141414; padding: 15px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Tipo de obra:</strong> ${tipoObra}</p>
-              <p style="margin: 5px 0;"><strong>Ciudad:</strong> ${solicitud.ciudad || "No especificada"}</p>
-              <p style="margin: 5px 0;"><strong>Presupuesto:</strong> ${solicitud.presupuesto || "Por definir"}</p>
+
+          <div style="padding: 32px 28px; background: #F2EEE7;">
+            <p style="margin: 0 0 16px 0; font-size: 15px;">Hola <strong>${nombre}</strong>,</p>
+            <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.7;">Hemos recibido tu solicitud de cotización para <strong>${tipoObra}</strong>. Nuestro equipo revisará la información y se pondrá en contacto contigo dentro de las próximas <strong>24 horas</strong>.</p>
+
+            <div style="background: white; border-left: 4px solid #141414; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 24px 0; font-size: 13px; line-height: 1.9;">
+              <p style="margin: 0 0 4px 0;"><strong>Tipo de obra:</strong> ${tipoObra}</p>
+              <p style="margin: 0 0 4px 0;"><strong>Ciudad:</strong> ${solicitud.ciudad || "No especificada"}</p>
+              <p style="margin: 0 0 4px 0;"><strong>Presupuesto:</strong> ${solicitud.presupuesto || "Por definir"}</p>
+              ${solicitud.telefono ? `<p style="margin: 0;"><strong>Teléfono de contacto:</strong> ${solicitud.telefono}</p>` : ""}
             </div>
-            
-            <p>Si tienes alguna pregunta mientras esperas nuestra respuesta, no dudes en escribirnos.</p>
-            
-            <p style="margin-top: 30px; color: #999; font-size: 12px;">
-              <strong>H&E Arquitectos</strong><br>
+
+            <p style="margin: 0 0 28px 0; font-size: 14px; line-height: 1.7;">Si tienes alguna pregunta mientras esperas, escríbenos directamente a <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; font-weight: 600; text-decoration: none;">hyearquitectos@gmail.com</a>.</p>
+
+            <div style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 20px; color: #999; font-size: 12px; line-height: 1.7;">
+              <strong style="color: #444;">H&amp;E Arquitectos</strong><br>
               Bogotá, Colombia<br>
-              <a href="mailto:contacto@hyearquitectos.com" style="color: #141414; text-decoration: none;">contacto@hyearquitectos.com</a>
-            </p>
+              <a href="mailto:hyearquitectos@gmail.com" style="color: #141414; text-decoration: none;">hyearquitectos@gmail.com</a>
+            </div>
           </div>
         </div>
       `,
-      text: `
-Hola ${nombre},
-
-Hemos recibido tu solicitud de cotización para ${tipoObra}.
-
-Nuestro equipo revisará la información y nos pondremos en contacto contigo dentro de las próximas 24 horas.
-
-Tipo de obra: ${tipoObra}
-Ciudad: ${solicitud.ciudad || "No especificada"}
-Presupuesto: ${solicitud.presupuesto || "Por definir"}
-
-H&E Arquitectos
-Bogotá, Colombia
-      `,
+      text: `Hola ${nombre},\n\nHemos recibido tu solicitud de cotización para ${tipoObra}.\n\nNuestro equipo se pondrá en contacto contigo dentro de las próximas 24 horas.\n\nTipo de obra: ${tipoObra}\nCiudad: ${solicitud.ciudad || "No especificada"}\nPresupuesto: ${solicitud.presupuesto || "Por definir"}\n\nH&E Arquitectos\nhyearquitectos@gmail.com`,
     };
 
     await transporter.sendMail(mailOptions);

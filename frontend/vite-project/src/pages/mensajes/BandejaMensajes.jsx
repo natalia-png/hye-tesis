@@ -187,7 +187,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
   };
 
   return (
-    <div className="relative">
+    <div className={`relative${menuOpen ? " z-10" : ""}`}>
       <button type="button" onClick={onClick} className="w-full card flex items-center gap-3 text-left pr-10">
         <Avatar
           name={displayName}

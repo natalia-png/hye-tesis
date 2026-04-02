@@ -70,7 +70,15 @@
       "Bash(AAB_SRC=\"c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/frontend/vite-project/android/app/build/outputs/bundle/release/app-release.aab\")",
       "Bash(DEST=\"c:/Users/HP/Downloads/HYE AP\")",
       "Bash(__NEW_LINE_a0f6dab48d3d0261__ cp:*)",
-      "Bash(cp \"$AAB_SRC\" \"$DEST/HyE Arquitectos.aab\")"
+      "Bash(cp \"$AAB_SRC\" \"$DEST/HyE Arquitectos.aab\")",
+      "Bash(xargs cat:*)",
+      "Bash(./gradlew assembleRelease bundleRelease)",
+      "Bash(echo \"JAVA_HOME=$JAVA_HOME\")",
+      "Read(//c//**)",
+      "Bash(echo JAVA_HOME=$JAVA_HOME)",
+      "Bash(grep -r \"sendEmail\\\\|nodemailer\\\\|transporter\\\\|smtp\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos --include=*.js --include=*.ts --include=*.jsx --include=*.tsx)",
+      "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/backend -type f \\\\\\(-name *.js -o -name *.ts \\\\\\) ! -path */node_modules/*)",
+      "Bash(grep -r \"from.*@\\\\|to:.*@\\\\|subject:\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos --include=*.js --include=*.ts --include=*.jsx --include=*.tsx)"
     ]
   }
 }

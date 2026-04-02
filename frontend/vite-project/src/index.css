@@ -137,6 +137,11 @@ html.dark .border-green-200  { border-color: rgb(22 101 52 / 0.5); }
 html.dark .border-amber-200  { border-color: rgb(146 64 14 / 0.5); }
 html.dark .border-red-200    { border-color: rgb(153 27 27 / 0.5); }
 html.dark .border-emerald-200 { border-color: rgb(6 78 59 / 0.5); }
+html.dark .bg-emerald-100  { background-color: rgb(6 78 59 / 0.3); }
+html.dark .bg-rose-50      { background-color: rgb(69 10 10 / 0.4); }
+html.dark .bg-orange-50    { background-color: rgb(69 26 3 / 0.4); }
+html.dark .border-rose-200  { border-color: rgb(153 27 27 / 0.5); }
+html.dark .border-orange-200 { border-color: rgb(154 52 18 / 0.5); }
 
 /* ── Dark mode: bg-white / bg-ivory / bg-linen overrides ── */
 /* text-white/text-ivory/text-linen NO se tocan — se usan en texto sobre fondos oscuros */

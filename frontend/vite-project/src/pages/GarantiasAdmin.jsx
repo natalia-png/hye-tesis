@@ -4,7 +4,7 @@
 
 import { useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, deleteDoc } from "firebase/firestore";
 import { db, storage } from "../lib/firebase";
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import PropTypes from "prop-types";
@@ -110,11 +110,25 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
     const [saving, setSaving] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [changingEstado, setChangingEstado] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const fileInputRef = useRef(null);
 
     const fecha = calcFechaSolicitud(solicitud);
 
     const solRef = doc(db, "garantias", projectId, "solicitudes", solicitud.id);
+
+    const handleEliminar = async (e) => {
+        e.stopPropagation();
+        if (!confirm(`¿Eliminar esta solicitud de "${solicitud.nombreCliente || "Cliente"}"? Esta acción no se puede deshacer.`)) return;
+        setDeleting(true);
+        try {
+            await deleteDoc(solRef);
+        } catch (err) {
+            console.error(err);
+            alert("No se pudo eliminar. Intenta de nuevo.");
+            setDeleting(false);
+        }
+    };
 
     const cambiarEstado = async (nuevoEstado) => {
         if (nuevoEstado === solicitud.estado) return;
@@ -177,32 +191,45 @@ function TarjetaSolicitudAdmin({ solicitud, projectId }) {
         <div className={`card space-y-3 ${solicitud.prioridad === "urgente" ? "border-l-4 border-l-red-400" : ""}`}>
 
             {/* Header */}
-            <button
-                type="button"
-                onClick={() => setExpanded(e => !e)}
-                className="w-full text-left"
-            >
-                {solicitud.prioridad === "urgente" && (
-                    <span className="inline-block text-[10px] font-bold text-red-500 mb-1">
-                        🚨 URGENTE
-                    </span>
-                )}
-                <SolicitudCardHeader
-                    solicitud={solicitud}
-                    expanded={expanded}
-                    subText={`${solicitud.nombreCliente || "Cliente"} · ${fecha}`}
-                    leftExtra={solicitud.fechaLimite && (
-                        <p className="text-[11px] text-amber-600 mt-0.5">
-                            ⏱ Límite: {new Date(solicitud.fechaLimite).toLocaleDateString("es-CO")}
-                        </p>
-                    )}
-                    rightExtra={solicitud.fotos?.length > 0 && (
-                        <span className="text-[10px] text-ink/40">
-                            📎 {solicitud.fotos.length} foto{solicitud.fotos.length > 1 ? "s" : ""}
+            <div className="flex items-start gap-2">
+                <button
+                    type="button"
+                    onClick={() => setExpanded(e => !e)}
+                    className="flex-1 text-left"
+                >
+                    {solicitud.prioridad === "urgente" && (
+                        <span className="inline-block text-[10px] font-bold text-red-500 mb-1">
+                            🚨 URGENTE
                         </span>
                     )}
-                />
-            </button>
+                    <SolicitudCardHeader
+                        solicitud={solicitud}
+                        expanded={expanded}
+                        subText={`${solicitud.nombreCliente || "Cliente"} · ${fecha}`}
+                        leftExtra={solicitud.fechaRespuestaEstimada && (
+                            <p className="text-[11px] text-amber-600 mt-0.5">
+                                ⏱ Resp. estimada: {new Date(solicitud.fechaRespuestaEstimada + "T12:00:00").toLocaleDateString("es-CO")}
+                            </p>
+                        )}
+                        rightExtra={solicitud.fotos?.length > 0 && (
+                            <span className="text-[10px] text-ink/40">
+                                📎 {solicitud.fotos.length} foto{solicitud.fotos.length > 1 ? "s" : ""}
+                            </span>
+                        )}
+                    />
+                </button>
+                <button
+                    type="button"
+                    onClick={handleEliminar}
+                    disabled={deleting}
+                    className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-ink/30 hover:text-red-500 hover:bg-red-50 transition-colors mt-0.5"
+                    title="Eliminar solicitud"
+                >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>
+            </div>
 
             {/* Detalle expandido */}
             {expanded && (

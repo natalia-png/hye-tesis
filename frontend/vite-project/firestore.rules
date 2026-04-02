@@ -101,7 +101,14 @@ service cloud.firestore {
       allow update: if isAdmin()
         || isColaborador()
         || (signedIn() && myUid() == resource.data.creadoPor);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin()
+        || (signedIn() && myUid() == resource.data.creadoPor);
+    }
+
+    /* collectionGroup para que admin/colaborador puedan consultar
+       todas las solicitudes de garantía desde el Dashboard */
+    match /{path=**}/solicitudes/{solicitudId} {
+      allow read: if isAdmin() || isColaborador();
     }
 
     /* ---------------- SOLICITUDES COMERCIALES ---------------- */

@@ -566,7 +566,7 @@ exports.crearCliente = onRequest(
 
     if (!await verifyAdmin(req, res)) return;
 
-    const { name, email } = req.body;
+    const { name, email, phone, cedula, address, city } = req.body;
     if (!name || !email) {
       res.status(400).json({ error: "name y email son obligatorios" });
       return;
@@ -583,13 +583,19 @@ exports.crearCliente = onRequest(
         emailVerified: false,
       });
 
-      // 2 — Guardar perfil en Firestore
-      await db.collection("users").doc(userRecord.uid).set({
+      // 2 — Guardar perfil completo en Firestore
+      const userData = {
         name: cleanName,
         email: cleanEmail,
         role: "cliente",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+      if (phone)   userData.phone   = phone.trim();
+      if (cedula)  userData.cedula  = cedula.trim();
+      if (address) userData.address = address.trim();
+      if (city)    userData.city    = city.trim();
+
+      await db.collection("users").doc(userRecord.uid).set(userData);
 
       // 3 — Generar link de establecer contraseña
       const resetLink = await admin.auth().generatePasswordResetLink(cleanEmail);
@@ -644,6 +650,42 @@ exports.crearCliente = onRequest(
         "auth/invalid-email": "El correo no es válido.",
       };
       res.status(400).json({ error: msgs[e.code] || e.message });
+    }
+  }
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   ENDPOINT — Actualizar datos de cliente existente
+   POST /actualizarCliente { uid, name, phone, cedula, address, city }
+═══════════════════════════════════════════════════════════════ */
+exports.actualizarCliente = onRequest(
+  { cors: true, invoker: "public" },
+  async (req, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    if (req.method !== "POST") { res.status(405).json({ error: "Method not allowed" }); return; }
+
+    if (!await verifyAdmin(req, res)) return;
+
+    const { uid, name, phone, cedula, address, city } = req.body;
+    if (!uid) { res.status(400).json({ error: "uid es obligatorio" }); return; }
+
+    try {
+      const updates = {};
+      if (name)    updates.name    = name.trim();
+      if (phone)   updates.phone   = phone.trim();
+      if (cedula)  updates.cedula  = cedula.trim();
+      if (address) updates.address = address.trim();
+      if (city)    updates.city    = city.trim();
+
+      if (Object.keys(updates).length > 0) {
+        await db.collection("users").doc(uid).update(updates);
+      }
+      res.json({ success: true });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
     }
   }
 );
@@ -706,8 +748,8 @@ async function eliminarClienteSiSinProyectos(clientId) {
 
 /* ═══════════════════════════════════════════════════════════════
    SCHEDULED — Notificaciones de vencimiento (diario 8am Colombia)
-   - Admin: proyectos con endDate ≤ 7 días
-   - Colaborador: fases con fechaEntregaResponsable ≤ 7 días
+   - Admin: proyectos con endDate ≤ 3 días
+   - Colaborador: fases con fechaEntregaResponsable ≤ 3 días
    ID determinístico → sin duplicados si corre varias veces el mismo día
 ═══════════════════════════════════════════════════════════════ */
 exports.notificarVencimientos = onSchedule(
@@ -739,7 +781,7 @@ exports.notificarVencimientos = onSchedule(
         const endDate = parseDateValue(p.endDate || p.fechaFin);
         if (endDate) {
           const dias = Math.round((endDate - hoy) / 86400000);
-          if (dias >= 0 && dias <= 7) {
+          if (dias >= 0 && dias <= 3) {
             const label = dias === 0 ? "hoy" : `en ${dias} día${dias > 1 ? "s" : ""}`;
             await createDeadlineNotif(adminUid, `deadline_proj_${projectId}_${dayStr}`, {
               type: "deadline_project",
@@ -764,7 +806,7 @@ exports.notificarVencimientos = onSchedule(
         if (!fechaFase) continue;
 
         const dias = Math.round((fechaFase - hoy) / 86400000);
-        if (dias >= 0 && dias <= 7) {
+        if (dias >= 0 && dias <= 3) {
           const label = dias === 0 ? "hoy" : `en ${dias} día${dias > 1 ? "s" : ""}`;
           const faseId = fase.id || fase.nombre || "fase";
           await createDeadlineNotif(uid, `deadline_fase_${projectId}_${faseId}_${dayStr}`, {

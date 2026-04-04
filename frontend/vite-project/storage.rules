@@ -63,6 +63,19 @@ service firebase.storage {
       allow read: if isClientOfProject(projectId) && isVisiblePhaseFile(projectId, faseId, fileId);
     }
 
+    /* ── Contratos de colaboradores (solo admin sube, colab solo lee el suyo) ── */
+    match /contratos/colaboradores/{userId}/{allPaths=**} {
+      allow read, write, delete: if isAdmin();
+      allow read: if signedIn() && myUid() == userId;
+    }
+
+    /* ── Contratos de proyectos (admin directo, colaborador propone, cliente lee) ── */
+    match /contratos/proyectos/{projectId}/{allPaths=**} {
+      allow read, write, delete: if isAdmin();
+      allow write: if isColaborador();
+      allow read: if isColaborador() || isClientOfProject(projectId);
+    }
+
     /* ── Archivos de garantías ── */
     match /garantias/{projectId}/{fileName=**} {
       allow read, write, delete: if signedIn();

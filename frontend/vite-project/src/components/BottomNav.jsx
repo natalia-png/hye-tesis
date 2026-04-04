@@ -43,11 +43,11 @@ export default function BottomNav() {
 
   const isCliente = user?.role === "cliente";
 
-  const isHome        = pathname === "/";
-  const isProjects    = pathname.startsWith("/proyectos") || pathname.startsWith("/mis-proyectos");
-  const isComercial   = pathname.startsWith("/comercial");
+  const isHome          = pathname === "/";
+  const isProjects      = pathname.startsWith("/proyectos") || pathname.startsWith("/mis-proyectos");
+  const isComercial     = pathname.startsWith("/comercial");
   const isColaboradores = pathname.startsWith("/colaboradores");
-  const isMensajes    = pathname.startsWith("/mensajes");
+  const isMensajes      = pathname.startsWith("/mensajes");
 
   // En dark mode el círculo activo tiene fondo claro (--ink = crema), así que el ícono debe ser oscuro
   const iconColor = (active) => {

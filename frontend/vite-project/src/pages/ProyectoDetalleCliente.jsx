@@ -42,6 +42,7 @@ export default function ProyectoDetalleCliente() {
           progress: calcAvanceGlobal(fases),
           fases,
           updatedAt: data.updatedAt || data.createdAt || null,
+          contratoURL: data.contratoURL || null,
         });
         const activa = fases.find(f => f.estado === "en_curso" || (f.porcentaje > 0 && f.porcentaje < 100));
         setOpenFaseId(activa?.id || null);
@@ -189,6 +190,28 @@ export default function ProyectoDetalleCliente() {
         </div>
       )}
 
+      {project.contratoURL && (
+        <div className="card space-y-2">
+          <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-ink/40">Contrato</p>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-ink/8 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-ink/50" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-ink">Contrato del proyecto</p>
+              <p className="text-[11px] text-ink/50">Documento oficial firmado</p>
+            </div>
+            <button type="button"
+              onClick={() => window.open(project.contratoURL, "_blank", "noopener,noreferrer")}
+              className="text-[12px] px-3 py-1.5 rounded-full bg-ink text-ivory font-medium hover:opacity-80 transition flex-shrink-0">
+              Ver
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Etapas ── */}
       <div className="space-y-1">
         <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-ink/35 px-1 mb-2">
@@ -328,12 +351,15 @@ function NotasPanel({ projectId, phaseId }) {
 
   useEffect(() => {
     if (!projectId || !phaseId) return;
+    // Sin where+orderBy compuesto para evitar requerir índice; filtramos en cliente
     const qs = query(
       collection(db, "projects", projectId, "fases", phaseId, "notas"),
-      orderBy("createdAt", "desc"), limit(10)
+      orderBy("createdAt", "desc"), limit(30)
     );
     const unsub = onSnapshot(qs, snap => {
-      setNotas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // El cliente solo ve notas aprobadas por el admin (visibleToClient === true)
+      setNotas(all.filter(n => n.visibleToClient === true));
       setReady(true);
     }, () => setReady(true));
     return () => { try { unsub(); } catch (e) { console.error(e); } };
@@ -524,16 +550,26 @@ function BtnPDF({ project }) {
 }
 
 /* ── HELPERS ── */
+function parseLocalDate(val) {
+  if (!val) return null;
+  if (val?.seconds) return new Date(val.seconds * 1000);
+  if (typeof val === "string") {
+    const d = new Date(val.slice(0, 10) + "T12:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+
 function getDaysLeft(d) {
   if (!d) return null;
-  const t = new Date(d);
-  return Number.isNaN(t) ? null : Math.ceil((t - Date.now()) / 86400000);
+  const t = parseLocalDate(d) || new Date(d);
+  return Number.isNaN(t.getTime()) ? null : Math.ceil((t - Date.now()) / 86400000);
 }
 
 function formatFecha(str, modo = "corta") {
   if (!str) return "—";
   try {
-    const d = new Date(str);
+    const d = parseLocalDate(str) || new Date(str);
     if (modo === "larga") return d.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" });
     return d.toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" });
   } catch { return str; }

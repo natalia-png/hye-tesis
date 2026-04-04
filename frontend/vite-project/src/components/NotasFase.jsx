@@ -20,6 +20,8 @@ export default function NotasFase({
   phaseId,
   canEdit = false,
   clientView = false,
+  autoVisible = true,   // false = las notas se guardan ocultas al cliente (para colaboradores)
+  currentUserUid = null,
 }) {
   const [items, setItems] = useState([]);
   const [text, setText] = useState("");
@@ -30,6 +32,8 @@ export default function NotasFase({
   const [ok, setOk] = useState("");
 
   const hadSuccessRef = useRef(false);
+  const clientViewRef = useRef(clientView);
+  useEffect(() => { clientViewRef.current = clientView; }, [clientView]);
 
   const notasRef = useMemo(() => {
     if (!projectId || !phaseId) return null;
@@ -44,12 +48,15 @@ export default function NotasFase({
 
     if (!notasRef) return;
 
+    // Consulta simple sin where+orderBy compuesto (evita requerir índice compuesto en Firestore)
     const qs = query(notasRef, orderBy("createdAt", "desc"), limit(30));
 
     const unsub = onSnapshot(
       qs,
       (snap) => {
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        // Filtrar en cliente: el cliente solo ve las notas marcadas visibleToClient === true
+        const list = clientViewRef.current ? all.filter(n => n.visibleToClient === true) : all;
         setItems(list);
         hadSuccessRef.current = true;
         setError("");
@@ -61,7 +68,7 @@ export default function NotasFase({
     );
 
     return () => { try { unsub(); } catch (e) { console.error(e); } };
-  }, [notasRef]);
+  }, [notasRef, clientView]);
 
   const lastUpdate = items?.[0]?.createdAt || null;
 
@@ -87,8 +94,8 @@ export default function NotasFase({
       await addDoc(notasRef, {
         text: t,
         createdAt: serverTimestamp(),
-        createdBy: "admin",
-        visibleToClient: true,
+        createdBy: currentUserUid || "unknown",
+        visibleToClient: autoVisible,
       });
       setText("");
       flash("Nota guardada.");
@@ -102,7 +109,9 @@ export default function NotasFase({
 
   // ── Eliminar nota ─────────────────────────────────────────────
   const onDelete = async (nota) => {
-    if (!canEdit || !notasRef) return;
+    const ownNote = currentUserUid && nota.createdBy === currentUserUid;
+    if (!canEdit && !ownNote) return;
+    if (!notasRef) return;
     const sure = confirm("¿Eliminar esta nota? Esta acción no se puede deshacer.");
     if (!sure) return;
 
@@ -122,13 +131,15 @@ export default function NotasFase({
 
   // ── Editar nota ───────────────────────────────────────────────
   const startEdit = (nota) => {
-    setEditing({ id: nota.id, text: nota.text });
+    setEditing({ id: nota.id, text: nota.text, createdBy: nota.createdBy || null });
   };
 
   const cancelEdit = () => setEditing(null);
 
   const saveEdit = async () => {
-    if (!canEdit || !notasRef || !editing) return;
+    if (!notasRef || !editing) return;
+    const ownNote = currentUserUid && editing.createdBy === currentUserUid;
+    if (!canEdit && !ownNote) return;
     const t = editing.text.trim();
     if (!t) return;
 
@@ -158,7 +169,9 @@ export default function NotasFase({
           <p className="text-[11px] text-ink/60">
             {clientView
               ? "Actualizaciones y comentarios asociados a esta fase."
-              : "Registra avances o decisiones. El cliente verá estas notas."}
+              : autoVisible
+                ? "Registra avances o decisiones. El cliente vera estas notas."
+                : "Agrega notas de avance. El administrador las revisara antes de que el cliente las vea."}
           </p>
         </div>
         <div className="text-right">
@@ -253,17 +266,19 @@ export default function NotasFase({
                       )}
                     </p>
 
-                    {/* Botones solo admin */}
-                    {canEdit && !clientView && (
+                    {/* Botones: admin ve todo, colaborador ve solo las suyas */}
+                    {!clientView && (canEdit || (currentUserUid && n.createdBy === currentUserUid)) && (
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(n)}
-                          disabled={!!deleting}
-                          className="text-[11px] text-ink/50 hover:text-ink transition-colors"
-                        >
-                          Editar
-                        </button>
+                        {(canEdit || n.createdBy === currentUserUid) && (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(n)}
+                            disabled={!!deleting}
+                            className="text-[11px] text-ink/50 hover:text-ink transition-colors"
+                          >
+                            Editar
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onDelete(n)}
@@ -290,6 +305,8 @@ NotasFase.propTypes = {
   phaseId: PropTypes.string.isRequired,
   canEdit: PropTypes.bool,
   clientView: PropTypes.bool,
+  autoVisible: PropTypes.bool,
+  currentUserUid: PropTypes.string,
 };
 
 function timeAgoSmart(value) {

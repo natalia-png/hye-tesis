@@ -61,7 +61,7 @@ service cloud.firestore {
         || (
           isColaborador()
           && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(["fases", "progress", "updatedAt", "chatPermisos"])
+             .hasOnly(["fases", "progress", "updatedAt", "chatPermisos", "contratoPropuesto"])
         );
 
       match /fases/{faseId} {
@@ -111,11 +111,22 @@ service cloud.firestore {
       allow read: if isAdmin() || isColaborador();
     }
 
+    /* ---------------- PROVEEDORES ---------------- */
+    match /proveedores/{proveedorId} {
+      allow read: if isAdmin() || isColaborador();
+      allow create, update, delete: if isAdmin();
+    }
+
     /* ---------------- SOLICITUDES COMERCIALES ---------------- */
     match /solicitudesComerciales/{solicitudId} {
       allow create: if true;
       allow read, update: if isAdmin() || isColaborador();
       allow delete: if isAdmin();
+    }
+
+    /* ---------------- CALENDARIO / EVENTOS ---------------- */
+    match /eventos/{userId}/items/{itemId} {
+      allow read, write, delete: if signedIn() && myUid() == userId;
     }
 
     /* ---------------- CHATS ---------------- */

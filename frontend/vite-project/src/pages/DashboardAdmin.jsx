@@ -1,11 +1,12 @@
 // src/pages/DashboardAdmin.jsx
 import { useEffect, useMemo, useState } from "react";
-import { collection, collectionGroup, getDocs, limit, query, where } from "firebase/firestore";
+import { collection, collectionGroup, doc, getDocs, limit, query, updateDoc, where, writeBatch, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
+import { calcAvanceGlobal } from "../data/fases";
 
 function useCountUp(to, duration = 800) {
   const [val, setVal] = useState(0);
@@ -41,7 +42,15 @@ export default function DashboardAdmin() {
   const [colaboradores, setColaboradores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
-  const [modal, setModal] = useState(null); // { title, items: [{label, sub, color, onClick}] }
+  const [modal, setModal] = useState(null);
+  const [approvalToast, setApprovalToast] = useState("");
+  const [approvingId, setApprovingId] = useState(null);
+  const [dashRejectModal, setDashRejectModal] = useState(null); // pending item
+  const [dashRejectReason, setDashRejectReason] = useState("");
+  const [contratoRejectModal, setContratoRejectModal] = useState(null); // { projectId, projectName, propuestoPor, propuestoPorUid }
+  const [contratoRejectReason, setContratoRejectReason] = useState("");
+  const [contratoActionId, setContratoActionId] = useState(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -182,6 +191,227 @@ export default function DashboardAdmin() {
 
   const recientes = useMemo(() => projects.slice(0, 4), [projects]);
 
+  // Avances pendientes de aprobacion — cruza todos los proyectos y sus fases
+  const pendingApprovals = useMemo(() => {
+    const list = [];
+    projects.forEach(p => {
+      (Array.isArray(p.fases) ? p.fases : []).forEach(f => {
+        const val = Number(f.avancePropuesto);
+        if (f.avancePropuesto != null && Number.isFinite(val) && val > 0 && !!f.avancePropuestoPorUid) {
+          list.push({
+            projectId: p.id,
+            projectName: p.name || p.nombre || "Proyecto",
+            faseId: f.id,
+            faseNombre: f.nombre || "Fase",
+            porcentajeActual: clampInt(f.porcentaje, 0, 100),
+            avancePropuesto: clampInt(f.avancePropuesto, 0, 100),
+            propuestoPor: f.avancePropuestoPorNombre || "Colaborador",
+            nota: f.notaAvancePropuesto || "",
+            propuestoAt: f.avancePropuestoAt || null,
+          });
+        }
+      });
+    });
+    return list;
+  }, [projects]);
+
+  // Trazabilidad de todas las solicitudes de contrato que ha hecho el admin
+  const trazabilidadContratos = useMemo(() => {
+    return projects
+      .filter(p => p.contratoSolicitado)
+      .map(p => {
+        let estado, estadoColor;
+        if (p.contratoURL) {
+          estado = "Resuelto";
+          estadoColor = "green";
+        } else if (p.contratoPropuesto) {
+          estado = "Propuesta en revisión";
+          estadoColor = "amber";
+        } else {
+          estado = "Pendiente";
+          estadoColor = "neutral";
+        }
+        return {
+          projectId: p.id,
+          projectName: p.name || p.nombre || "Proyecto",
+          solicitadoAt: p.contratoSolicitado.solicitadoAt || null,
+          estado,
+          estadoColor,
+          propuestoPor: p.contratoPropuesto?.subidoPor || null,
+        };
+      })
+      .sort((a, b) => {
+        const order = { "Pendiente": 0, "Propuesta en revisión": 1, "Resuelto": 2 };
+        return (order[a.estado] ?? 3) - (order[b.estado] ?? 3);
+      });
+  }, [projects]);
+
+  // Contratos propuestos pendientes de aprobacion
+  const pendingContratos = useMemo(() => {
+    return projects
+      .filter(p => p.contratoPropuesto?.url)
+      .map(p => ({
+        projectId: p.id,
+        projectName: p.name || p.nombre || "Proyecto",
+        url: p.contratoPropuesto.url,
+        propuestoPor: p.contratoPropuesto.subidoPor || "Colaborador",
+        propuestoPorUid: p.contratoPropuesto.subidoPorUid || null,
+        propuestoAt: p.contratoPropuesto.subidoAt || null,
+      }));
+  }, [projects]);
+
+  const handleAprobarContrato = async ({ projectId }) => {
+    setContratoActionId(projectId);
+    try {
+      const project = projects.find(p => p.id === projectId);
+      if (!project?.contratoPropuesto?.url) return;
+      await updateDoc(doc(db, "projects", projectId), {
+        contratoURL: project.contratoPropuesto.url,
+        contratoPropuesto: null,
+        updatedAt: serverTimestamp(),
+      });
+      setProjects(prev => prev.map(p => p.id === projectId
+        ? { ...p, contratoURL: p.contratoPropuesto.url, contratoPropuesto: null }
+        : p));
+      setApprovalToast("Contrato aprobado y publicado al cliente.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } catch (e) {
+      console.error(e);
+      setApprovalToast("Error al aprobar contrato.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } finally {
+      setContratoActionId(null);
+    }
+  };
+
+  const handleRechazarContrato = async ({ projectId, projectName, propuestoPor, propuestoPorUid }, reason = "") => {
+    setContratoActionId(projectId);
+    try {
+      await updateDoc(doc(db, "projects", projectId), {
+        contratoPropuesto: null,
+        updatedAt: serverTimestamp(),
+      });
+      if (propuestoPorUid && reason.trim()) {
+        try {
+          const { createNotification } = await import("../lib/notifications.js");
+          createNotification(propuestoPorUid, {
+            type: "contrato_rechazado",
+            title: "Propuesta de contrato rechazada",
+            body: `Tu propuesta de contrato para "${projectName}" fue rechazada. Motivo: ${reason.trim()}`,
+            projectId,
+            projectName,
+          });
+        } catch (e) { console.error(e); }
+      }
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, contratoPropuesto: null } : p));
+      setApprovalToast("Propuesta de contrato rechazada.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setContratoActionId(null);
+    }
+  };
+
+  const confirmContratoReject = async () => {
+    if (!contratoRejectModal) return;
+    await handleRechazarContrato(contratoRejectModal, contratoRejectReason);
+    setContratoRejectModal(null);
+    setContratoRejectReason("");
+  };
+
+  const handleApproveFromDashboard = async ({ projectId, faseId, avancePropuesto }) => {
+    const key = `${projectId}:${faseId}`;
+    setApprovingId(key);
+    try {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return;
+      const nextFases = (project.fases || []).map(f => {
+        if (f.id !== faseId) return f;
+        const pct = clampInt(avancePropuesto, 0, 100);
+        let estado = "pendiente";
+        if (pct >= 100) estado = "completada";
+        else if (pct > 0) estado = "en_curso";
+        return {
+          ...f, porcentaje: pct, estado,
+          avancePropuesto: null, notaAvancePropuesto: "",
+          avancePropuestoPorUid: null, avancePropuestoPorNombre: null, avancePropuestoAt: null,
+        };
+      });
+      const progress = calcAvanceGlobal(nextFases);
+      await updateDoc(doc(db, "projects", projectId), {
+        fases: nextFases, progress, updatedAt: serverTimestamp(),
+      });
+      // Hacer archivos de la fase visibles al cliente
+      try {
+        const archRef = collection(db, "projects", projectId, "fases", faseId, "archivos");
+        const archSnap = await getDocs(query(archRef, where("visibleToClient", "==", false)));
+        if (!archSnap.empty) {
+          const batch = writeBatch(db);
+          archSnap.docs.forEach(d => batch.update(d.ref, { visibleToClient: true }));
+          await batch.commit();
+        }
+      } catch (e) { console.error(e); }
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, fases: nextFases, progress } : p));
+      setApprovalToast("Avance aprobado correctamente.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } catch (e) {
+      console.error(e);
+      setApprovalToast("Error al aprobar. Intenta de nuevo.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const handleRejectFromDashboard = async ({ projectId, faseId, propuestoPor, faseNombre, projectName }, reason = "") => {
+    const key = `${projectId}:${faseId}`;
+    setApprovingId(key);
+    try {
+      const project = projects.find(p => p.id === projectId);
+      if (!project) return;
+      const fase = (project.fases || []).find(f => f.id === faseId);
+      const nextFases = (project.fases || []).map(f => (
+        f.id !== faseId ? f : {
+          ...f,
+          avancePropuesto: null, notaAvancePropuesto: "",
+          avancePropuestoPorUid: null, avancePropuestoPorNombre: null, avancePropuestoAt: null,
+        }
+      ));
+      await updateDoc(doc(db, "projects", projectId), {
+        fases: nextFases, updatedAt: serverTimestamp(),
+      });
+      // Notificar al colaborador con el motivo
+      const responsableUid = fase?.responsableUid || fase?.avancePropuestoPorUid;
+      if (responsableUid && reason.trim()) {
+        try {
+          const { createNotification } = await import("../lib/notifications.js");
+          createNotification(responsableUid, {
+            type: "avance_rechazado",
+            title: "Propuesta rechazada",
+            body: `Tu propuesta para "${faseNombre}" en ${projectName} fue rechazada. Motivo: ${reason.trim()}`,
+            projectId,
+            projectName,
+          });
+        } catch (e) { console.error(e); }
+      }
+      setProjects(prev => prev.map(p => p.id === projectId ? { ...p, fases: nextFases } : p));
+      setApprovalToast("Propuesta rechazada.");
+      setTimeout(() => setApprovalToast(""), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  const confirmDashReject = async () => {
+    if (!dashRejectModal) return;
+    await handleRejectFromDashboard(dashRejectModal, dashRejectReason);
+    setDashRejectModal(null);
+    setDashRejectReason("");
+  };
+
   if (!ready) return <p className="text-[13px]" style={{ color: "rgb(var(--ink) / 0.6)" }}>Verificando sesión…</p>;
 
   if (loading) return (
@@ -320,18 +550,17 @@ export default function DashboardAdmin() {
       </div>
 
       {/* ── Pulso hoy ── */}
-      <div className="rounded-2xl border bg-ivory p-4 space-y-3"
-        style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+      <div className="rounded-2xl border border-black/[0.07] dark:border-white/10 bg-ivory dark:bg-white/5 p-4 space-y-3">
         <div className="flex items-center gap-2">
           {pulso.length > 0 && <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />}
-          <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>Pulso hoy</p>
+          <p className="text-[12px] font-semibold text-ink dark:text-white/90">Pulso hoy</p>
         </div>
         {pulso.length === 0 ? (
           <div className="flex items-center gap-3 py-1">
             <span className="text-[22px]">✅</span>
             <div>
-              <p className="text-[13px] font-medium" style={{ color: "rgb(var(--ink))" }}>Todo en orden</p>
-              <p className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.45)" }}>Sin alertas activas en este momento.</p>
+              <p className="text-[13px] font-medium text-ink dark:text-white/80">Todo en orden</p>
+              <p className="text-[11px] text-ink/45 dark:text-white/35">Sin alertas activas en este momento.</p>
             </div>
           </div>
         ) : (
@@ -341,14 +570,315 @@ export default function DashboardAdmin() {
         )}
       </div>
 
+      {/* ── Modal rechazo dashboard ── */}
+      {dashRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-3 pb-4"
+          onClick={() => { setDashRejectModal(null); setDashRejectReason(""); }}>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-black/10"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-black/[0.06]">
+              <p className="text-[14px] font-bold" style={{ color: "rgb(var(--ink))" }}>Rechazar propuesta</p>
+              <p className="text-[12px] mt-0.5" style={{ color: "rgb(var(--ink) / 0.5)" }}>
+                {dashRejectModal.projectName} — {dashRejectModal.faseNombre}
+              </p>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "rgb(var(--ink) / 0.7)" }}>
+                  Motivo del rechazo <span className="text-red-500">*</span>
+                </p>
+                <textarea
+                  value={dashRejectReason}
+                  onChange={e => setDashRejectReason(e.target.value)}
+                  rows={3} maxLength={300} autoFocus
+                  placeholder="Explica al colaborador que debe corregir..."
+                  className="w-full border rounded-xl px-3 py-2 text-[13px] outline-none resize-none"
+                  style={{ borderColor: "rgb(var(--taupe) / 0.35)", color: "rgb(var(--ink))" }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+                  {dashRejectModal.propuestoPor} recibira una notificacion con este mensaje.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setDashRejectModal(null); setDashRejectReason(""); }}
+                  className="flex-1 py-2.5 rounded-xl border text-[13px] transition"
+                  style={{ borderColor: "rgb(var(--ink) / 0.2)", color: "rgb(var(--ink) / 0.6)" }}>
+                  Cancelar
+                </button>
+                <button type="button"
+                  onClick={confirmDashReject}
+                  disabled={!dashRejectReason.trim() || !!approvingId}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold transition disabled:opacity-50">
+                  {approvingId ? "..." : "Confirmar rechazo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PDF preview modal ── */}
+      {pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/90"
+          onClick={() => setPdfPreviewUrl(null)}>
+          <div className="flex items-center justify-between px-4 py-3 bg-black/80 flex-shrink-0"
+            onClick={e => e.stopPropagation()}>
+            <p className="text-white text-[13px] font-medium">Vista previa del contrato</p>
+            <div className="flex items-center gap-2">
+              <a href={pdfPreviewUrl} target="_blank" rel="noopener noreferrer"
+                className="text-[11px] px-3 py-1.5 rounded-full border border-white/30 text-white/80 hover:text-white transition">
+                Descargar
+              </a>
+              <button type="button" onClick={() => setPdfPreviewUrl(null)}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition">
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <iframe
+              src={`https://docs.google.com/viewer?url=${encodeURIComponent(pdfPreviewUrl)}&embedded=true`}
+              className="w-full h-full border-0"
+              title="Vista previa PDF"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal rechazo contrato ── */}
+      {contratoRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 px-3 pb-4"
+          onClick={() => { setContratoRejectModal(null); setContratoRejectReason(""); }}>
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-black/10"
+            onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-black/[0.06]">
+              <p className="text-[14px] font-bold" style={{ color: "rgb(var(--ink))" }}>Rechazar propuesta de contrato</p>
+              <p className="text-[12px] mt-0.5" style={{ color: "rgb(var(--ink) / 0.5)" }}>
+                {contratoRejectModal.projectName}
+              </p>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <p className="text-[12px] font-semibold mb-1.5" style={{ color: "rgb(var(--ink) / 0.7)" }}>
+                  Motivo del rechazo <span className="text-red-500">*</span>
+                </p>
+                <textarea
+                  value={contratoRejectReason}
+                  onChange={e => setContratoRejectReason(e.target.value)}
+                  rows={3} maxLength={300} autoFocus
+                  placeholder="Indica al jurídico qué debe corregir..."
+                  className="w-full border rounded-xl px-3 py-2 text-[13px] outline-none resize-none"
+                  style={{ borderColor: "rgb(var(--taupe) / 0.35)", color: "rgb(var(--ink))" }}
+                />
+                <p className="text-[10px] mt-1" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+                  {contratoRejectModal.propuestoPor} recibirá una notificación con este mensaje.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button"
+                  onClick={() => { setContratoRejectModal(null); setContratoRejectReason(""); }}
+                  className="flex-1 py-2.5 rounded-xl border text-[13px] transition"
+                  style={{ borderColor: "rgb(var(--ink) / 0.2)", color: "rgb(var(--ink) / 0.6)" }}>
+                  Cancelar
+                </button>
+                <button type="button"
+                  onClick={confirmContratoReject}
+                  disabled={!contratoRejectReason.trim() || !!contratoActionId}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-[13px] font-semibold transition disabled:opacity-50">
+                  {contratoActionId ? "..." : "Confirmar rechazo"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Toast aprobacion ── */}
+      {approvalToast && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-ink text-ivory text-[12px] font-medium px-4 py-2.5 rounded-2xl shadow-xl">
+          {approvalToast}
+        </div>
+      )}
+
+      {/* ── Avances pendientes de aprobacion ── */}
+      {pendingApprovals.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">
+              Avances pendientes de aprobacion
+            </p>
+            <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
+              {pendingApprovals.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pendingApprovals.map(item => {
+              const key = `${item.projectId}:${item.faseId}`;
+              const busy = approvingId === key;
+              return (
+                <div key={key}
+                  className="rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-amber-900/20 p-3 space-y-2.5">
+                  {/* Info */}
+                  <button type="button" onClick={() => nav(`/proyectos/${item.projectId}`)} className="w-full text-left">
+                    <p className="text-[12px] font-semibold text-ink dark:text-white hover:underline truncate">
+                      {item.projectName}
+                    </p>
+                    <p className="text-[11px] text-ink/55 dark:text-white/50 mt-0.5">
+                      Fase: <span className="font-medium text-ink/70 dark:text-white/70">{item.faseNombre}</span>
+                    </p>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-ink/60 dark:text-white/50 font-medium">{item.propuestoPor}</span>
+                    <span className="text-[10px] text-ink/40 dark:text-white/30">propuso</span>
+                    <span className="text-[12px] font-bold text-amber-700 dark:text-amber-300">
+                      {item.porcentajeActual}% → {item.avancePropuesto}%
+                    </span>
+                  </div>
+                  {item.nota && (
+                    <p className="text-[11px] text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded-lg px-2.5 py-1.5 whitespace-pre-wrap">
+                      {item.nota}
+                    </p>
+                  )}
+                  {/* Acciones */}
+                  <div className="flex items-center gap-2">
+                    <button type="button"
+                      onClick={() => handleApproveFromDashboard(item)}
+                      disabled={busy}
+                      className="flex-1 text-[11px] font-semibold py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition disabled:opacity-50 active:scale-[0.98]">
+                      {busy ? "..." : "Aprobar"}
+                    </button>
+                    <button type="button"
+                      onClick={() => { setDashRejectModal(item); setDashRejectReason(""); }}
+                      disabled={busy}
+                      className="flex-1 text-[11px] font-semibold py-2 rounded-xl border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition disabled:opacity-50 active:scale-[0.98]">
+                      Rechazar
+                    </button>
+                    <button type="button"
+                      onClick={() => nav(`/proyectos/${item.projectId}`)}
+                      className="px-3 py-2 rounded-xl border border-ink/15 dark:border-white/15 text-ink/50 dark:text-white/40 hover:text-ink dark:hover:text-white hover:border-ink/30 dark:hover:border-white/30 transition text-[11px]">
+                      Ver
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Contratos pendientes de aprobacion ── */}
+      {pendingContratos.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">
+              Contratos pendientes de aprobacion
+            </p>
+            <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
+              {pendingContratos.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pendingContratos.map(item => {
+              const busy = contratoActionId === item.projectId;
+              return (
+                <div key={item.projectId}
+                  className="rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-amber-900/20 p-3 space-y-2.5">
+                  <button type="button" onClick={() => nav(`/proyectos/${item.projectId}`)} className="w-full text-left">
+                    <p className="text-[12px] font-semibold text-ink dark:text-white hover:underline truncate">
+                      {item.projectName}
+                    </p>
+                    <p className="text-[11px] text-ink/55 dark:text-white/50 mt-0.5">
+                      Propuesto por <span className="font-medium text-ink/70 dark:text-white/70">{item.propuestoPor}</span>
+                    </p>
+                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button type="button"
+                      onClick={() => setPdfPreviewUrl(item.url)}
+                      className="text-[11px] px-3 py-1.5 rounded-full border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition">
+                      Ver PDF
+                    </button>
+                    <button type="button"
+                      onClick={() => handleAprobarContrato(item)}
+                      disabled={busy}
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white transition disabled:opacity-50 active:scale-[0.98]">
+                      {busy ? "..." : "Aprobar"}
+                    </button>
+                    <button type="button"
+                      onClick={() => { setContratoRejectModal(item); setContratoRejectReason(""); }}
+                      disabled={busy}
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-full border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition disabled:opacity-50 active:scale-[0.98]">
+                      Rechazar
+                    </button>
+                    <button type="button"
+                      onClick={() => nav(`/proyectos/${item.projectId}`)}
+                      className="ml-auto text-[11px] text-ink/40 dark:text-white/30 hover:text-ink dark:hover:text-white transition">
+                      Ver proyecto →
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Trazabilidad de contratos solicitados ── */}
+      {trazabilidadContratos.some(c => c.estado !== "Resuelto") && (
+        <div className="rounded-2xl border border-black/[0.07] dark:border-white/10 bg-ivory dark:bg-white/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            <p className="text-[12px] font-semibold text-ink dark:text-white/90">Contratos solicitados</p>
+            <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
+              {trazabilidadContratos.filter(c => c.estado !== "Resuelto").length}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {trazabilidadContratos.filter(c => c.estado !== "Resuelto").map(item => {
+              const dot = item.estadoColor === "green" ? "bg-emerald-400"
+                : item.estadoColor === "amber" ? "bg-amber-400 animate-pulse"
+                : "bg-ink/25 dark:bg-white/25";
+              const badge = item.estadoColor === "green"
+                ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300"
+                : item.estadoColor === "amber"
+                ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                : "bg-ink/8 dark:bg-white/8 text-ink/55 dark:text-white/40";
+              return (
+                <button key={item.projectId} type="button"
+                  onClick={() => nav(`/proyectos/${item.projectId}`)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.04] active:scale-[0.99] transition-all text-left">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium truncate text-ink dark:text-white/85">{item.projectName}</p>
+                    {item.propuestoPor && (
+                      <p className="text-[10px] text-ink/45 dark:text-white/30 truncate">
+                        Propuesto por {item.propuestoPor}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${badge}`}>
+                    {item.estado}
+                  </span>
+                  <svg className="w-3 h-3 flex-shrink-0 text-ink/20 dark:text-white/20"
+                    fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Trazabilidad del equipo ── */}
       {teamStats.length > 0 && (
-        <div className="rounded-2xl border bg-ivory p-4 space-y-3"
-          style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+        <div className="rounded-2xl border border-black/[0.07] dark:border-white/10 bg-ivory dark:bg-white/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>Trazabilidad del equipo</p>
+            <p className="text-[12px] font-semibold text-ink dark:text-white/90">Trazabilidad del equipo</p>
             <button type="button" onClick={() => nav("/colaboradores")}
-              className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>Ver equipo →</button>
+              className="text-[11px] text-ink/40 dark:text-white/35 hover:text-ink dark:hover:text-white transition">Ver equipo →</button>
           </div>
           <div className="space-y-2">
             {teamStats.map(col => (
@@ -372,12 +902,11 @@ export default function DashboardAdmin() {
 
       {/* ── Actividad reciente ── */}
       {recientes.length > 0 && (
-        <div className="rounded-2xl border bg-ivory p-4 space-y-3"
-          style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+        <div className="rounded-2xl border border-black/[0.07] dark:border-white/10 bg-ivory dark:bg-white/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>Actividad reciente</p>
+            <p className="text-[12px] font-semibold text-ink dark:text-white/90">Actividad reciente</p>
             <button type="button" onClick={() => nav("/proyectos")}
-              className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>Ver todos →</button>
+              className="text-[11px] text-ink/40 dark:text-white/35 hover:text-ink dark:hover:text-white transition">Ver todos →</button>
           </div>
           <div className="space-y-1">
             {recientes.map(p => (
@@ -417,33 +946,37 @@ function ColaboradorRow({ col, onPress }) {
     else { fechaLabel = `${dl}d`; }
   }
 
+  const barCls = pct === 100 ? "bg-emerald-400 dark:bg-emerald-500"
+    : pct >= 60 ? "bg-amber-400 dark:bg-amber-500"
+    : pct > 0 ? "bg-red-400 dark:bg-red-500"
+    : "bg-ink/20 dark:bg-white/20";
+  const cntCls = pct === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-ink/50 dark:text-white/40";
+
   return (
     <button type="button" onClick={onPress}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/[0.025] active:scale-[0.99] transition-all text-left"
-      style={{ background: "rgb(var(--sand) / 0.4)" }}>
-      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-bold text-ivory"
-        style={{ background: "rgb(var(--ink))" }}>
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl bg-black/[0.025] dark:bg-white/[0.04] hover:bg-black/[0.045] dark:hover:bg-white/[0.07] active:scale-[0.99] transition-all text-left">
+      <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] font-bold text-ivory dark:text-ink bg-ink dark:bg-white/90">
         {(col.name || col.email || "?")[0].toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1">
-          <p className="text-[12px] font-semibold truncate" style={{ color: "rgb(var(--ink))" }}>
+          <p className="text-[12px] font-semibold truncate text-ink dark:text-white/90">
             {col.name || col.email}
           </p>
           <div className="flex items-center gap-2 flex-shrink-0">
             {fechaLabel && <span className="text-[10px]" style={fechaCls}>⏱ {fechaLabel}</span>}
-            <span className="text-[10px] font-semibold" style={{ color: pct === 100 ? "#16a34a" : "rgb(var(--ink) / 0.5)" }}>
+            <span className={`text-[10px] font-semibold ${cntCls}`}>
               {col.completadas}/{col.total}
             </span>
           </div>
         </div>
-        <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: "rgb(var(--ink) / 0.08)" }}>
-          <div className={`h-full rounded-full transition-all duration-700 ease-out ${pct === 100 ? "bg-emerald-400" : pct >= 60 ? "bg-amber-400" : "bg-ink/40"}`}
+        <div className="h-1.5 w-full rounded-full overflow-hidden bg-ink/8 dark:bg-white/10">
+          <div className={`h-full rounded-full transition-all duration-700 ease-out ${barCls}`}
             style={{ width: `${barWidth}%` }} />
         </div>
       </div>
-      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
-        style={{ color: "rgb(var(--ink) / 0.2)" }}>
+      <svg className="w-3 h-3 flex-shrink-0 text-ink/20 dark:text-white/20"
+        fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
       </svg>
     </button>
@@ -453,8 +986,8 @@ function ColaboradorRow({ col, onPress }) {
 /* ── Alert row ── */
 function AlertRow({ alert }) {
   const styles = {
-    red:   { wrap: "bg-red-50 border-red-200",    title: "text-red-800",    sub: "text-red-600/80" },
-    amber: { wrap: "bg-amber-50 border-amber-200", title: "text-amber-800",  sub: "text-amber-700/80" },
+    red:   { wrap: "bg-red-50 dark:bg-red-900/25 border-red-200 dark:border-red-800",    title: "text-red-800 dark:text-red-300",    sub: "text-red-600/80 dark:text-red-400/80" },
+    amber: { wrap: "bg-amber-50 dark:bg-amber-900/25 border-amber-200 dark:border-amber-800", title: "text-amber-800 dark:text-amber-300", sub: "text-amber-700/80 dark:text-amber-400/80" },
   };
   const s = styles[alert.color] || styles.amber;
   return (
@@ -465,7 +998,8 @@ function AlertRow({ alert }) {
         <p className={`text-[12px] font-semibold leading-snug ${s.title}`}>{alert.text}</p>
         <p className={`text-[10px] mt-0.5 ${s.sub}`}>{alert.sub}</p>
       </div>
-      <svg className="w-3.5 h-3.5 flex-shrink-0 opacity-40" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <svg className={`w-3.5 h-3.5 flex-shrink-0 opacity-40 ${alert.color === "red" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}
+        fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
       </svg>
     </button>
@@ -480,6 +1014,14 @@ function RecentProject({ project, onClick }) {
   const ago = ts ? timeAgo(ts) : "";
   const fases = Array.isArray(project.fases) ? project.fases : [];
 
+  // Color semáforo basado en avance global
+  const progColor = prog >= 80 ? "text-emerald-600 dark:text-emerald-400"
+    : prog >= 40 ? "text-amber-600 dark:text-amber-400"
+    : "text-red-500 dark:text-red-400";
+  const barColor = prog >= 80 ? "bg-emerald-400 dark:bg-emerald-500"
+    : prog >= 40 ? "bg-amber-400 dark:bg-amber-500"
+    : "bg-red-400 dark:bg-red-500";
+
   useEffect(() => {
     const t = setTimeout(() => setBarWidth(prog), 600);
     return () => clearTimeout(t);
@@ -487,34 +1029,23 @@ function RecentProject({ project, onClick }) {
 
   return (
     <button type="button" onClick={onClick}
-      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-black/[0.03] active:scale-[0.99] transition-all text-left group">
+      className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-black/[0.03] dark:hover:bg-white/[0.04] active:scale-[0.99] transition-all text-left group">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-1.5">
-          <p className="text-[13px] font-medium truncate" style={{ color: "rgb(var(--ink))" }}>
+          <p className="text-[13px] font-medium truncate text-ink dark:text-white/90">
             {project.name || project.nombre || "Proyecto"}
           </p>
           <div className="flex items-center gap-2 flex-shrink-0">
-            {ago && <span className="text-[10px]" style={{ color: "rgb(var(--ink) / 0.35)" }}>{ago}</span>}
-            <span className="text-[11px] font-semibold" style={{ color: "rgb(var(--ink) / 0.5)" }}>{prog}%</span>
+            {ago && <span className="text-[10px] text-ink/35 dark:text-white/30">{ago}</span>}
+            <span className={`text-[12px] font-bold ${progColor}`}>{prog}%</span>
           </div>
         </div>
-        {fases.length > 0 ? (
-          <div className="flex gap-0.5">
-            {fases.slice(0, 8).map((f, i) => {
-              const fp = clampInt(f.porcentaje, 0, 100);
-              const fc = f.estado === "completada" || fp >= 100 ? "bg-emerald-400"
-                : fp >= 50 ? "bg-amber-400" : fp > 0 ? "bg-red-300" : "bg-black/10";
-              return <div key={i} className={`flex-1 h-1 rounded-full ${fc}`} />;
-            })}
-          </div>
-        ) : (
-          <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: "rgb(var(--ink) / 0.07)" }}>
-            <div className="h-full rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${barWidth}%`, background: "rgb(var(--ink) / 0.35)" }} />
-          </div>
-        )}
+        <div className="h-1.5 w-full rounded-full overflow-hidden bg-black/8 dark:bg-white/10">
+          <div className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+            style={{ width: `${barWidth}%` }} />
+        </div>
       </div>
-      <svg className="w-3 h-3 opacity-0 group-hover:opacity-25 transition-opacity flex-shrink-0"
+      <svg className="w-3 h-3 opacity-0 group-hover:opacity-25 transition-opacity flex-shrink-0 text-ink dark:text-white"
         fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
       </svg>

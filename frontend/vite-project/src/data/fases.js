@@ -41,6 +41,14 @@ export const normalizeFases = (fases) => {
     const responsableNombre = f?.responsableNombre ?? null;
     const responsableSubRole = f?.responsableSubRole ?? null;
     const fechaEntregaResponsable = f?.fechaEntregaResponsable ?? null;
+    const avancePropuestoRaw = f?.avancePropuesto;
+    const avancePropuesto = Number.isFinite(Number(avancePropuestoRaw))
+      ? clampInt(Number(avancePropuestoRaw), 0, 100)
+      : null;
+    const notaAvancePropuesto = f?.notaAvancePropuesto ?? "";
+    const avancePropuestoPorUid = f?.avancePropuestoPorUid ?? null;
+    const avancePropuestoPorNombre = f?.avancePropuestoPorNombre ?? null;
+    const avancePropuestoAt = f?.avancePropuestoAt ?? null;
 
     // ── Fechas del plan (también se preservan) ──
     const fechaInicioPlaneada = f?.fechaInicioPlaneada ?? null;
@@ -56,6 +64,11 @@ export const normalizeFases = (fases) => {
       responsableNombre,
       responsableSubRole,
       fechaEntregaResponsable,
+      avancePropuesto,
+      notaAvancePropuesto,
+      avancePropuestoPorUid,
+      avancePropuestoPorNombre,
+      avancePropuestoAt,
       fechaInicioPlaneada,
       fechaFinPlaneada,
     };

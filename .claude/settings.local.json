@@ -78,7 +78,9 @@
       "Bash(echo JAVA_HOME=$JAVA_HOME)",
       "Bash(grep -r \"sendEmail\\\\|nodemailer\\\\|transporter\\\\|smtp\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos --include=*.js --include=*.ts --include=*.jsx --include=*.tsx)",
       "Bash(find c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos/backend -type f \\\\\\(-name *.js -o -name *.ts \\\\\\) ! -path */node_modules/*)",
-      "Bash(grep -r \"from.*@\\\\|to:.*@\\\\|subject:\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos --include=*.js --include=*.ts --include=*.jsx --include=*.tsx)"
+      "Bash(grep -r \"from.*@\\\\|to:.*@\\\\|subject:\" c:/Users/HP/Pictures/Tesis-Plataforma-HYE-Arquitectos --include=*.js --include=*.ts --include=*.jsx --include=*.tsx)",
+      "Bash(npx vite:*)",
+      "Bash(npx firebase:*)"
     ]
   }
 }

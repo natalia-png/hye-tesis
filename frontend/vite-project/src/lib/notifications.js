@@ -7,6 +7,23 @@ import {
 import { db } from "./firebase";
 
 /* ─────────────────────────────────────────────────────────────
+   notifyAdmins
+   Envia notificacion a todos los usuarios con role === "admin"
+───────────────────────────────────────────────────────────── */
+export async function notifyAdmins(payload) {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "users"), where("role", "==", "admin"), limit(20))
+    );
+    await Promise.all(
+      snap.docs.map(d => createNotification(d.id, payload))
+    );
+  } catch (e) {
+    console.error("notifyAdmins error:", e.message || e);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
    createNotification
    Escribe en Firestore + dispara push FCM si el cliente tiene token
 ───────────────────────────────────────────────────────────── */

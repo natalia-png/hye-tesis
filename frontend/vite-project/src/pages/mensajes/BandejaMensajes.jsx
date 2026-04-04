@@ -503,32 +503,56 @@ function PermisosPanel() {
 
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-ink/60 leading-relaxed">
+      <p className="text-[12px] text-ink/60 dark:text-white/50 leading-relaxed">
         Activa qué colaboradores pueden chatear con el cliente de cada proyecto.
       </p>
       {proyectos.map(p => (
         <div key={p.id} className="card space-y-3">
           <div>
-            <p className="text-[13px] font-semibold text-ink">{p.name || p.nombre}</p>
-            <p className="text-[11px] text-ink/50">Cliente: {p.client || p.cliente || "—"}</p>
+            <p className="text-[13px] font-semibold text-ink dark:text-white/90">{p.name || p.nombre}</p>
+            <p className="text-[11px] text-ink/50 dark:text-white/40">Cliente: {p.client || p.cliente || "—"}</p>
           </div>
-          <div className="space-y-2.5">
+          <div className="divide-y divide-sand dark:divide-white/8">
             {colaboradores.map(c => {
               const key = `${p.id}_${c.uid}`;
               const activo = p.chatPermisos?.[c.uid] || false;
+              const busy = saving[key];
               return (
-                <div key={c.uid} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-[#5C5852] flex items-center justify-center flex-shrink-0">
-                      <span className="text-[11px] font-bold text-ivory">{(c.name || "?")[0].toUpperCase()}</span>
+                <div key={c.uid} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                  {/* Avatar + nombre */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold transition-colors ${activo ? "bg-emerald-600 text-white" : "bg-ink/10 dark:bg-white/10 text-ink/50 dark:text-white/40"}`}>
+                      {(c.name || "?")[0].toUpperCase()}
                     </div>
-                    <p className="text-[12px] text-ink truncate">{c.name}</p>
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-medium text-ink dark:text-white/85 truncate">{c.name}</p>
+                      <p className={`text-[10px] font-semibold ${activo ? "text-emerald-600 dark:text-emerald-400" : "text-ink/35 dark:text-white/30"}`}>
+                        {activo ? "Con acceso al chat" : "Sin acceso"}
+                      </p>
+                    </div>
                   </div>
-                  <button type="button" disabled={saving[key]}
+                  {/* Toggle visual claro */}
+                  <button
+                    type="button"
+                    disabled={busy}
                     onClick={() => togglePermiso(p, c)}
-                    className="relative flex-shrink-0 w-10 rounded-full transition-colors duration-200 disabled:opacity-50"
-                    style={{ height: "22px", backgroundColor: activo ? "#141414" : "#d1c9bf" }}>
-                    <span className={`absolute top-0.5 w-[18px] h-[18px] rounded-full bg-white shadow transition-transform duration-200 ${activo ? "translate-x-[20px]" : "translate-x-0.5"}`} />
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 ${
+                      activo
+                        ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 dark:hover:bg-emerald-900/60"
+                        : "bg-ink/6 dark:bg-white/8 text-ink/50 dark:text-white/40 border border-ink/15 dark:border-white/15 hover:bg-ink/10 dark:hover:bg-white/12"
+                    }`}>
+                    {busy ? (
+                      <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : activo ? (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
+                      </svg>
+                    )}
+                    {busy ? "Guardando…" : activo ? "Activado" : "Desactivado"}
                   </button>
                 </div>
               );

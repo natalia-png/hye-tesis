@@ -195,6 +195,44 @@ export default function Configuracion() {
         </div>
       </div>
 
+      {user?.role === "colaborador" && (
+        <div className="card space-y-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.15em] font-semibold" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+              Mi contrato
+            </p>
+            <p className="text-[11px] leading-relaxed mt-0.5" style={{ color: "rgb(var(--ink) / 0.5)" }}>
+              Documento oficial de tu vinculación con H&amp;E
+            </p>
+          </div>
+
+          {user?.contratoURL ? (
+            <div className="space-y-2">
+              <p className="text-[12px]" style={{ color: "rgb(var(--ink) / 0.6)" }}>Documento disponible</p>
+              <button
+                type="button"
+                onClick={() => window.open(user.contratoURL, "_blank", "noopener,noreferrer")}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-medium border transition hover:bg-ink/5"
+                style={{ borderColor: "rgb(var(--taupe) / 0.4)", color: "rgb(var(--ink))" }}
+              >
+                Ver contrato
+              </button>
+            </div>
+          ) : (
+            <p className="text-[12px] italic" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+              El administrador aún no ha subido tu contrato.
+            </p>
+          )}
+
+          {(user?.telefono || user?.cedula) && (
+            <div className="space-y-1 border-t pt-2" style={{ borderColor: "rgb(var(--taupe) / 0.3)" }}>
+              {user?.telefono && <InfoRow label="Teléfono" value={user.telefono} />}
+              {user?.cedula && <InfoRow label="Cédula" value={user.cedula} />}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="card space-y-4">
         <p className="text-[10px] uppercase tracking-[0.15em] font-semibold" style={{ color: "rgb(var(--ink) / 0.4)" }}>
           Apariencia

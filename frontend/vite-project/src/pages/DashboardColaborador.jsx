@@ -62,6 +62,60 @@ export default function DashboardColaborador() {
     return result;
   }, [proyectos, user?.uid]);
 
+  const propuestasPendientes = useMemo(() => misFases.filter(f => {
+    const val = Number(f.avancePropuesto);
+    return f.avancePropuesto != null && Number.isFinite(val) && val > 0 && !!f.avancePropuestoPorUid;
+  }), [misFases]);
+
+  const propuestasRechazadas = useMemo(() => misFases.filter(f =>
+    f.ultimoRechazo?.motivo && !f.avancePropuestoPorUid
+  ), [misFases]);
+
+  const isJuridico = !!user?.subRole?.toLowerCase().includes("jur");
+
+  // Trazabilidad de contratos para el juridico
+  const trazabilidadContratos = useMemo(() => {
+    if (!isJuridico) return [];
+    const result = [];
+    proyectos.forEach(p => {
+      const fueYo = p.contratoPropuesto?.subidoPorUid === user?.uid
+        || p.contratoPropuesto?.subidoPor === user?.name
+        || p.contratoPropuesto?.subidoPor === user?.email;
+      const haySolicitud = !!p.contratoSolicitado;
+      const hayPropuesta = !!p.contratoPropuesto;
+      const hayContrato = !!p.contratoURL;
+
+      // Solo incluir proyectos con solicitud del admin O donde el juridico propuso
+      if (!haySolicitud && !fueYo) return;
+
+      let estado, estadoColor;
+      if (hayContrato && haySolicitud) {
+        estado = "Aprobado";
+        estadoColor = "green";
+      } else if (hayPropuesta && fueYo) {
+        estado = "Enviado — en revisión";
+        estadoColor = "amber";
+      } else if (haySolicitud && !hayPropuesta) {
+        estado = "Pendiente — subir propuesta";
+        estadoColor = "red";
+      } else {
+        return;
+      }
+
+      result.push({
+        proyectoId: p.id,
+        proyectoNombre: p.name || p.nombre || "Sin nombre",
+        estado,
+        estadoColor,
+        solicitadoAt: p.contratoSolicitado?.solicitadoAt || null,
+        subidoAt: p.contratoPropuesto?.subidoAt || null,
+      });
+    });
+    // Pendientes primero, luego en revisión, luego aprobados
+    const order = { "Pendiente — subir propuesta": 0, "Enviado — en revisión": 1, "Aprobado": 2 };
+    return result.sort((a, b) => (order[a.estado] ?? 3) - (order[b.estado] ?? 3));
+  }, [proyectos, isJuridico, user?.uid, user?.name, user?.email]);
+
   const stats = useMemo(() => {
     const activas   = misFases.filter(f => f.estado === "en_curso");
     const pendientes = misFases.filter(f => f.estado !== "completada" && f.estado !== "en_curso");
@@ -220,6 +274,148 @@ export default function DashboardColaborador() {
         </div>
       ) : (
         <>
+          {/* ── Propuestas enviadas pendientes de aprobacion ── */}
+          {propuestasPendientes.length > 0 && (
+            <div className="rounded-2xl border bg-ivory p-4 space-y-2.5"
+              style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>
+                  Propuestas enviadas — esperando aprobacion
+                </p>
+                <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  {propuestasPendientes.length}
+                </span>
+              </div>
+              {propuestasPendientes.map(f => (
+                <button key={f.id} type="button"
+                  onClick={() => nav(`/proyectos/${f.proyectoId}`)}
+                  className="w-full flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left hover:shadow-sm active:scale-[0.99] transition-all"
+                  style={{ borderColor: "rgb(var(--taupe) / 0.2)", background: "rgb(var(--sand) / 0.5)" }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[13px] bg-amber-100 text-amber-700 font-bold">
+                    {clampInt(f.avancePropuesto, 0, 100)}%
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold truncate" style={{ color: "rgb(var(--ink))" }}>
+                      {f.nombre}
+                    </p>
+                    <p className="text-[11px] truncate" style={{ color: "rgb(var(--ink) / 0.5)" }}>
+                      {f.proyectoNombre} — actual {clampInt(f.porcentaje, 0, 100)}% → propuesto {clampInt(f.avancePropuesto, 0, 100)}%
+                    </p>
+                  </div>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                    style={{ color: "rgb(var(--ink) / 0.2)" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              ))}
+              <p className="text-[10px] text-center" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+                Luisa revisara y aprobara cada propuesta antes de que el cliente lo vea.
+              </p>
+            </div>
+          )}
+
+          {/* ── Trazabilidad de contratos (solo Jurídico) ── */}
+          {trazabilidadContratos.length > 0 && (
+            <div className="rounded-2xl border bg-ivory p-4 space-y-3"
+              style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>
+                  Contratos asignados
+                </p>
+                <span className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+                  {trazabilidadContratos.filter(c => c.estado === "Aprobado").length}/{trazabilidadContratos.length} resueltos
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {trazabilidadContratos.map(c => {
+                  const dot = c.estadoColor === "green" ? "bg-emerald-400"
+                    : c.estadoColor === "amber" ? "bg-amber-400 animate-pulse"
+                    : "bg-red-400 animate-pulse";
+                  const badge = c.estadoColor === "green"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : c.estadoColor === "amber"
+                    ? "bg-amber-100 text-amber-700"
+                    : "bg-red-100 text-red-600";
+                  return (
+                    <button key={c.proyectoId} type="button"
+                      onClick={() => nav(`/proyectos/${c.proyectoId}`)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-black/[0.03] active:scale-[0.99] transition-all text-left"
+                      style={{ background: "rgb(var(--sand) / 0.4)" }}>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-medium truncate" style={{ color: "rgb(var(--ink))" }}>
+                          {c.proyectoNombre}
+                        </p>
+                        <p className="text-[10px]" style={{ color: "rgb(var(--ink) / 0.45)" }}>
+                          {c.subidoAt ? `Enviado ${timeAgo(c.subidoAt)}` : c.solicitadoAt ? `Solicitado ${timeAgo(c.solicitadoAt)}` : ""}
+                        </p>
+                      </div>
+                      <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${badge}`}>
+                        {c.estado}
+                      </span>
+                      <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                        style={{ color: "rgb(var(--ink) / 0.2)" }}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ── Propuestas rechazadas ── */}
+          {propuestasRechazadas.length > 0 && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+                <p className="text-[12px] font-semibold text-red-800">
+                  Propuestas rechazadas — requieren corrección
+                </p>
+                <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                  {propuestasRechazadas.length}
+                </span>
+              </div>
+              {propuestasRechazadas.map(f => (
+                <div key={f.id}
+                  className="rounded-xl border border-red-200 bg-white overflow-hidden">
+                  {/* Cabecera de la fase */}
+                  <div className="flex items-center gap-3 px-3 pt-3 pb-2">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-red-100 text-red-600 flex-shrink-0">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-semibold text-red-900 truncate">{f.nombre}</p>
+                      <p className="text-[11px] text-red-700/70 truncate">{f.proyectoNombre}</p>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-600 border border-red-200 flex-shrink-0">
+                      {clampInt(f.porcentaje, 0, 100)}% actual
+                    </span>
+                  </div>
+                  {/* Motivo del rechazo */}
+                  <div className="mx-3 mb-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
+                    <p className="text-[10px] font-semibold text-red-500 uppercase tracking-wide mb-1">Motivo del rechazo</p>
+                    <p className="text-[12px] text-red-800 leading-relaxed">{f.ultimoRechazo.motivo}</p>
+                  </div>
+                  {/* Fecha + acción */}
+                  <div className="flex items-center justify-between px-3 pb-3 gap-2">
+                    <p className="text-[10px] text-red-400">
+                      {f.ultimoRechazo?.fecha ? timeAgo(f.ultimoRechazo.fecha) : ""}
+                    </p>
+                    <button type="button"
+                      onClick={() => nav(`/proyectos/${f.proyectoId}`)}
+                      className="text-[11px] font-semibold px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white transition active:scale-95">
+                      Corregir y reenviar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ── Próxima entrega ── FOCAL POINT */}
           {stats.proxima ? (
             <ProximaEntrega fase={stats.proxima} nav={nav} />
@@ -477,6 +673,19 @@ function WorkBar({ label, count, total, color, onClick }) {
 
 /* ── Helpers ── */
 function clampInt(v, a, b) { const n = Number(v); return Number.isFinite(n) ? Math.max(a, Math.min(b, Math.round(n))) : a; }
+function timeAgo(value) {
+  if (!value) return "";
+  const d = value?.seconds ? new Date(value.seconds * 1000) : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const diff = Date.now() - d.getTime();
+  const s = Math.floor(diff / 1000);
+  if (s < 60) return "hace unos segundos";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `hace ${h} h`;
+  return `hace ${Math.floor(h / 24)} d`;
+}
 function diffDays(fecha) {
   if (!fecha) return null;
   const end = new Date(fecha); end.setHours(0, 0, 0, 0);

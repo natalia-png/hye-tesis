@@ -21,6 +21,9 @@ function mergeProfileData(prev, data) {
     subRole: (data.subRole || "").toLowerCase(),
     name: data.name || prev.name,
     photoURL: data.photoURL || prev.photoURL || "",
+    contratoURL: data.contratoURL ?? prev.contratoURL ?? null,
+    telefono: data.telefono ?? prev.telefono ?? null,
+    cedula: data.cedula ?? prev.cedula ?? null,
   };
 }
 
@@ -107,6 +110,9 @@ export function AuthProvider({ children }) {
           photoURL: p?.photoURL || fbUser.photoURL || "",
           role: (p?.role || "sin-rol").toLowerCase(),
           subRole: (p?.subRole || "").toLowerCase(),
+          contratoURL: p?.contratoURL ?? null,
+          telefono: p?.telefono ?? null,
+          cedula: p?.cedula ?? null,
         });
 
         // Listener en tiempo real: si el admin cambia el rol mientras hay sesión activa,

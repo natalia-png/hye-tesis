@@ -215,6 +215,16 @@ export default function DashboardAdmin() {
     return list;
   }, [projects]);
 
+  // Garantías con propuesta de jurídica pendiente de aprobación
+  const pendingGarantias = useMemo(() => {
+    return garantias
+      .filter(g => !!g.respuestaPropuesta)
+      .map(g => ({
+        ...g,
+        proyectoNombre: projects.find(p => p.id === g._projectId)?.name || "Proyecto",
+      }));
+  }, [garantias, projects]);
+
   // Trazabilidad de todas las solicitudes de contrato que ha hecho el admin
   const trazabilidadContratos = useMemo(() => {
     return projects
@@ -764,6 +774,45 @@ export default function DashboardAdmin() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Garantías propuestas por jurídica pendientes de aprobación ── */}
+      {pendingGarantias.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+            <p className="text-[12px] font-semibold text-amber-900 dark:text-amber-200">
+              Respuestas de garantía — pendientes de aprobación
+            </p>
+            <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100">
+              {pendingGarantias.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pendingGarantias.map(g => (
+              <div key={g.id}
+                className="rounded-xl border border-amber-200 dark:border-amber-700 bg-white dark:bg-amber-900/20 p-3 space-y-2">
+                <button type="button" onClick={() => nav(`/proyectos/${g._projectId}/garantias`)} className="w-full text-left">
+                  <p className="text-[12px] font-semibold text-ink dark:text-white hover:underline truncate">
+                    {g.proyectoNombre}
+                  </p>
+                  <p className="text-[11px] text-ink/55 dark:text-white/50 mt-0.5">
+                    Por: <span className="font-medium text-ink/70 dark:text-white/70">{g.respuestaPropuesta.propuestoPor || "Jurídica"}</span>
+                  </p>
+                </button>
+                {g.respuestaPropuesta.texto && (
+                  <p className="text-[11px] text-amber-900 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 rounded-lg px-2.5 py-1.5 line-clamp-2">
+                    {g.respuestaPropuesta.texto}
+                  </p>
+                )}
+                <button type="button" onClick={() => nav(`/proyectos/${g._projectId}/garantias`)}
+                  className="w-full text-[11px] font-semibold py-2 rounded-xl border border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition active:scale-[0.98]">
+                  Revisar y aprobar →
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}

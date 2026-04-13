@@ -246,8 +246,8 @@ function TarjetaHistorial({ proyecto, nav }) {
   if (deleteResult) return null;
 
   return (
-    <div className="rounded-2xl border overflow-hidden"
-      style={{ borderColor: "rgb(var(--taupe) / 0.25)", background: "rgb(var(--ivory))" }}>
+    <div className="rounded-2xl border overflow-hidden bg-[rgb(var(--ivory))] dark:bg-[#252320]"
+      style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
 
       {/* Franja de color superior */}
       <div className={`h-1 w-full ${esArchivado ? "bg-amber-400" : "bg-emerald-500"}`} />
@@ -376,7 +376,7 @@ function TarjetaHistorial({ proyecto, nav }) {
 function Dato({ label, value, colored }) {
   const colors = { green: "#16a34a", amber: "#d97706" };
   return (
-    <div className="rounded-xl px-3 py-2" style={{ background: "rgb(var(--sand) / 0.5)" }}>
+    <div className="rounded-xl px-3 py-2 bg-[rgb(var(--sand)/0.5)] dark:bg-white/[0.06]">
       <p className="text-[10px] uppercase tracking-[0.12em]" style={{ color: "rgb(var(--ink) / 0.4)" }}>{label}</p>
       <p className="text-[12px] font-semibold mt-0.5" style={{ color: colored ? colors[colored] : "rgb(var(--ink))" }}>{value}</p>
     </div>

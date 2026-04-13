@@ -747,6 +747,42 @@ function EstadoChip({ estado }) {
 }
 EstadoChip.propTypes = { estado: PropTypes.string };
 
+// ── Nota privada del colaborador (solo admin la ve) ───────────
+function NotaPrivadaAdmin({ nota, autor }) {
+  const isUrl = /^https?:\/\//i.test(nota.trim());
+  return (
+    <div className="mt-3 flex gap-2.5 rounded-xl border border-violet-200 dark:border-violet-700/40 bg-violet-50 dark:bg-violet-900/15 px-3 py-2.5">
+      {/* Icono candado */}
+      <div className="flex-shrink-0 mt-0.5">
+        <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-800/40 flex items-center justify-center">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            className="text-violet-600 dark:text-violet-400">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-violet-600 dark:text-violet-400 mb-1">
+          Nota privada{autor ? ` · ${autor.split(" ")[0]}` : ""}
+        </p>
+        {isUrl ? (
+          <a href={nota.trim()} target="_blank" rel="noopener noreferrer"
+            className="text-[12px] text-violet-700 dark:text-violet-300 underline underline-offset-2 break-all hover:text-violet-900 dark:hover:text-violet-200 transition-colors">
+            {nota.trim()}
+          </a>
+        ) : (
+          <p className="text-[12px] text-violet-900 dark:text-violet-200 whitespace-pre-wrap break-words leading-relaxed">
+            {nota}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+NotaPrivadaAdmin.propTypes = { nota: PropTypes.string.isRequired, autor: PropTypes.string };
+
 // ── pickComparable ────────────────────────────────────────────
 function pickComparable(f) {
   return {
@@ -984,10 +1020,7 @@ function SortableFaseItem({
                       </p>
                     )}
                     {f.notaParaAdmin && (
-                      <p className="mt-1.5 text-[11px] text-ink/70 dark:text-white/60 bg-white/70 dark:bg-white/10 rounded-lg px-2 py-1.5 whitespace-pre-wrap border border-sand dark:border-white/10">
-                        <span className="font-semibold text-ink/50 dark:text-white/40">Nota privada: </span>
-                        {f.notaParaAdmin}
-                      </p>
+                      <NotaPrivadaAdmin nota={f.notaParaAdmin} autor={f.responsableNombre || f.avancePropuestoPorNombre} />
                     )}
                     <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-500">
                       Al aprobar: el avance se actualiza y los archivos de esta fase quedan visibles al cliente.
@@ -1014,6 +1047,11 @@ function SortableFaseItem({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Nota privada del colaborador — solo visible al admin, persiste tras aprobar */}
+          {isAdmin && !pendingApproval && f.notaParaAdmin && (
+            <NotaPrivadaAdmin nota={f.notaParaAdmin} autor={f.responsableNombre} />
           )}
 
           {/* Control de avance */}
@@ -1067,7 +1105,8 @@ function SortableFaseItem({
           )}
 
           <NotasFase projectId={projectId} phaseId={f.id}
-            canEdit={canEditFaseActual(f)} clientView={clientView}
+            canEdit={canEditFaseActual(f) && !(isAdmin && !!f.responsableUid)}
+            clientView={clientView}
             autoVisible={!isColab} currentUserUid={currentUserUid} />
           {/* Solo admin puede togglear visibilidad; colaborador solo puede subir */}
           <ArchivosFase projectId={projectId} phaseId={f.id}

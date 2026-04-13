@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp, getDocs, getDoc, doc, query, where, getDocsFromServer } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { getAuth } from "firebase/auth";
-import { cloneFases, DEFAULT_FASES } from "../data/fases";
+import { DEFAULT_FASES } from "../data/fases";
 import { useAuth } from "../app/useAuth";
 
 const FUNCTIONS_URL = "https://us-central1-hye-tesis.cloudfunctions.net";
@@ -57,6 +57,12 @@ export default function ProyectoNuevo() {
   const [clienteSearch, setClienteSearch] = useState("");
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
   const [loadingClientes, setLoadingClientes] = useState(true);
+
+  // ── Fases
+  const [fasesProyecto, setFasesProyecto] = useState(() =>
+    DEFAULT_FASES.map(f => ({ ...f }))
+  );
+  const [nuevaFaseNombre, setNuevaFaseNombre] = useState("");
 
   // ── Proveedores
   const [proveedores, setProveedores] = useState([]);
@@ -135,6 +141,36 @@ export default function ProyectoNuevo() {
     );
   };
 
+  const moverFase = (idx, dir) => {
+    setFasesProyecto(prev => {
+      const next = [...prev];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return prev;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  };
+
+  const eliminarFase = (idx) => {
+    setFasesProyecto(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
+
+  const agregarFase = () => {
+    const nombre = nuevaFaseNombre.trim();
+    if (!nombre) return;
+    const slug = nombre
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_|_$/, "");
+    const id = fasesProyecto.some(f => f.id === slug) ? `${slug}_${Date.now()}` : slug;
+    setFasesProyecto(prev => [...prev, { id, nombre, porcentaje: 0, estado: "pendiente", peso: 1 }]);
+    setNuevaFaseNombre("");
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
@@ -150,6 +186,9 @@ export default function ProyectoNuevo() {
     }
     if (clienteMode === "nuevo" && !form.client.trim()) {
       setError("El nombre del cliente es obligatorio."); return;
+    }
+    if (fasesProyecto.length === 0) {
+      setError("El proyecto debe tener al menos una fase."); return;
     }
 
     setSaving(true);
@@ -199,7 +238,7 @@ export default function ProyectoNuevo() {
         proveedores: proveedoresSeleccionados,
         proveedoresIds: proveedoresSeleccionados.map(p => p.id),
         status: "Planificado",
-        fases: cloneFases(DEFAULT_FASES),
+        fases: fasesProyecto.map(f => ({ ...f })),
         progress: 0,
         createdBy: user?.uid || null,
         createdAt: serverTimestamp(),
@@ -333,19 +372,18 @@ export default function ProyectoNuevo() {
                       {clientes.length === 0 ? "No hay clientes registrados aún." : "Sin resultados."}
                     </p>
                   ) : (
-                    <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-taupe/25 divide-y divide-taupe/10"
-                      style={{ background: "rgb(var(--ivory))" }}>
+                    <div className="max-h-48 overflow-y-auto space-y-1 rounded-xl border border-taupe/25 divide-y divide-taupe/10 bg-[rgb(var(--ivory))] dark:bg-[#252320]">
                       {clientesFiltrados.map(c => (
                         <button key={c.uid} type="button" onClick={() => seleccionarCliente(c)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-sand/60 transition">
-                          <div className="w-7 h-7 rounded-full bg-ink flex items-center justify-center flex-shrink-0">
-                            <span className="text-[11px] font-bold text-ivory">{(c.name || "?")[0].toUpperCase()}</span>
+                          className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-sand/60 dark:hover:bg-white/[0.06] transition">
+                          <div className="w-7 h-7 rounded-full bg-ink dark:bg-white/90 flex items-center justify-center flex-shrink-0">
+                            <span className="text-[11px] font-bold text-ivory dark:text-[#1A1917]">{(c.name || "?")[0].toUpperCase()}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-medium text-ink truncate">{c.name}</p>
-                            <p className="text-[11px] text-ink/50 truncate">{c.email}</p>
+                            <p className="text-[13px] font-medium text-ink dark:text-ivory truncate">{c.name}</p>
+                            <p className="text-[11px] text-ink/50 dark:text-ivory/50 truncate">{c.email}</p>
                           </div>
-                          {c.phone && <p className="text-[11px] text-ink/40 flex-shrink-0">{c.phone}</p>}
+                          {c.phone && <p className="text-[11px] text-ink/40 dark:text-ivory/40 flex-shrink-0">{c.phone}</p>}
                         </button>
                       ))}
                     </div>
@@ -450,6 +488,69 @@ export default function ProyectoNuevo() {
               className="input w-full text-[13px] resize-none" />
           </div>
 
+          {/* ══ SECCIÓN FASES ══ */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between">
+              <p className="text-[12px] font-semibold text-ink dark:text-ivory">Fases del proyecto</p>
+              <span className="text-[11px] text-ink/50 dark:text-ivory/50">{fasesProyecto.length} fase{fasesProyecto.length !== 1 ? "s" : ""}</span>
+            </div>
+            <p className="text-[11px] text-ink/50 dark:text-ivory/50 -mt-1">
+              Selecciona las fases que aplican. Puedes eliminar, reordenar y agregar fases personalizadas.
+            </p>
+
+            {/* Lista de fases */}
+            <div className="rounded-xl border border-taupe/25 divide-y divide-taupe/10 bg-[rgb(var(--ivory))] dark:bg-[#252320]">
+              {fasesProyecto.map((fase, idx) => (
+                <div key={fase.id} className="flex items-center gap-2 px-3 py-2.5">
+                  {/* Orden */}
+                  <div className="flex flex-col gap-0.5 flex-shrink-0">
+                    <button type="button" onClick={() => moverFase(idx, -1)} disabled={idx === 0}
+                      className="w-5 h-4 flex items-center justify-center rounded text-ink/30 dark:text-ivory/30 hover:text-ink dark:hover:text-ivory hover:bg-ink/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition">
+                      <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor"><path d="M5 2L9 8H1z"/></svg>
+                    </button>
+                    <button type="button" onClick={() => moverFase(idx, 1)} disabled={idx === fasesProyecto.length - 1}
+                      className="w-5 h-4 flex items-center justify-center rounded text-ink/30 dark:text-ivory/30 hover:text-ink dark:hover:text-ivory hover:bg-ink/10 dark:hover:bg-white/10 disabled:opacity-20 disabled:cursor-not-allowed transition">
+                      <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor"><path d="M5 8L1 2H9z"/></svg>
+                    </button>
+                  </div>
+
+                  {/* Número */}
+                  <span className="w-5 h-5 rounded-full bg-ink/10 dark:bg-white/10 text-ink dark:text-ivory flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {idx + 1}
+                  </span>
+
+                  {/* Nombre */}
+                  <p className="flex-1 text-[13px] font-medium text-ink dark:text-ivory truncate">{fase.nombre}</p>
+
+                  {/* Eliminar */}
+                  <button type="button" onClick={() => eliminarFase(idx)}
+                    disabled={fasesProyecto.length <= 1}
+                    className="w-6 h-6 flex items-center justify-center rounded-full text-ink/25 dark:text-ivory/25 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-20 disabled:cursor-not-allowed transition flex-shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Agregar fase personalizada */}
+            <div className="flex gap-2">
+              <input
+                value={nuevaFaseNombre}
+                onChange={e => setNuevaFaseNombre(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); agregarFase(); } }}
+                placeholder="Nombre de nueva fase…"
+                className="input flex-1 text-[13px]"
+              />
+              <button type="button" onClick={agregarFase}
+                disabled={!nuevaFaseNombre.trim()}
+                className="px-3 py-1.5 rounded-xl bg-ink dark:bg-white/90 text-ivory dark:text-[#1A1917] text-[12px] font-semibold disabled:opacity-40 hover:opacity-90 transition flex-shrink-0">
+                + Agregar
+              </button>
+            </div>
+          </div>
+
           {/* ══ SECCIÓN PROVEEDORES ══ */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
@@ -485,23 +586,22 @@ export default function ProyectoNuevo() {
                 <input value={provSearch} onChange={e => setProvSearch(e.target.value)}
                   placeholder="Buscar proveedor…"
                   className="input w-full text-[13px]" />
-                <div className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-taupe/25 divide-y divide-taupe/10"
-                  style={{ background: "rgb(var(--ivory))" }}>
+                <div className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-taupe/25 divide-y divide-taupe/10 bg-[rgb(var(--ivory))] dark:bg-[#252320]">
                   {provFiltrados.map(p => {
                     const sel = !!proveedoresSeleccionados.find(s => s.id === p.id);
                     return (
                       <button key={p.id} type="button" onClick={() => toggleProveedor(p)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition ${sel ? "bg-ink/[0.06]" : "hover:bg-sand/60"}`}>
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition ${sel ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-sand/60 dark:hover:bg-white/[0.06]"}`}>
                         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                           sel ? "bg-ink border-ink" : "border-taupe/50"}`}>
                           {sel && <svg className="w-2.5 h-2.5 text-ivory" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-ink truncate">{p.name}</p>
-                          {p.specialty && <p className="text-[11px] text-ink/50">{p.specialty}</p>}
+                          <p className="text-[13px] font-medium text-ink dark:text-ivory truncate">{p.name}</p>
+                          {p.specialty && <p className="text-[11px] text-ink/50 dark:text-ivory/50">{p.specialty}</p>}
                         </div>
-                        {p.phone && <p className="text-[11px] text-ink/40 flex-shrink-0">{p.phone}</p>}
+                        {p.phone && <p className="text-[11px] text-ink/40 dark:text-ivory/40 flex-shrink-0">{p.phone}</p>}
                       </button>
                     );
                   })}

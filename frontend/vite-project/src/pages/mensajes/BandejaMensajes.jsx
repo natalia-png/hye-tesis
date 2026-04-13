@@ -55,7 +55,26 @@ export default function BandejaMensajes() {
 /* ── Lista de chats ── */
 function ChatList({ chats, ready, user, nav, isArchived = false }) {
   const [showNuevo, setShowNuevo] = useState(false);
+  const [freshPhotos, setFreshPhotos] = useState({});
   const isCliente = user?.role === "cliente";
+
+  // Fetch current photos from users collection (chat.participantPhotos can be stale)
+  useEffect(() => {
+    if (!ready || chats.length === 0) return;
+    const uids = [...new Set(
+      chats.flatMap(c => (c.participants || []).filter(uid => uid !== user?.uid))
+    )].filter(Boolean);
+    if (uids.length === 0) return;
+    const chunks = [];
+    for (let i = 0; i < uids.length; i += 30) chunks.push(uids.slice(i, i + 30));
+    Promise.all(
+      chunks.map(chunk => getDocs(query(collection(db, "users"), where(documentId(), "in", chunk))))
+    ).then(snaps => {
+      const photos = {};
+      snaps.forEach(snap => snap.docs.forEach(d => { photos[d.id] = d.data().photoURL || ""; }));
+      setFreshPhotos(photos);
+    }).catch(console.error);
+  }, [chats, ready, user?.uid]);
 
   return (
     <div className="space-y-3">
@@ -103,6 +122,7 @@ function ChatList({ chats, ready, user, nav, isArchived = false }) {
         return chats.map(chat => (
           <TarjetaChat key={chat.id} chat={chat} currentUid={user?.uid}
             isArchived={isArchived}
+            freshPhotos={freshPhotos}
             onClick={() => nav(`/mensajes/${chat.id}`)} />
         ));
       })()}
@@ -110,7 +130,7 @@ function ChatList({ chats, ready, user, nav, isArchived = false }) {
   );
 }
 
-function getChatDisplay(chat, currentUid) {
+function getChatDisplay(chat, currentUid, freshPhotos = {}) {
   if (chat.type === "project") {
     const others = (chat.participants || [])
       .filter(uid => uid !== currentUid)
@@ -120,7 +140,7 @@ function getChatDisplay(chat, currentUid) {
     return {
       displayName: chat.projectName || "Proyecto",
       subtitle: others || "Chat de proyecto",
-      photoURL: otherUid ? chat.participantPhotos?.[otherUid] || "" : "",
+      photoURL: otherUid ? (freshPhotos[otherUid] || chat.participantPhotos?.[otherUid] || "") : "",
     };
   }
   const otherUid = (chat.participants || []).find(uid => uid !== currentUid);
@@ -129,12 +149,12 @@ function getChatDisplay(chat, currentUid) {
   return {
     displayName,
     subtitle: ROLE_LABEL[otherRole] || "Usuario",
-    photoURL: otherUid ? chat.participantPhotos?.[otherUid] || "" : "",
+    photoURL: otherUid ? (freshPhotos[otherUid] || chat.participantPhotos?.[otherUid] || "") : "",
   };
 }
 
 /* ── Tarjeta chat en bandeja ── */
-function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
+function TarjetaChat({ chat, currentUid, onClick, isArchived = false, freshPhotos = {} }) {
   const unread = chat.unread?.[currentUid] || 0;
   const [menuOpen, setMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -150,7 +170,7 @@ function TarjetaChat({ chat, currentUid, onClick, isArchived = false }) {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  const { displayName, subtitle, photoURL } = getChatDisplay(chat, currentUid);
+  const { displayName, subtitle, photoURL } = getChatDisplay(chat, currentUid, freshPhotos);
 
   const lastTime = chat.lastAt?.seconds
     ? timeAgoUtil(new Date(chat.lastAt.seconds * 1000)) : "";
@@ -423,8 +443,50 @@ function NuevoChatDirecto({ currentUser, onCreated, onClose }) {
   );
 }
 
-/* ── Panel de permisos (admin) ── */
+/* ── Panel de permisos (admin) — Chat + Asistente IA ── */
 function PermisosPanel() {
+  const [seccion, setSeccion] = useState("chat"); // "chat" | "ia"
+  const [busqueda, setBusqueda] = useState("");
+
+  return (
+    <div className="space-y-3">
+      {/* Sub-tabs */}
+      <div className="flex rounded-xl border border-taupe/25 overflow-hidden text-[11px]">
+        {[
+          { id: "chat", label: "Permisos de chat" },
+          { id: "ia",   label: "Asistente IA" },
+        ].map(s => (
+          <button key={s.id} type="button" onClick={() => { setSeccion(s.id); setBusqueda(""); }}
+            className={`flex-1 py-1.5 font-medium transition text-center ${seccion === s.id ? "bg-ink text-ivory" : "text-ink/55 hover:text-ink"}`}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Buscador */}
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-ink/35 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z" />
+        </svg>
+        <input
+          type="text"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder={seccion === "chat" ? "Buscar proyecto o colaborador…" : "Buscar usuario…"}
+          className="input w-full pl-8 text-[12px]"
+        />
+      </div>
+
+      {seccion === "chat"
+        ? <PermisosChatPanel busqueda={busqueda} />
+        : <PermisosIAPanel busqueda={busqueda} />
+      }
+    </div>
+  );
+}
+
+/* ── Sub-panel: Permisos de chat ── */
+function PermisosChatPanel({ busqueda }) {
   const [proyectos, setProyectos] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -457,11 +519,7 @@ function PermisosPanel() {
       const { doc, updateDoc, arrayUnion, arrayRemove, getDoc } = await import("firebase/firestore");
       const actual = proyecto.chatPermisos?.[colaborador.uid] || false;
       const nuevoValor = !actual;
-
-      await updateDoc(doc(db, "projects", proyecto.id), {
-        [`chatPermisos.${colaborador.uid}`]: nuevoValor,
-      });
-
+      await updateDoc(doc(db, "projects", proyecto.id), { [`chatPermisos.${colaborador.uid}`]: nuevoValor });
       const chatRef = doc(db, "chats", `project_${proyecto.id}`);
       const chatSnap = await getDoc(chatRef);
       if (chatSnap.exists()) {
@@ -476,25 +534,29 @@ function PermisosPanel() {
           await updateDoc(chatRef, { participants: arrayRemove(colaborador.uid) });
         }
       }
-
       setProyectos(prev => prev.map(p => p.id === proyecto.id
         ? { ...p, chatPermisos: { ...p.chatPermisos, [colaborador.uid]: nuevoValor } }
         : p
       ));
-    } catch (e) { console.error(e);
-    } finally {
-      setSaving(s => ({ ...s, [key]: false }));
-    }
+    } catch (e) { console.error(e); }
+    finally { setSaving(s => ({ ...s, [key]: false })); }
   };
 
   if (loading) return <LoadingSpinner text="Cargando…" />;
 
-  if (proyectos.length === 0) return (
-    <div className="card text-center py-10">
-      <p className="text-[13px] text-ink/50">No hay proyectos activos con cliente asignado.</p>
-    </div>
+  const q = busqueda.toLowerCase().trim();
+  const proyectosFiltrados = proyectos.filter(p =>
+    !q ||
+    (p.name || p.nombre || "").toLowerCase().includes(q) ||
+    (p.client || p.cliente || "").toLowerCase().includes(q) ||
+    colaboradores.some(c => c.name?.toLowerCase().includes(q))
   );
 
+  if (proyectosFiltrados.length === 0) return (
+    <div className="card text-center py-10">
+      <p className="text-[13px] text-ink/50">{q ? "Sin resultados." : "No hay proyectos activos con cliente asignado."}</p>
+    </div>
+  );
   if (colaboradores.length === 0) return (
     <div className="card text-center py-10">
       <p className="text-[13px] text-ink/50">No hay colaboradores registrados aún.</p>
@@ -503,63 +565,153 @@ function PermisosPanel() {
 
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-ink/60 dark:text-white/50 leading-relaxed">
-        Activa qué colaboradores pueden chatear con el cliente de cada proyecto.
-      </p>
-      {proyectos.map(p => (
-        <div key={p.id} className="card space-y-3">
-          <div>
-            <p className="text-[13px] font-semibold text-ink dark:text-white/90">{p.name || p.nombre}</p>
-            <p className="text-[11px] text-ink/50 dark:text-white/40">Cliente: {p.client || p.cliente || "—"}</p>
-          </div>
-          <div className="divide-y divide-sand dark:divide-white/8">
-            {colaboradores.map(c => {
-              const key = `${p.id}_${c.uid}`;
-              const activo = p.chatPermisos?.[c.uid] || false;
-              const busy = saving[key];
-              return (
-                <div key={c.uid} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
-                  {/* Avatar + nombre */}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold transition-colors ${activo ? "bg-emerald-600 text-white" : "bg-ink/10 dark:bg-white/10 text-ink/50 dark:text-white/40"}`}>
-                      {(c.name || "?")[0].toUpperCase()}
+      {proyectosFiltrados.map(p => {
+        const colsFiltrados = q
+          ? colaboradores.filter(c => c.name?.toLowerCase().includes(q) || (p.name || p.nombre || "").toLowerCase().includes(q))
+          : colaboradores;
+        if (colsFiltrados.length === 0) return null;
+        return (
+          <div key={p.id} className="card space-y-3">
+            <div>
+              <p className="text-[13px] font-semibold text-ink dark:text-white/90">{p.name || p.nombre}</p>
+              <p className="text-[11px] text-ink/50 dark:text-white/40">Cliente: {p.client || p.cliente || "—"}</p>
+            </div>
+            <div className="divide-y divide-sand dark:divide-white/8">
+              {colsFiltrados.map(c => {
+                const key = `${p.id}_${c.uid}`;
+                const activo = p.chatPermisos?.[c.uid] || false;
+                const busy = saving[key];
+                return (
+                  <div key={c.uid} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold transition-colors ${activo ? "bg-emerald-600 text-white" : "bg-ink/10 dark:bg-white/10 text-ink/50 dark:text-white/40"}`}>
+                        {(c.name || "?")[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[12px] font-medium text-ink dark:text-white/85 truncate">{c.name}</p>
+                        <p className={`text-[10px] font-semibold ${activo ? "text-emerald-600 dark:text-emerald-400" : "text-ink/35 dark:text-white/30"}`}>
+                          {activo ? "Con acceso al chat" : "Sin acceso"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-[12px] font-medium text-ink dark:text-white/85 truncate">{c.name}</p>
-                      <p className={`text-[10px] font-semibold ${activo ? "text-emerald-600 dark:text-emerald-400" : "text-ink/35 dark:text-white/30"}`}>
-                        {activo ? "Con acceso al chat" : "Sin acceso"}
-                      </p>
-                    </div>
+                    <button type="button" disabled={busy} onClick={() => togglePermiso(p, c)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 ${
+                        activo
+                          ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 dark:hover:bg-emerald-900/60"
+                          : "bg-ink/6 dark:bg-white/8 text-ink/50 dark:text-white/40 border border-ink/15 dark:border-white/15 hover:bg-ink/10 dark:hover:bg-white/12"
+                      }`}>
+                      {busy ? (
+                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : activo ? (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
+                        </svg>
+                      )}
+                      {busy ? "Guardando…" : activo ? "Activado" : "Desactivado"}
+                    </button>
                   </div>
-                  {/* Toggle visual claro */}
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => togglePermiso(p, c)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all disabled:opacity-50 active:scale-95 flex-shrink-0 ${
-                      activo
-                        ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-200 dark:hover:bg-emerald-900/60"
-                        : "bg-ink/6 dark:bg-white/8 text-ink/50 dark:text-white/40 border border-ink/15 dark:border-white/15 hover:bg-ink/10 dark:hover:bg-white/12"
-                    }`}>
-                    {busy ? (
-                      <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                    ) : activo ? (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 12H6" />
-                      </svg>
-                    )}
-                    {busy ? "Guardando…" : activo ? "Activado" : "Desactivado"}
-                  </button>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Sub-panel: Acceso al Asistente IA ── */
+function PermisosIAPanel({ busqueda }) {
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(null);
+
+  useEffect(() => {
+    getDocs(query(collection(db, "users"), where("role", "in", ["colaborador", "cliente"]), limit(100)))
+      .then(snap => setUsuarios(snap.docs.map(d => ({ uid: d.id, ...d.data() }))))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggleIA = async (uid, habilitada) => {
+    setToggling(uid);
+    try {
+      await updateDoc(doc(db, "users", uid), { iaHabilitada: !habilitada });
+      setUsuarios(prev => prev.map(u => u.uid === uid ? { ...u, iaHabilitada: !habilitada } : u));
+    } catch (e) { console.error(e); }
+    finally { setToggling(null); }
+  };
+
+  if (loading) return <LoadingSpinner text="Cargando…" />;
+
+  const q = busqueda.toLowerCase().trim();
+  const filtrados = usuarios.filter(u =>
+    !q ||
+    (u.name || "").toLowerCase().includes(q) ||
+    (u.email || "").toLowerCase().includes(q) ||
+    (u.subRole || "").toLowerCase().includes(q)
+  );
+
+  // Agrupar por rol
+  const clientes = filtrados.filter(u => u.role === "cliente");
+  const colaboradores = filtrados.filter(u => u.role === "colaborador");
+
+  if (filtrados.length === 0) return (
+    <div className="card text-center py-10">
+      <p className="text-[13px] text-ink/50">{q ? "Sin resultados." : "No hay usuarios registrados."}</p>
+    </div>
+  );
+
+  const GrupoIA = ({ titulo, lista }) => {
+    if (lista.length === 0) return null;
+    return (
+      <div className="card space-y-1">
+        <p className="text-[10px] uppercase tracking-[0.15em] font-semibold text-ink/40 pb-1">{titulo}</p>
+        {lista.map(u => {
+          const habilitada = u.iaHabilitada !== false;
+          return (
+            <div key={u.uid} className="flex items-center justify-between gap-3 py-2 border-b last:border-0 border-taupe/15">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[12px] font-bold ${habilitada ? "bg-ink text-ivory dark:bg-[#EDE9E0] dark:text-[#1A1917]" : "bg-ink/10 dark:bg-white/10 text-ink/40 dark:text-white/35"}`}>
+                  {(u.name || "?")[0].toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[12px] font-medium text-ink dark:text-white/85 truncate">{u.name || u.email}</p>
+                  <p className="text-[10px] text-ink/40 dark:text-white/30 capitalize">
+                    {u.subRole || u.role}
+                    {habilitada
+                      ? <span className="ml-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">· IA activa</span>
+                      : <span className="ml-1.5 text-ink/30 dark:text-white/25 font-semibold">· IA desactivada</span>
+                    }
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={toggling === u.uid}
+                onClick={() => toggleIA(u.uid, habilitada)}
+                aria-label={habilitada ? "Desactivar IA" : "Activar IA"}
+                className="relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 disabled:opacity-50 focus:outline-none"
+                style={{ background: habilitada ? "rgb(var(--ink))" : "rgb(var(--taupe) / 0.35)" }}
+              >
+                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200"
+                  style={{ left: habilitada ? "calc(100% - 22px)" : "2px" }} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-3">
+      <GrupoIA titulo="Colaboradores" lista={colaboradores} />
+      <GrupoIA titulo="Clientes" lista={clientes} />
     </div>
   );
 }
@@ -580,6 +732,7 @@ TarjetaChat.propTypes = {
   currentUid: PropTypes.string,
   onClick: PropTypes.func,
   isArchived: PropTypes.bool,
+  freshPhotos: PropTypes.object,
 };
 
 NuevoChatDirecto.propTypes = {

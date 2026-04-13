@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import { collection, doc, getDocs, limit, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
@@ -7,24 +7,18 @@ import { useTheme } from "../app/ThemeContext.jsx";
 import { useAuth } from "../app/useAuth";
 import Avatar from "../components/ui/Avatar.jsx";
 
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export default function Configuracion() {
   const { dark, setTheme } = useTheme();
   const { user, logout } = useAuth();
-  const [previewURL, setPreviewURL] = useState("");
+  const [cropFile, setCropFile] = useState(null);
   const [savingPhoto, setSavingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const [photoSuccess, setPhotoSuccess] = useState("");
 
-  useEffect(() => {
-    return () => {
-      if (previewURL) URL.revokeObjectURL(previewURL);
-    };
-  }, [previewURL]);
-
   const currentTheme = dark ? "dark" : "light";
-  const displayedPhoto = previewURL || user?.photoURL || "";
+  const displayedPhoto = user?.photoURL || "";
 
   const themeOptions = useMemo(() => ([
     {
@@ -47,34 +41,25 @@ export default function Configuracion() {
     },
   ]), []);
 
-  const handleFileChange = async (event) => {
+  const handleFileChange = (event) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     setPhotoError("");
     setPhotoSuccess("");
-
     if (!file || !user?.uid) return;
+    if (!file.type.startsWith("image/")) { setPhotoError("Selecciona una imagen valida."); return; }
+    if (file.size > MAX_FILE_SIZE) { setPhotoError("La foto no debe superar 5 MB."); return; }
+    setCropFile(file);
+  };
 
-    if (!file.type.startsWith("image/")) {
-      setPhotoError("Selecciona una imagen valida.");
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      setPhotoError("La foto no debe superar 2 MB.");
-      return;
-    }
-
-    if (previewURL) URL.revokeObjectURL(previewURL);
-    const localPreview = URL.createObjectURL(file);
-    setPreviewURL(localPreview);
+  const uploadCroppedBlob = async (blob) => {
+    setCropFile(null);
     setSavingPhoto(true);
-
+    setPhotoError("");
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `profilePhotos/${user.uid}/avatar-${Date.now()}.${ext}`;
+      const path = `profilePhotos/${user.uid}/avatar-${Date.now()}.jpg`;
       const fileRef = storageRef(storage, path);
-      await uploadBytes(fileRef, file, { contentType: file.type });
+      await uploadBytes(fileRef, blob, { contentType: "image/jpeg" });
       const url = await getDownloadURL(fileRef);
 
       if (auth.currentUser) {
@@ -89,20 +74,22 @@ export default function Configuracion() {
         updatedAt: serverTimestamp(),
       });
 
-      const chatsSnap = await getDocs(query(
-        collection(db, "chats"),
-        where("participants", "array-contains", user.uid),
-        limit(50)
-      ));
+      try {
+        const chatsSnap = await getDocs(query(
+          collection(db, "chats"),
+          where("participants", "array-contains", user.uid),
+          limit(50)
+        ));
+        await Promise.allSettled(
+          chatsSnap.docs.map((chatDoc) => updateDoc(chatDoc.ref, {
+            [`participantPhotos.${user.uid}`]: url,
+            [`participantNames.${user.uid}`]: user.name || user.email || "Usuario",
+          }))
+        );
+      } catch (chatErr) {
+        console.warn("No se pudieron actualizar las fotos en chats:", chatErr);
+      }
 
-      await Promise.allSettled(
-        chatsSnap.docs.map((chatDoc) => updateDoc(chatDoc.ref, {
-          [`participantPhotos.${user.uid}`]: url,
-          [`participantNames.${user.uid}`]: user.name || user.email || "Usuario",
-        }))
-      );
-
-      setPreviewURL("");
       setPhotoSuccess("Foto de perfil actualizada.");
     } catch (e) {
       console.error(e);
@@ -113,6 +100,14 @@ export default function Configuracion() {
   };
 
   return (
+    <>
+    {cropFile && (
+      <CropModal
+        file={cropFile}
+        onConfirm={uploadCroppedBlob}
+        onCancel={() => setCropFile(null)}
+      />
+    )}
     <section className="space-y-5">
       <div>
         <p className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: "rgb(var(--ink) / 0.4)" }}>
@@ -298,6 +293,143 @@ export default function Configuracion() {
         </button>
       </div>
     </section>
+    </>
+  );
+}
+
+// ── Crop Modal ─────────────────────────────────────────────
+function CropModal({ file, onConfirm, onCancel }) {
+  const CROP_SIZE = 220;
+  const [imgSrc, setImgSrc] = useState("");
+  const [imgSize, setImgSize] = useState({ w: 0, h: 0 });
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const imgRef = useRef(null);
+  const containerRef = useRef(null);
+  const drag = useRef({ active: false, sx: 0, sy: 0, ox: 0, oy: 0 });
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setImgSrc(url);
+    const img = new Image();
+    img.onload = () => {
+      const minS = Math.max(CROP_SIZE / img.naturalWidth, CROP_SIZE / img.naturalHeight);
+      setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
+      setScale(minS);
+      setOffset({ x: 0, y: 0 });
+    };
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const minScale = imgSize.w > 0 ? Math.max(CROP_SIZE / imgSize.w, CROP_SIZE / imgSize.h) : 1;
+
+  const clampOffset = (ox, oy, s) => {
+    const iw = imgSize.w * s;
+    const ih = imgSize.h * s;
+    const maxX = Math.max(0, (iw - CROP_SIZE) / 2);
+    const maxY = Math.max(0, (ih - CROP_SIZE) / 2);
+    return { x: Math.max(-maxX, Math.min(maxX, ox)), y: Math.max(-maxY, Math.min(maxY, oy)) };
+  };
+
+  const onPointerDown = (e) => {
+    drag.current = { active: true, sx: e.clientX, sy: e.clientY, ox: offset.x, oy: offset.y };
+    containerRef.current?.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  const onPointerMove = (e) => {
+    if (!drag.current.active) return;
+    const { x, y } = clampOffset(drag.current.ox + e.clientX - drag.current.sx, drag.current.oy + e.clientY - drag.current.sy, scale);
+    setOffset({ x, y });
+  };
+  const onPointerUp = () => { drag.current.active = false; };
+
+  const handleConfirm = () => {
+    if (!imgRef.current || !imgSize.w) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = CROP_SIZE;
+    canvas.height = CROP_SIZE;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
+    ctx.clip();
+    const iw = imgSize.w * scale;
+    const ih = imgSize.h * scale;
+    ctx.drawImage(imgRef.current, (CROP_SIZE - iw) / 2 + offset.x, (CROP_SIZE - ih) / 2 + offset.y, iw, ih);
+    canvas.toBlob((blob) => { if (blob) onConfirm(blob); }, "image/jpeg", 0.92);
+  };
+
+  const iw = imgSize.w * scale;
+  const ih = imgSize.h * scale;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60" style={{ backdropFilter: "blur(6px)" }}>
+      <div className="bg-white dark:bg-[#252320] rounded-3xl p-6 shadow-2xl w-[min(360px,92vw)] space-y-5">
+        <div>
+          <p className="text-[15px] font-bold" style={{ color: "rgb(var(--ink))" }}>Ajustar foto de perfil</p>
+          <p className="text-[12px] mt-0.5" style={{ color: "rgb(var(--ink) / 0.5)" }}>Arrastra para encuadrar · desliza para hacer zoom</p>
+        </div>
+
+        <div className="flex justify-center">
+          <div
+            ref={containerRef}
+            className="relative overflow-hidden rounded-full border-2 border-ink/20 cursor-grab active:cursor-grabbing"
+            style={{ width: CROP_SIZE, height: CROP_SIZE, background: "rgb(var(--sand))" }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+          >
+            {imgSrc && imgSize.w > 0 && (
+              <img
+                ref={imgRef}
+                src={imgSrc}
+                alt="preview"
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  width: iw,
+                  height: ih,
+                  left: (CROP_SIZE - iw) / 2 + offset.x,
+                  top: (CROP_SIZE - ih) / 2 + offset.y,
+                  userSelect: "none",
+                  pointerEvents: "none",
+                }}
+              />
+            )}
+          </div>
+        </div>
+
+        {imgSize.w > 0 && (
+          <div className="space-y-1 px-1">
+            <div className="flex justify-between">
+              <span className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.5)" }}>Zoom</span>
+              <span className="text-[11px]" style={{ color: "rgb(var(--ink) / 0.4)" }}>{Math.round((scale / minScale) * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={3}
+              step={0.01}
+              value={scale / minScale}
+              onChange={(e) => {
+                const s = minScale * parseFloat(e.target.value);
+                setScale(s);
+                setOffset((prev) => clampOffset(prev.x, prev.y, s));
+              }}
+              className="w-full accent-current"
+            />
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onCancel} className="flex-1 btn-outline text-[13px]">Cancelar</button>
+          <button type="button" onClick={handleConfirm} disabled={!imgSize.w} className="flex-1 btn-primary text-[13px] disabled:opacity-40">
+            Usar esta foto
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

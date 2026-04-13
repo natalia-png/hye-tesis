@@ -75,6 +75,18 @@ export default function GestionColaboradores() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Error al crear el colaborador.");
 
+            // Guardar teléfono y cédula directamente (la Cloud Function puede no incluirlos)
+            if (data.uid && (form.telefono?.trim() || form.cedula?.trim())) {
+                try {
+                    await updateDoc(doc(db, "users", data.uid), {
+                        telefono: form.telefono?.trim() || "",
+                        cedula: form.cedula?.trim() || "",
+                    });
+                } catch (e) {
+                    console.warn("No se guardaron teléfono/cédula:", e);
+                }
+            }
+
             setModal(false);
             setForm({ name: "", email: "", password: "", subRole: "", telefono: "", cedula: "" });
         } catch (e) {
@@ -317,8 +329,8 @@ function TarjetaColaborador({ colaborador, onEliminar }) {
         <div className="card space-y-2">
             <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-ink flex items-center justify-center flex-shrink-0">
-                        <span className="text-[14px] font-bold text-ivory">
+                    <div className="w-9 h-9 rounded-full bg-ink dark:bg-white/90 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[14px] font-bold text-ivory dark:text-[#1A1917]">
                             {(colaborador.name || "?")[0].toUpperCase()}
                         </span>
                     </div>

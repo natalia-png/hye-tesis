@@ -1,7 +1,7 @@
 // src/pages/DashboardColaborador.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import { collection, collectionGroup, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
 import { getSubRoleColor } from "../data/roles";
@@ -34,6 +34,7 @@ export default function DashboardColaborador() {
   const [proyectos, setProyectos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // { title, items: [{label, sub, color, onClick}] }
+  const [garantiasPropuestas, setGarantiasPropuestas] = useState([]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -43,6 +44,26 @@ export default function DashboardColaborador() {
     }, () => setLoading(false));
     return () => { try { unsub(); } catch (e) { console.error(e); } };
   }, [user?.uid]);
+
+  // Garantías propuestas pendientes (solo jurídico)
+  useEffect(() => {
+    const juridico = !!user?.subRole?.toLowerCase().includes("jur");
+    if (!user?.uid || !juridico) return;
+    const q = query(
+      collectionGroup(db, "solicitudes"),
+      where("respuestaPropuesta.propuestoPorUid", "==", user.uid)
+    );
+    const unsub = onSnapshot(q, snap => {
+      setGarantiasPropuestas(snap.docs.map(d => {
+        const data = d.data();
+        // path: garantias/{projectId}/solicitudes/{solId}
+        const segments = d.ref.path.split("/");
+        const projectId = segments[1];
+        return { id: d.id, projectId, ...data };
+      }));
+    }, () => {});
+    return () => { try { unsub(); } catch (e) { console.error(e); } };
+  }, [user?.uid, user?.subRole]);
 
   const misFases = useMemo(() => {
     const result = [];
@@ -311,6 +332,47 @@ export default function DashboardColaborador() {
               ))}
               <p className="text-[10px] text-center" style={{ color: "rgb(var(--ink) / 0.4)" }}>
                 Luisa revisara y aprobara cada propuesta antes de que el cliente lo vea.
+              </p>
+            </div>
+          )}
+
+          {/* ── Garantías propuestas pendientes (solo Jurídico) ── */}
+          {isJuridico && garantiasPropuestas.length > 0 && (
+            <div className="rounded-2xl border bg-ivory p-4 space-y-2.5"
+              style={{ borderColor: "rgb(var(--taupe) / 0.25)" }}>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                <p className="text-[12px] font-semibold" style={{ color: "rgb(var(--ink))" }}>
+                  Respuestas de garantía — esperando aprobación
+                </p>
+                <span className="ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                  {garantiasPropuestas.length}
+                </span>
+              </div>
+              {garantiasPropuestas.map(sol => (
+                <button key={sol.id} type="button"
+                  onClick={() => nav(`/proyectos/${sol.projectId}/garantias`)}
+                  className="w-full flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left hover:shadow-sm active:scale-[0.99] transition-all"
+                  style={{ borderColor: "rgb(var(--taupe) / 0.2)", background: "rgb(var(--sand) / 0.5)" }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[16px] bg-amber-100 mt-0.5">
+                    🛡️
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-semibold truncate" style={{ color: "rgb(var(--ink))" }}>
+                      {sol.descripcion ? `"${sol.descripcion.substring(0, 60)}…"` : "Solicitud de garantía"}
+                    </p>
+                    <p className="text-[11px] mt-0.5 truncate" style={{ color: "rgb(var(--ink) / 0.5)" }}>
+                      Tu propuesta está en revisión por Luisa
+                    </p>
+                  </div>
+                  <svg className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"
+                    style={{ color: "rgb(var(--ink) / 0.2)" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              ))}
+              <p className="text-[10px] text-center" style={{ color: "rgb(var(--ink) / 0.4)" }}>
+                Luisa aprobará cada propuesta antes de registrarla en la solicitud.
               </p>
             </div>
           )}

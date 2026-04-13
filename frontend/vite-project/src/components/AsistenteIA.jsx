@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, getDocs, query, where, limit, orderBy } from "firebase/firestore";
+import { collection, doc, getDocs, onSnapshot, query, where, limit, orderBy } from "firebase/firestore";
 import PropTypes from "prop-types";
 import { db, geminiModel } from "../lib/firebase";
 import { useAuth } from "../app/useAuth";
@@ -213,9 +213,30 @@ export default function AsistenteIA() {
   const [cargando, setCargando] = useState(false);
   const [proyectos, setProyectos] = useState([]);
   const [error, setError] = useState("");
+  // Escucha directa de iaHabilitada — independiente del contexto
+  const [iaHabilitada, setIaHabilitada] = useState(true);
+  const [pos, setPos] = useState(() => {
+    try {
+      const s = localStorage.getItem("hye-ia-pos");
+      return s ? JSON.parse(s) : { right: 16, bottom: 128 };
+    } catch { return { right: 16, bottom: 128 }; }
+  });
   const chatRef = useRef(null);
   const inputRef = useRef(null);
   const chatSessionRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const drag = useRef({ active: false, sx: 0, sy: 0, sr: 0, sb: 0, moved: false });
+
+  // Listener directo al documento del usuario para iaHabilitada en tiempo real
+  useEffect(() => {
+    if (!user?.uid || user.role === "admin") return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      setIaHabilitada(data.iaHabilitada !== false);
+    });
+    return () => unsub();
+  }, [user?.uid, user?.role]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -317,6 +338,39 @@ export default function AsistenteIA() {
   };
 
   if (!user) return null;
+  if (user.role !== "admin" && !iaHabilitada) return null;
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0) return;
+    drag.current = { active: true, sx: e.clientX, sy: e.clientY, sr: pos.right, sb: pos.bottom, moved: false };
+    wrapperRef.current?.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!drag.current.active) return;
+    const dx = drag.current.sx - e.clientX;
+    const dy = drag.current.sy - e.clientY;
+    if (!drag.current.moved && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) drag.current.moved = true;
+    if (drag.current.moved) {
+      const r = Math.max(4, Math.min(drag.current.sr + dx, window.innerWidth - 56));
+      const b = Math.max(4, Math.min(drag.current.sb + dy, window.innerHeight - 56));
+      setPos({ right: r, bottom: b });
+    }
+  };
+
+  const handlePointerUp = (e) => {
+    if (!drag.current.active) return;
+    drag.current.active = false;
+    if (drag.current.moved) {
+      const dx = drag.current.sx - e.clientX;
+      const dy = drag.current.sy - e.clientY;
+      const r = Math.max(4, Math.min(drag.current.sr + dx, window.innerWidth - 56));
+      const b = Math.max(4, Math.min(drag.current.sb + dy, window.innerHeight - 56));
+      localStorage.setItem("hye-ia-pos", JSON.stringify({ right: r, bottom: b }));
+    } else {
+      setAbierto((v) => !v);
+    }
+  };
 
   const sugerencias = {
     admin: ["Como van los proyectos?", "Que fases estan en curso?", "Que es un anteproyecto?"],
@@ -325,35 +379,18 @@ export default function AsistenteIA() {
   }[user.role] || ["En que me puedes ayudar?"];
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setAbierto((v) => !v)}
-        className={`fixed right-4 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 ${
-          abierto ? "bg-ink text-ivory scale-95" : "bg-ink text-ivory hover:scale-110"
-        }`}
-        style={{ bottom: "calc(8rem + env(safe-area-inset-bottom, 0px))" }}
-        aria-label="Asistente IA"
-      >
-        {abierto ? (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-            />
-          </svg>
-        )}
-      </button>
-
+    <div
+      ref={wrapperRef}
+      style={{ position: "fixed", right: pos.right, bottom: pos.bottom, zIndex: 50, touchAction: "none" }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+    >
       {abierto && (
         <div
-          className="fixed right-4 z-50 w-[calc(100vw-2rem)] max-w-[380px] bg-white rounded-2xl shadow-2xl border border-sand flex flex-col overflow-hidden"
-          style={{ bottom: "calc(13rem + env(safe-area-inset-bottom, 0px))", maxHeight: "55dvh" }}
+          className="absolute right-0 w-[min(380px,calc(100vw-2rem))] bg-white rounded-2xl shadow-2xl border border-sand flex flex-col overflow-hidden"
+          style={{ bottom: "56px", maxHeight: "55dvh" }}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between px-4 py-3 bg-ink text-ivory flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -482,7 +519,30 @@ export default function AsistenteIA() {
           </div>
         </div>
       )}
-    </>
+
+      <button
+        type="button"
+        className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 cursor-grab active:cursor-grabbing select-none ${
+          abierto ? "bg-ink text-ivory scale-95" : "bg-ink text-ivory hover:scale-110"
+        }`}
+        aria-label="Asistente IA"
+        tabIndex={0}
+      >
+        {abierto ? (
+          <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+            />
+          </svg>
+        )}
+      </button>
+    </div>
   );
 }
 

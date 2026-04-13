@@ -246,9 +246,9 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
   const isDone = fase.estado === "completada" || pct >= 100;
   const isActive = !isDone && (fase.estado === "en_curso" || pct > 0);
 
-  let cardBg = "bg-white border-black/[0.06]";
+  let cardBg = "bg-white dark:bg-[#252320] border-black/[0.06] dark:border-white/[0.07]";
   if (isDone) { cardBg = "bg-[#5C5852] border-[#5C5852]"; }
-  else if (isActive) { cardBg = "bg-white border-black/20"; }
+  else if (isActive) { cardBg = "bg-white dark:bg-[#252320] border-black/20 dark:border-white/10"; }
 
   return (
     <div className={`rounded-2xl overflow-hidden border transition-all duration-200 ${cardBg} ${isOpen ? "shadow-md" : "shadow-sm"}`}>
@@ -322,7 +322,7 @@ function FaseCard({ fase, index, projectId, isOpen, onToggle }) {
 
       {/* Body */}
       {isOpen && (
-        <div className="border-t border-black/[0.06] bg-[#FAFAF7]">
+        <div className="border-t border-black/[0.06] dark:border-white/[0.06] bg-[#FAFAF7] dark:bg-[#1a1a18]">
           <NotasPanel projectId={projectId} phaseId={fase.id} />
           <ArchivosPanel projectId={projectId} phaseId={fase.id} />
 
@@ -398,7 +398,7 @@ function NotasPanel({ projectId, phaseId }) {
                 <span className="text-[8px] font-bold text-ivory tracking-tight">HE</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="bg-white rounded-2xl rounded-tl-[6px] px-3.5 py-2.5 border border-taupe/30 shadow-sm">
+                <div className="bg-white dark:bg-white/5 rounded-2xl rounded-tl-[6px] px-3.5 py-2.5 border border-taupe/30 dark:border-white/10 shadow-sm">
                   <p className="text-[13px] text-ink/70 leading-relaxed whitespace-pre-wrap">{n.text}</p>
                 </div>
                 <p className="text-[10px] text-ink/30 mt-1 ml-1">H&E · {timeAgo(n.createdAt)}</p>
@@ -471,7 +471,7 @@ function ArchivosPanel({ projectId, phaseId }) {
               type="button"
               onClick={() => download(a)}
               disabled={busy}
-              className="w-full flex items-center gap-3 bg-white rounded-2xl border border-taupe/30 px-3 py-2.5 text-left group hover:border-ink/25 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
+              className="w-full flex items-center gap-3 bg-white dark:bg-white/5 rounded-2xl border border-taupe/30 dark:border-white/10 px-3 py-2.5 text-left group hover:border-ink/25 dark:hover:border-white/20 hover:shadow-sm active:scale-[0.99] transition-all duration-150"
             >
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${tipo.bg}`}>
                 <span className="text-[10px] font-black tracking-tight">{tipo.ext}</span>
@@ -481,7 +481,7 @@ function ArchivosPanel({ projectId, phaseId }) {
                 {a.size && <p className="text-[10px] text-ink/35">{formatSize(a.size)}</p>}
               </div>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${busy ? "border-2 border-ink/15 border-t-ink/60 animate-spin"
-                : "bg-[#F2EEE7] group-hover:bg-[#5C5852]"
+                : "bg-[#F2EEE7] dark:bg-white/10 group-hover:bg-[#5C5852]"
                 }`}>
                 {busy ? null : (
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"

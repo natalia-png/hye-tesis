@@ -24,6 +24,14 @@ android {
             keyPassword "Equipohye123"
         }
     }
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            if (variant.buildType.name == "release") {
+                outputFileName = "HYE-Arquitectos-v${defaultConfig.versionName}-release-final.apk"
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

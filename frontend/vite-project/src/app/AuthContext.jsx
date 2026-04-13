@@ -24,6 +24,7 @@ function mergeProfileData(prev, data) {
     contratoURL: data.contratoURL ?? prev.contratoURL ?? null,
     telefono: data.telefono ?? prev.telefono ?? null,
     cedula: data.cedula ?? prev.cedula ?? null,
+    iaHabilitada: data.iaHabilitada ?? prev.iaHabilitada ?? true,
   };
 }
 
@@ -37,12 +38,27 @@ function ForegroundToast({ notif, onClose }) {
   if (!notif) return null;
 
   const icons = {
-    phase_done: "✓",
-    phase_started: "→",
-    progress_update: "↑",
+    phase_done:                "✅",
+    phase_started:             "🚀",
+    progress_update:           "📈",
+    avance_propuesto:          "📊",
+    avance_rechazado:          "↩️",
+    deadline_project:          "⏰",
+    deadline_fase:             "⏱️",
+    new_note:                  "📝",
+    new_file:                  "📎",
+    new_message:               "💬",
+    nueva_garantia:            "🛡️",
+    garantia_respondida:       "✔️",
+    nueva_solicitud_comercial: "🏗️",
+    contrato_propuesto:        "📄",
+    contrato_rechazado:        "❌",
+    contrato_solicitado:       "📋",
+    contrato_aprobado:         "✅",
+    general:                   "🔔",
   };
 
-  const type = notif.data?.type || "progress_update";
+  const type = notif.data?.type || "general";
 
   return (
     <div
@@ -113,6 +129,7 @@ export function AuthProvider({ children }) {
           contratoURL: p?.contratoURL ?? null,
           telefono: p?.telefono ?? null,
           cedula: p?.cedula ?? null,
+          iaHabilitada: p?.iaHabilitada ?? true,
         });
 
         // Listener en tiempo real: si el admin cambia el rol mientras hay sesión activa,

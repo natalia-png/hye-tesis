@@ -37,6 +37,10 @@ export default function ProyectoDetalle({
   const [contratoRejectOpen, setContratoRejectOpen] = useState(false);
   const [contratoRejectReason, setContratoRejectReason] = useState("");
   const [solicitandoContrato, setSolicitandoContrato] = useState(false);
+  const [editingProveedores, setEditingProveedores] = useState(false);
+  const [todosProveedores, setTodosProveedores] = useState([]);
+  const [provSearch, setProvSearch] = useState("");
+  const [savingProv, setSavingProv] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -100,6 +104,7 @@ export default function ProyectoDetalle({
           contratoURL: data.contratoURL || null,
           contratoPropuesto: data.contratoPropuesto || null,
           contratoSolicitado: data.contratoSolicitado || null,
+          proveedores: Array.isArray(data.proveedores) ? data.proveedores : [],
         });
       } catch (e) {
         console.error(e);
@@ -244,6 +249,45 @@ export default function ProyectoDetalle({
 
   const canEditFases = canManageDocuments && !clientView;
 
+  const openEditProveedores = async () => {
+    if (todosProveedores.length === 0) {
+      const snap = await getDocs(collection(db, "proveedores"));
+      setTodosProveedores(snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "")));
+    }
+    setProvSearch("");
+    setEditingProveedores(true);
+  };
+
+  const toggleProveedorProyecto = (prov) => {
+    setProject(prev => {
+      const lista = prev.proveedores || [];
+      const existe = lista.find(p => p.id === prov.id);
+      return {
+        ...prev,
+        proveedores: existe
+          ? lista.filter(p => p.id !== prov.id)
+          : [...lista, { id: prov.id, name: prov.name, specialty: prov.specialty || "" }],
+      };
+    });
+  };
+
+  const saveProveedores = async () => {
+    setSavingProv(true);
+    try {
+      const lista = project.proveedores || [];
+      await updateDoc(doc(db, "projects", id), {
+        proveedores: lista,
+        proveedoresIds: lista.map(p => p.id),
+      });
+      setEditingProveedores(false);
+    } catch (e) {
+      alert("Error al guardar: " + e.message);
+    } finally {
+      setSavingProv(false);
+    }
+  };
+
   if (loading) {
     return (
       <section className="space-y-4">
@@ -297,7 +341,9 @@ export default function ProyectoDetalle({
       {pdfPreviewUrl && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/90"
           onClick={() => setPdfPreviewUrl(null)}>
-          <div className="flex items-center justify-between px-4 py-3 bg-black/80 flex-shrink-0"
+          <div
+            className="flex items-center justify-between px-4 bg-black flex-shrink-0"
+            style={{ paddingTop: "max(12px, env(safe-area-inset-top, 12px))", paddingBottom: "12px" }}
             onClick={e => e.stopPropagation()}>
             <p className="text-white text-[13px] font-medium">Vista previa del contrato</p>
             <div className="flex items-center gap-2">
@@ -306,8 +352,11 @@ export default function ProyectoDetalle({
                 Descargar
               </a>
               <button type="button" onClick={() => setPdfPreviewUrl(null)}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition text-[20px]">
-                ×
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-[12px] font-medium transition active:scale-95">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Cerrar
               </button>
             </div>
           </div>
@@ -499,6 +548,72 @@ export default function ProyectoDetalle({
           <InfoRow label="Entrega estimada" value={formatDate(endDate)} />
           <DaysRemaining endDate={endDate} />
         </div>
+
+        {/* ── Proveedores ── */}
+        {!clientView && (
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-semibold text-ink">Proveedores asignados</h2>
+              {isAdmin && !editingProveedores && (
+                <button type="button" onClick={openEditProveedores}
+                  className="text-[12px] text-ink/50 hover:text-ink underline">
+                  Editar
+                </button>
+              )}
+            </div>
+
+            {editingProveedores ? (
+              <div className="space-y-2">
+                <input
+                  value={provSearch}
+                  onChange={e => setProvSearch(e.target.value)}
+                  placeholder="Buscar proveedor…"
+                  className="input w-full text-[13px]"
+                />
+                <div className="max-h-44 overflow-y-auto rounded-xl border border-taupe/25 divide-y divide-taupe/10 bg-[rgb(var(--ivory))] dark:bg-[#252320]">
+                  {todosProveedores
+                    .filter(p => !provSearch || (p.name || "").toLowerCase().includes(provSearch.toLowerCase()) || (p.specialty || "").toLowerCase().includes(provSearch.toLowerCase()))
+                    .map(p => {
+                      const sel = !!(project.proveedores || []).find(s => s.id === p.id);
+                      return (
+                        <button key={p.id} type="button" onClick={() => toggleProveedorProyecto(p)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition ${sel ? "bg-ink/[0.06] dark:bg-white/[0.08]" : "hover:bg-sand/60 dark:hover:bg-white/[0.06]"}`}>
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${sel ? "bg-ink border-ink" : "border-taupe/50"}`}>
+                            {sel && <svg className="w-2.5 h-2.5 text-ivory" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-ink dark:text-ivory truncate">{p.name}</p>
+                            {p.specialty && <p className="text-[11px] text-ink/50 dark:text-ivory/50">{p.specialty}</p>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={saveProveedores} disabled={savingProv}
+                    className="px-4 py-1.5 rounded-xl bg-ink text-white text-[12px] disabled:opacity-60 hover:brightness-110 transition">
+                    {savingProv ? "Guardando…" : "Guardar"}
+                  </button>
+                  <button type="button" onClick={() => { setEditingProveedores(false); }}
+                    className="px-4 py-1.5 rounded-xl text-[12px] text-ink/60 hover:text-ink transition">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (project.proveedores || []).length === 0 ? (
+              <p className="text-[13px] text-ink/40 italic">Sin proveedores asignados.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {(project.proveedores || []).map(p => (
+                  <div key={p.id} className="flex flex-col px-3 py-1.5 rounded-xl bg-sand/50 dark:bg-white/[0.07] border border-taupe/20">
+                    <span className="text-[12px] font-medium text-ink dark:text-ivory">{p.name}</span>
+                    {p.specialty && <span className="text-[11px] text-ink/50 dark:text-ivory/50">{p.specialty}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {!clientView && (
           <div className="card space-y-2">

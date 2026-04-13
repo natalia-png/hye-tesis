@@ -46,6 +46,7 @@ export const normalizeFases = (fases) => {
       ? clampInt(Number(avancePropuestoRaw), 0, 100)
       : null;
     const notaAvancePropuesto = f?.notaAvancePropuesto ?? "";
+    const notaParaAdmin = f?.notaParaAdmin ?? "";
     const avancePropuestoPorUid = f?.avancePropuestoPorUid ?? null;
     const avancePropuestoPorNombre = f?.avancePropuestoPorNombre ?? null;
     const avancePropuestoAt = f?.avancePropuestoAt ?? null;
@@ -66,6 +67,7 @@ export const normalizeFases = (fases) => {
       fechaEntregaResponsable,
       avancePropuesto,
       notaAvancePropuesto,
+      notaParaAdmin,
       avancePropuestoPorUid,
       avancePropuestoPorNombre,
       avancePropuestoAt,

@@ -25,3 +25,5 @@ firebase-debug.log
 *.local
 "@ | Out-File -FilePath ".gitignore" -Encoding utf8
 frontend/vite-project/public/firebase-messaging-sw.js
+# Claude
+.claude/
